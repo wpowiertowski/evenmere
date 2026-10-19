@@ -112,4 +112,4 @@ When you finish or get blocked, reply with:
 
 ## Performance budgets
 
-The per-system tick budgets are in the [architecture plan](docs/design/architecture.md#performance-budgets): a total of ≤ 2.0 ms on average and ≤ 6 ms at p99, on a Steam Deck–class CPU at 20,000 residents and 5,000 buildings. From M2 onward, check with `dotnet run --project src/Evenmere.Tools -- perf --save tests/fixtures/saves/perf-reference.evsave`.
+The per-system tick budgets are in the [architecture plan](docs/design/architecture.md#performance-budgets): a total of ≤ 2.0 ms on average and ≤ 6 ms at p99, on a Steam Deck–class CPU at 20,000 residents and 5,000 buildings. From M2 onward, check with `dotnet run --project src/Evenmere.Tools -- perf --save tests/fixtures/saves/perf-2k.evsave`, or use `perf-20k` once it exists.
