@@ -30,11 +30,13 @@ Pillar 3 says culture is a second path, not a side stat. If eras and tiers depen
   | Scholars | Universities (tech) |
   | Patrons | Patronage (civic) |
 
-- **Decline is always on.** If any basic need stays below 50% for a full season (10 days), the house steps down one tier.
+- **Decline is always on.** If a basic need that the house has had met at its current tier stays below 50% for a full season (10 days), the house steps down one tier.
+  - A need never yet met at this tier only holds occupancy down, so a newly advanced house cannot bounce straight back.
   - Decline is never below Settlers, never empties a house, and needs a fresh grace period before it can repeat.
   - Festivals pause grace timers island-wide while they run.
   - The tradition *Common Voice* and the Belfry monument extend the grace period.
 - **Inspirations** cut a node's cost by 40% when their condition is met, in both trees.
+- **Staffing rule:** a tier's basic goods and services are produced and staffed by lower tiers. Lint rule EVL010 (added in M2) checks this.
 
 ## Consequences
 

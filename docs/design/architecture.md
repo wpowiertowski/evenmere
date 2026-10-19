@@ -243,11 +243,15 @@ Each system is one folder in `Evenmere.Sim` with its own tests. The numbers here
 ### Population and needs
 
 - Residences belong to one of six tiers: **Settlers → Villagers → Townsfolk → Artisans → Scholars → Patrons** ([progression](progression.md)).
-- **Basic needs** are goods (consumed per 100 residents per day) and services (a building within road range: Market, Shrine, Tavern, School, Theatre, Concert Hall). Each met basic need raises the house's target occupancy.
+- **Basic needs** are goods (consumed per 1,000 residents per day) and services (a building within road range: Market, Shrine, Tavern, School, Theatre, Concert Hall). Each met basic need raises the house's target occupancy.
   - When all basic needs are met for 3 consecutive days, the house advances, provided the next tier is unlocked, the upgrade materials are in the pool and the player hasn't locked the house.
 - **Comfort needs** are goods only. Each met comfort need adds +25% to the tier's knowledge, culture and coin output. A missing comfort good never causes decline.
 - **Fair shares.** At each day boundary, the system computes a fulfilment ratio per good from pool stock against projected demand, and every house consumes at that ratio. No house is starved because of its ID.
-- **Decline (always on):** if any basic need stays below 50% for a full season (10 days), the house steps down one tier. Residents above the lower tier's capacity move out. Decline is one step at a time, needs a fresh grace period before it can repeat, never goes below Settlers and never leaves a house empty.
+- **Decline (always on):** if a basic need that the house has had met at its current tier stays below 50% for a full season (10 days), the house steps down one tier. Residents above the lower tier's capacity move out.
+  - A need never yet met at this tier only holds occupancy down, so a newly advanced house never bounces straight back.
+  - Decline is one step at a time and needs a fresh grace period before it can repeat. It never goes below Settlers and never leaves a house empty.
+  - Festivals pause every grace timer while they run.
+- **Design rule:** the goods and services a tier needs are made and staffed by lower tiers, so a new tier never deadlocks on its own workforce.
 - Each tier supplies its own workforce. From Villagers upward, tiers also generate knowledge, culture or coin, so higher tiers are the engine of progression.
 
 ### Research (the Civilization side)
@@ -377,6 +381,8 @@ All game content is data, not code: adding a good, building, tech or tradition m
 | EVL006 | Every tier's basic needs can be met using only items unlocked by nodes of the same era or earlier |
 | EVL007 | Every display string exists in `locale/en` |
 | EVL008 | Era gateways exist (one tech and one civic per era transition), and every era's nodes need only that era or earlier |
+| EVL009 | Era I buildings declare no `upkeepCoin` (added in M3) |
+| EVL010 | A tier's basic goods and services are produced and staffed only by lower tiers (added in M2) |
 
 ## Presentation layer
 
