@@ -4,7 +4,7 @@ Status: Accepted · Date: 2026-10-18
 
 ## Context
 
-The game will hold about 47 goods, more than 120 buildings, 50 techs, 31 civics and over 40 traditions, and agents will add them in parallel. Content written in code would create merge conflicts in core logic and make modding expensive.
+The game will hold 47 goods, over 100 buildings, 50 techs, 31 civics and 34 traditions, and agents will add them in parallel. Content written in code would create merge conflicts in core logic and make modding expensive.
 
 ## Decision
 
