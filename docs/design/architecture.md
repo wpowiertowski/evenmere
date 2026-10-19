@@ -302,7 +302,7 @@ Culture is a parallel progression, not a bonus stat ([culture tree](culture-tree
 
 All game content is data, not code: adding a good, building, tech or tradition means editing JSON, never touching a system ([ADR-0004](../adr/0004-data-driven-content.md)).
 
-- **Files:** `content/<type>/<id>.json`, one item per file. The types are `goods`, `buildings`, `recipes`, `tiers`, `techs`, `civics`, `traditions`, `festivals`, `greatworks`, `monuments`, `happenings`, `eras` and `terrains`. Maps live in `content/maps/<id>/`.
+- **Files:** `content/<type>/<id>.json`, one item per file. The types are `goods`, `buildings`, `recipes`, `tiers`, `techs`, `civics`, `traditions`, `festivals`, `greatworks`, `monuments`, `happenings`, `eras` and `terrains`. Game-wide tunables live in `content/rules/core.json`, and maps in `content/maps/<id>/`.
 - **IDs:** `snake_case` strings that are unique within their type.
 - **Schemas:** one JSON Schema (draft 2020-12) per type in `content/schemas/`, checked by the linter and usable by editors.
 - **Loading:** the sim loads all files into an immutable `ContentDb` at startup. String IDs become compact typed integer IDs (`GoodId`, `BuildingTypeId`, …), assigned in ordinal string order so the mapping is stable. Decimal quantities in JSON (at most three decimal places) become `Amount` exactly.

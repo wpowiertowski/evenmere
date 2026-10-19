@@ -12,9 +12,9 @@ Projects and their allowed references:
 
 | Project | May reference |
 | --- | --- |
-| `Evenmere.Core` | nothing (BCL only) |
+| `Evenmere.Core` | BCL plus `System.IO.Hashing` only |
 | `Evenmere.Content` | Core, System.Text.Json, JsonSchema.Net |
-| `Evenmere.Sim` | Content, Core, MessagePack, System.IO.Hashing |
+| `Evenmere.Sim` | Content, Core, MessagePack |
 | `Evenmere.Tools` | Sim, Content, Core, System.CommandLine |
 | `Evenmere.Game` (in `game/`) | Sim, Content, Core, Godot |
 | `tests/*` | the project under test, plus test libraries |
@@ -23,7 +23,7 @@ Enforcement:
 
 1. **Project references:** a disallowed reference does not compile.
 2. **Architecture tests** in `Evenmere.Sim.Tests` that reflect over the assemblies:
-   - No Core, Content or Sim assembly references `GodotSharp`.
+   - No Core, Content or Sim assembly references `GodotSharp`, and Core references nothing beyond the BCL and `System.IO.Hashing`.
    - No type under the `Evenmere.Sim.State` namespaces has a field of type `float`, `double`, `decimal`, `Dictionary<,>` or `HashSet<>`.
    - Every `Command` subtype has exactly one handler.
 3. **`Microsoft.CodeAnalysis.BannedApiAnalyzers`** in Core and Sim, with the list in `src/BannedSymbols.txt`.
