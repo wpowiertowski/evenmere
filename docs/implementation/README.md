@@ -56,14 +56,20 @@ The orchestrator is a Claude Code session, or the developer, working through one
 1. **Kick off the milestone.** Read its gate. For M2 and later, dispatch Mx-00 first and merge its refined cards.
 2. **Pick ready tasks:** every dependency is merged and the task's status is `todo`.
 3. **Avoid conflicts.** Never run two tasks at once whose **Owns** globs overlap. Lane-shared files (see below) are allowed only in the sections each card names.
-4. **Dispatch** each ready task to a subagent in an **isolated worktree** on branch `task/<ID>-<slug>`. In Claude Code, use the Agent tool with `isolation: "worktree"`, using the prompt template below. Run independent tasks in parallel, up to about 4–6 at a time.
-5. **Review the report against the card.** Check that every acceptance item has evidence, that the diff stays inside **Owns**, and that no test was weakened.
-6. **Verify:** run `scripts/verify.sh` on the task branch. If it fails, send the failure back to the same agent (SendMessage) instead of starting a new one.
-7. **Merge:**
-   - Before M1-29: `git merge --no-ff task/<ID>-<slug>` into `main`, update the task's status to `done` in the milestone index in the same commit, then push.
-   - From M1-29 onward: push the branch, open a PR titled `<ID>: <title>`, wait for green CI, and squash-merge.
-8. **Handle blockers.** If an agent reports a blocker or an interface or ADR proposal, decide it, writing an ADR if a contract changes, then merge that decision before re-dispatching.
-9. **Close the milestone.** When every task is done, run the gate checks, record the results in the milestone file's **Gate record**, and update the design docs and ADRs with what was learned.
+4. **Dispatch** each ready task to a **Sonnet subagent** in an **isolated worktree**. In Claude Code, use the Agent tool with `model: "sonnet"` and `isolation: "worktree"`, using the prompt template below. Run independent tasks in parallel, up to about 4–6 at a time.
+5. **Review the code, not just the report.** The subagent leaves its changes uncommitted. Read the full diff in its worktree, and check that:
+   - every acceptance item has evidence;
+   - the diff stays inside **Owns**;
+   - no test was weakened;
+   - the code follows AGENTS.md (determinism, layering, conventions);
+   - the design matches the card and the docs.
+6. **Verify:** run `scripts/verify.sh` in the worktree yourself.
+7. **Feedback loop:** if the review or the verification finds anything, send specific, actionable feedback to the **same** subagent (SendMessage) and repeat steps 5–6. Don't fix it yourself, and don't start a fresh agent.
+8. **Commit and merge** once the change is approved:
+   - Before M1-29: commit in the worktree as `<ID>: <title>`, `git merge --no-ff` into `main`, update the task's status to `done` in the milestone index, then push.
+   - From M1-29 onward: commit, push the branch, open a PR titled `<ID>: <title>`, wait for green CI, and squash-merge.
+9. **Handle blockers.** If an agent reports a blocker or an interface or ADR proposal, decide it, writing an ADR if a contract changes, then merge that decision before re-dispatching.
+10. **Close the milestone.** When every task is done, run the gate checks, record the results in the milestone file's **Gate record**, and update the design docs and ADRs with what was learned.
 
 ### Status values
 
@@ -89,11 +95,13 @@ While you work:
 - Follow the steps in order. If a step is wrong or impossible, explain it in your report
   rather than inventing a different design.
 - Run scripts/verify.sh before you finish; it must pass.
+- If dotnet is not on PATH, run: export PATH=/usr/local/share/dotnet:$PATH
 
 When you finish:
-- Commit on your current branch with the message "{ID}: {Title}" and a body explaining
-  what and why.
-- Reply using the "Reporting back" format in AGENTS.md.
+- Do NOT commit. Leave every change uncommitted in this worktree. The orchestrator
+  reviews your diff, may send you feedback to address, and commits once it is approved.
+- Reply using the "Reporting back" format in AGENTS.md, and start with the absolute path
+  of your worktree.
 ```
 
 ## Shared files and registration points

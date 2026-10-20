@@ -94,9 +94,10 @@ A task is done when all of these hold:
 
 ## Git workflow
 
-- **Branches:** each task works on `task/<ID>-<slug>`, usually in its own git worktree, created by the orchestrator.
-- **Commit message:** `<ID>: <imperative summary>` with a body explaining what and why. When Claude made the commit, include the attribution trailer the session specifies.
-- **Until GitHub CI exists** (task M1-29), the orchestrator verifies each task branch with `scripts/verify.sh`, merges it into `main` with `--no-ff`, and pushes.
+- **Branches:** each task works in its own git worktree, created by the orchestrator.
+- **Implementing agents do not commit.** Leave your changes uncommitted in the worktree. The orchestrator reviews the full diff, sends feedback for you to address, and commits once the change is approved.
+- **Commit message** (written by the orchestrator): `<ID>: <imperative summary>` with a body explaining what and why, plus the attribution trailer the session specifies.
+- **Until GitHub CI exists** (task M1-29), the orchestrator verifies each task with `scripts/verify.sh`, commits, merges into `main` with `--no-ff`, and pushes.
 - **After M1-29,** every change lands through a pull request: CI must be green, and `main` is protected, so direct pushes are blocked.
 - Never rewrite published history on `main`.
 

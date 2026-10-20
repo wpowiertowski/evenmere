@@ -66,7 +66,7 @@
    - Four-space indent for C#, two-space for JSON, LF line endings, final newline.
    - File-scoped namespaces (warning), `_camelCase` private fields, and `var` only when the type is apparent.
 8. Append to `.gitignore`, keeping the existing Godot entries: `bin/`, `obj/`, `*.user`, `.vs/`, `.idea/`, `TestResults/`, `artifacts/`, `game/content/` (staged by export) and `*.evsave`, with a negated exception `!tests/fixtures/**/*.evsave`.
-9. Write `scripts/verify.sh` (bash, `set -euo pipefail`, executable). It runs from the repo root in these marked sections:
+9. Write `scripts/verify.sh` (bash, `set -euo pipefail`, executable). It `cd`s to the repo root. If `dotnet` isn't on `PATH` but `/usr/local/share/dotnet/dotnet` exists, it prepends that directory. It runs in these marked sections:
    - `# --- section: build ---`: `dotnet restore`, then `dotnet build -c Release --no-restore`
    - `# --- section: test ---`: `dotnet test -c Release --no-build`
    - `# --- section: lint ---`: placeholder `echo "lint: not yet wired"`
