@@ -210,6 +210,10 @@ From M2 onward, every task lands through a **PR with green CI**.
 
 **Goal:** the island reveals itself over time through expeditions, and discoveries reward curiosity.
 
+**Carried over from M1-04:**
+- `revealCoastline` only sets a pending flag (`ProgressionState.CoastlineRevealed`); consume it here.
+- The `discovery` modifier target matches nothing until `ModifierContext` gains a discovery field.
+
 **Steps:**
 
 1. **Fog:** per region. The start region and the coastline in view start revealed. Placement on a fogged tile is rejected (`Fogged`).
@@ -231,6 +235,10 @@ From M2 onward, every task lands through a **PR with green CI**.
 **Reads:** culture-tree.md (§How culture works, §Traditions, §Slots, §Architectural styles).
 
 **Goal:** tradition cards in typed slots, swappable at any time, whose effects apply through the modifier index.
+
+**Carried over from M1-04:**
+- `ModifiersSystem` has no removal path yet. Add "remove all modifiers of source X" to `ModifiersSystem` and `IProgressionService`, because unslotting needs it, and so do a festival ending and a monument being demolished.
+- Tradition unlocks and slot counts are recorded but only exposed on the concrete `ProgressionQueries`. Add them to `IProgressionQueries` with an ADR-0011 addendum.
 
 **Steps:**
 

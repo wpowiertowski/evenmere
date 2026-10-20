@@ -94,6 +94,8 @@ Both eras may ship as free updates after the public build.
 
 **Goal:** the complete Enlightenment era as data.
 
+**Carried over from M1-04:** building `aura` specs (the Bathhouse) are parsed but not evaluated by any system. Implement aura evaluation (coverage along roads, like services) before or with this content.
+
 **Steps:**
 
 1. Add 8 goods and 5 chains.
@@ -204,6 +206,8 @@ Both eras may ship as free updates after the public build.
 | sim + content | M5-08 | `src/Evenmere.Sim/Systems/Research/Repeatable*`, `src/Evenmere.Sim/Systems/Culture/Repeatable*`, `content/techs/scientific_societies.json`, `content/civics/living_heritage.json` |
 
 **Goal:** a calm, open endgame.
+
+**Carried over from M1-04:** effects are idempotent per `EffectSource`, so a repeatable node currently applies only once. Add a level to `EffectSource` (or key repeatable applications by level) with an ADR-0011 addendum.
 
 **Steps:**
 
