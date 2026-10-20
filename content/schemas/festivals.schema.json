@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evenmere.example/schemas/festivals.schema.json",
+  "title": "Festival",
+  "description": "A festival, held at a festival ground. One file per festival in content/festivals/<id>.json.",
+  "type": "object",
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "seasons": {
+      "description": "The seasons it can be held in; leave out for any season.",
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/season" },
+      "uniqueItems": true
+    },
+    "cost": {
+      "description": "What it costs to hold; it must ask for something.",
+      "$ref": "common.schema.json#/$defs/cost",
+      "minProperties": 1
+    },
+    "days": { "description": "How many days it runs.", "type": "integer", "minimum": 1, "maximum": 365 },
+    "culturePerDay": { "description": "Culture it yields per day while running.", "$ref": "common.schema.json#/$defs/quantityOrZero" },
+    "seasonBonus": {
+      "description": "An extra culture percentage in one season.",
+      "type": "object",
+      "properties": {
+        "season": { "$ref": "common.schema.json#/$defs/season" },
+        "percent": { "type": "integer", "minimum": -100, "maximum": 1000 }
+      },
+      "required": ["season", "percent"],
+      "additionalProperties": false
+    },
+    "effects": { "description": "Effects (typically modifiers) active while it runs.", "$ref": "common.schema.json#/$defs/effects" },
+    "start": {
+      "description": "Whether the festival is available from the start without an unlockFestival effect.",
+      "type": "boolean"
+    }
+  },
+  "required": ["id", "cost", "days", "culturePerDay"],
+  "additionalProperties": false
+}

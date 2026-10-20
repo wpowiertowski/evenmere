@@ -1,0 +1,16 @@
+{
+  "id": "town_charter",
+  "era": 1,
+  "cost": 160,
+  "requires": ["net_weaving"],
+  "effects": [
+    { "unlockFeature": "expeditions" },
+    { "unlockTier": "townsfolk" }
+  ],
+  "inspiration": {
+    "when": {
+      "population": { "tier": "villagers", "atLeast": 150 }
+    }
+  },
+  "gateway": true
+}

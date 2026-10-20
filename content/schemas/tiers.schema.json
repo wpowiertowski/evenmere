@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evenmere.example/schemas/tiers.schema.json",
+  "title": "Population tier",
+  "description": "A population tier. Houses of one tier upgrade in place to the next. One file per tier in content/tiers/<id>.json.",
+  "type": "object",
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "order": {
+      "description": "The tier's rank, 1 for the lowest; unique across tiers.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64
+    },
+    "era": { "$ref": "common.schema.json#/$defs/era" },
+    "capacity": { "description": "Residents per house.", "type": "integer", "minimum": 1, "maximum": 1000 },
+    "advanceFrom": {
+      "description": "The tier a house advances from to reach this one; leave out for the lowest tier.",
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "upgradeCost": {
+      "description": "The cost of advancing a house into this tier.",
+      "$ref": "common.schema.json#/$defs/cost"
+    },
+    "basicNeeds": {
+      "description": "Needs a house must meet to stay at this tier.",
+      "type": "object",
+      "properties": {
+        "goods": {
+          "description": "Goods per 1,000 residents per day.",
+          "$ref": "common.schema.json#/$defs/goodAmounts"
+        },
+        "services": {
+          "description": "Services a building must provide within road range.",
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/serviceKind" },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "comfortNeeds": {
+      "description": "Goods per 1,000 residents per day that raise this tier's output when met.",
+      "$ref": "common.schema.json#/$defs/goodAmounts"
+    },
+    "outputs": { "$ref": "common.schema.json#/$defs/outputs" },
+    "start": {
+      "description": "Whether the tier is available from the start without an unlockTier effect.",
+      "type": "boolean"
+    }
+  },
+  "required": ["id", "order", "era", "capacity"],
+  "additionalProperties": false
+}

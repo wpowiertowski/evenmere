@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evenmere.example/schemas/happenings.schema.json",
+  "title": "Happening",
+  "description": "A gentle world event with choices. One file per happening in content/happenings/<id>.json.",
+  "type": "object",
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "trigger": { "description": "The condition that makes the happening eligible.", "$ref": "common.schema.json#/$defs/condition" },
+    "chancePerMille": {
+      "description": "The chance per day, in per-mille, that an eligible happening occurs.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "cooldownDays": { "description": "Days before it can occur again.", "type": "integer", "minimum": 0, "maximum": 3650 },
+    "options": {
+      "description": "The choices; at least one. Never harsh.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "effects": { "$ref": "common.schema.json#/$defs/effects" },
+          "durationDays": {
+            "description": "For modifiers, how many days they last; 0 means they are permanent.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3650
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "defaultOption": {
+      "description": "The index of the option applied if the player does not choose; must be less than the number of options.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000
+    }
+  },
+  "required": ["id", "trigger", "chancePerMille", "cooldownDays", "options"],
+  "additionalProperties": false
+}

@@ -1,0 +1,5 @@
+{
+  "id": "catch_fish",
+  "outputs": { "fish": 1 },
+  "cycleSeconds": 20
+}

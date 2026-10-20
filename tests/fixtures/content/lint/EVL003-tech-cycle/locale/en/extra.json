@@ -1,0 +1,8 @@
+{
+  "tech.ring_a.name": "Ring A",
+  "tech.ring_a.desc": "A tech that is part of a cycle.",
+  "tech.ring_b.name": "Ring B",
+  "tech.ring_b.desc": "A tech that is part of a cycle.",
+  "tech.ring_c.name": "Ring C",
+  "tech.ring_c.desc": "A tech that is part of a cycle."
+}

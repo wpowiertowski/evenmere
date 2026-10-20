@@ -1,0 +1,10 @@
+{
+  "id": "townsfolk",
+  "order": 3,
+  "era": 1,
+  "capacity": 15,
+  "advanceFrom": "villagers",
+  "basicNeeds": {
+    "services": ["market"]
+  }
+}

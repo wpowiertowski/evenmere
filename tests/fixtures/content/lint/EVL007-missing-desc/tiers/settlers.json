@@ -1,0 +1,11 @@
+{
+  "id": "settlers",
+  "order": 1,
+  "era": 1,
+  "capacity": 6,
+  "basicNeeds": {
+    "goods": { "fish": 4, "wood": 3 },
+    "services": ["market"]
+  },
+  "start": true
+}

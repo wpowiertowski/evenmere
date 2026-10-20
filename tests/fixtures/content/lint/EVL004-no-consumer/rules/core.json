@@ -1,0 +1,17 @@
+{
+  "cartTicksPerTile": 2,
+  "outputBuffer": 4,
+  "cartLoad": 2,
+  "declineGraceDays": 10,
+  "advanceStreakDays": 3,
+  "inspirationDiscountPerMille": 400,
+  "marketGating": true,
+  "seasons": {
+    "seasonal": {
+      "spring": 1000,
+      "summer": 1200,
+      "autumn": 1100,
+      "winter": 700
+    }
+  }
+}

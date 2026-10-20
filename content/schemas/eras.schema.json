@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evenmere.example/schemas/eras.schema.json",
+  "title": "Era",
+  "description": "An era. Era N+1 begins when the tech gateway and the civic gateway of era N are complete. One file per era in content/eras/<id>.json.",
+  "type": "object",
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "order": {
+      "description": "The era's number, 1 for the first; unique across eras. Items name an era by this number.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64
+    },
+    "requires": {
+      "description": "The gateways that must be complete before the era begins. Every era after the first has them; the first does not.",
+      "type": "object",
+      "properties": {
+        "tech": {
+          "description": "A tech with gateway: true that belongs to the previous era.",
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "civic": {
+          "description": "A civic with gateway: true that belongs to the previous era.",
+          "$ref": "common.schema.json#/$defs/id"
+        }
+      },
+      "required": ["tech", "civic"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["id", "order"],
+  "additionalProperties": false
+}

@@ -1,0 +1,15 @@
+{
+  "id": "village_moot",
+  "era": 1,
+  "cost": 140,
+  "effects": [
+    { "traditionSlot": "hearth" },
+    { "unlockTradition": "common_hearth" }
+  ],
+  "inspiration": {
+    "when": {
+      "festivalsHeld": { "atLeast": 2 }
+    }
+  },
+  "gateway": true
+}

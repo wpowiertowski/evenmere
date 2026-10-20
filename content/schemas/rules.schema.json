@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evenmere.example/schemas/rules.schema.json",
+  "title": "Game rules",
+  "description": "The game-wide tunables in content/rules/core.json. Systems read tunables from here and never from constants. The file has no id.",
+  "type": "object",
+  "properties": {
+    "cartTicksPerTile": {
+      "description": "Ticks a cart takes to cross one tile of road cost 1000.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "outputBuffer": {
+      "description": "The most a producer's output buffer holds, per good.",
+      "$ref": "common.schema.json#/$defs/quantity"
+    },
+    "cartLoad": {
+      "description": "The amount one cart carries; must not exceed outputBuffer.",
+      "$ref": "common.schema.json#/$defs/quantity"
+    },
+    "declineGraceDays": {
+      "description": "Days a basic need may stay unmet before a house steps down a tier.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3650
+    },
+    "advanceStreakDays": {
+      "description": "Consecutive days all basic needs must be met before a house advances.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3650
+    },
+    "inspirationDiscountPerMille": {
+      "description": "The share of a node's full cost an inspiration removes, in per-mille.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "marketGating": {
+      "description": "Whether a house can draw goods only inside a market's coverage.",
+      "type": "boolean"
+    },
+    "seasons": {
+      "description": "Productivity multipliers per season, in per-mille, for buildings that carry the tag named by the key.",
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9]*(_[a-z0-9]+)*$": {
+          "type": "object",
+          "properties": {
+            "spring": { "type": "integer", "minimum": 0, "maximum": 10000 },
+            "summer": { "type": "integer", "minimum": 0, "maximum": 10000 },
+            "autumn": { "type": "integer", "minimum": 0, "maximum": 10000 },
+            "winter": { "type": "integer", "minimum": 0, "maximum": 10000 }
+          },
+          "required": ["spring", "summer", "autumn", "winter"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "cartTicksPerTile", "outputBuffer", "cartLoad", "declineGraceDays", "advanceStreakDays",
+    "inspirationDiscountPerMille", "marketGating"
+  ],
+  "additionalProperties": false
+}

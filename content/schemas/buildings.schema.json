@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evenmere.example/schemas/buildings.schema.json",
+  "title": "Building",
+  "description": "A type of building, including houses, roads and bridges. A multi-stage monument or wonder is a building plus a monument file that names it. Buildings never name their own unlock: a tech, civic or monument lists them in its effects, or the building sets start. One file per building in content/buildings/<id>.json.",
+  "type": "object",
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "category": { "description": "What the building is for. Systems branch on this, and modifiers can target it.", "$ref": "common.schema.json#/$defs/buildingCategory" },
+    "era": { "$ref": "common.schema.json#/$defs/era" },
+    "footprint": {
+      "description": "Width and height in tiles before rotation.",
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1, "maximum": 64 },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "placement": {
+      "description": "Where the building may stand and what it needs nearby. Leave out for any buildable terrain with road access.",
+      "type": "object",
+      "properties": {
+        "terrain": {
+          "description": "The terrains it may stand on; empty or absent means any buildable terrain.",
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/id" },
+          "uniqueItems": true
+        },
+        "roadAccess": { "description": "Whether it needs a road beside it to work; true when absent.", "type": "boolean" },
+        "coastline": { "description": "Whether it must stand on the coast.", "type": "boolean" },
+        "riverside": { "description": "Whether it must stand beside a river.", "type": "boolean" },
+        "deposit": { "description": "The deposit it must stand over.", "$ref": "common.schema.json#/$defs/depositKind" },
+        "fertility": {
+          "description": "Enough of the footprint must be fertile for a crop.",
+          "type": "object",
+          "properties": {
+            "crop": { "$ref": "common.schema.json#/$defs/cropKind" },
+            "minPercent": { "description": "The least share of footprint tiles that must be fertile.", "type": "integer", "minimum": 1, "maximum": 100 }
+          },
+          "required": ["crop", "minPercent"],
+          "additionalProperties": false
+        },
+        "areaYield": {
+          "description": "How a gatherer's yield is measured from the map around it. A footprint_fertility yield needs placement.fertility, and a footprint_deposit yield needs placement.deposit.",
+          "type": "object",
+          "properties": {
+            "kind": { "$ref": "common.schema.json#/$defs/areaYieldKind" },
+            "terrain": {
+              "description": "For kind radius: the terrains that count.",
+              "type": "array",
+              "items": { "$ref": "common.schema.json#/$defs/id" },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "radius": { "description": "For kind radius: the search radius in tiles.", "type": "integer", "minimum": 1, "maximum": 64 },
+            "fullAt": { "description": "For kind radius: the number of counted tiles that gives a full yield.", "type": "integer", "minimum": 1, "maximum": 10000 },
+            "exclusive": { "description": "For kind radius: whether tiles already claimed by a lower-ID building are skipped.", "type": "boolean" }
+          },
+          "required": ["kind"],
+          "if": {
+            "properties": { "kind": { "const": "radius" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["terrain", "radius", "fullAt"]
+          },
+          "else": {
+            "properties": { "terrain": false, "radius": false, "fullAt": false, "exclusive": false }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "cost": { "description": "What the building costs to build; free when absent. The reserved key coin is coin.", "$ref": "common.schema.json#/$defs/cost" },
+    "buildDays": { "description": "Build time in days; 0 for roads and pre-placed buildings.", "type": "integer", "minimum": 0, "maximum": 100000 },
+    "workforce": {
+      "description": "The workers it needs, all of one tier.",
+      "type": "object",
+      "properties": {
+        "tier": { "$ref": "common.schema.json#/$defs/id" },
+        "count": { "type": "integer", "minimum": 1, "maximum": 1000000 }
+      },
+      "required": ["tier", "count"],
+      "additionalProperties": false
+    },
+    "recipe": { "description": "The recipe it runs, if it is a producer. A recipe a building names is available with that building.", "$ref": "common.schema.json#/$defs/id" },
+    "storage": {
+      "description": "Storehouse behaviour: it stores goods in the island pool and sends carts.",
+      "type": "object",
+      "properties": {
+        "reach": { "description": "How far its carts reach, in road-distance tiles.", "type": "integer", "minimum": 1, "maximum": 1000 },
+        "carts": { "description": "How many carts it owns.", "type": "integer", "minimum": 1, "maximum": 1000 }
+      },
+      "required": ["reach", "carts"],
+      "additionalProperties": false
+    },
+    "service": {
+      "description": "A service the building provides within road range.",
+      "type": "object",
+      "properties": {
+        "kind": { "$ref": "common.schema.json#/$defs/serviceKind" },
+        "coverage": { "description": "The coverage radius, in road-distance tiles.", "type": "integer", "minimum": 1, "maximum": 1000 }
+      },
+      "required": ["kind", "coverage"],
+      "additionalProperties": false
+    },
+    "outputs": { "description": "Knowledge, culture, coin and creativity it produces per day.", "$ref": "common.schema.json#/$defs/outputs" },
+    "slots": {
+      "description": "Great-work display slots it offers. The type is a great-work type ID, or any for slots that take any type. Each type is listed once.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "$ref": "common.schema.json#/$defs/id" },
+          "count": { "type": "integer", "minimum": 1, "maximum": 1000000 }
+        },
+        "required": ["type", "count"],
+        "additionalProperties": false
+      }
+    },
+    "upgradeOf": { "description": "The building this one upgrades in place.", "$ref": "common.schema.json#/$defs/id" },
+    "fuel": {
+      "description": "Fuel the building burns each day.",
+      "type": "object",
+      "properties": {
+        "good": { "$ref": "common.schema.json#/$defs/id" },
+        "perDay": { "$ref": "common.schema.json#/$defs/quantity" }
+      },
+      "required": ["good", "perDay"],
+      "additionalProperties": false
+    },
+    "upkeepCoin": { "description": "Coin upkeep per day (Era II onward only).", "$ref": "common.schema.json#/$defs/quantityOrZero" },
+    "attractiveness": { "description": "Attractiveness it adds; negative for heavy industry.", "type": "integer", "minimum": -1000, "maximum": 1000 },
+    "lodging": { "description": "Visitors it lodges per day.", "type": "integer", "minimum": 0, "maximum": 1000000 },
+    "roadCost": { "description": "For road types, the travel cost per tile in thousandths (dirt road 1000).", "type": "integer", "minimum": 1, "maximum": 1000000 },
+    "bridgeSpan": { "description": "For bridge road types, the longest river span in tiles. A bridge also needs roadCost.", "type": "integer", "minimum": 1, "maximum": 64 },
+    "siteBonus": {
+      "description": "Bonuses that apply to this building only, depending on where it stands.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "when": { "$ref": "common.schema.json#/$defs/siteCondition" },
+          "stat": { "$ref": "common.schema.json#/$defs/stat" },
+          "percent": { "$ref": "common.schema.json#/$defs/percent" }
+        },
+        "required": ["when", "stat", "percent"],
+        "additionalProperties": false
+      }
+    },
+    "aura": {
+      "description": "A modifier the building spreads over the buildings or residents within its road coverage. The target is required and never island-wide.",
+      "type": "object",
+      "properties": {
+        "stat": { "$ref": "common.schema.json#/$defs/stat" },
+        "percent": { "$ref": "common.schema.json#/$defs/percent" },
+        "target": { "$ref": "common.schema.json#/$defs/modifierTarget" },
+        "coverage": { "type": "integer", "minimum": 1, "maximum": 1000 }
+      },
+      "required": ["stat", "percent", "target", "coverage"],
+      "additionalProperties": false
+    },
+    "unique": { "description": "Whether only one may exist per island.", "type": "boolean" },
+    "start": { "description": "Whether the building is available from the start. Otherwise exactly one tech, civic or monument unlocks it.", "type": "boolean" },
+    "tags": { "$ref": "common.schema.json#/$defs/tags" }
+  },
+  "required": ["id", "category", "era", "footprint", "buildDays"],
+  "dependentRequired": {
+    "bridgeSpan": ["roadCost"]
+  },
+  "additionalProperties": false
+}

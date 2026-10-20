@@ -1,0 +1,364 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evenmere.example/schemas/common.schema.json",
+  "title": "Evenmere shared definitions",
+  "description": "Definitions that the per-type schemas share. Every closed vocabulary lives here once; a test compares each list with ContentNames in the code, so a vocabulary change fails until this file is updated.",
+  "$defs": {
+    "id": {
+      "description": "A snake_case ID: lowercase letters and digits in groups separated by single underscores, starting with a letter, at most 64 characters.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(_[a-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "tags": {
+      "description": "Free-form snake_case tags that systems and modifiers select on.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/id" },
+      "uniqueItems": true
+    },
+    "era": {
+      "description": "An era number (the era's order, 1 for the first). It must name an era that content/eras defines.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64
+    },
+    "count": {
+      "description": "A whole-number threshold for a condition.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000
+    },
+    "percent": {
+      "description": "A whole-number percentage change; negative reduces. Percentages on one stat add before applying once.",
+      "type": "integer",
+      "minimum": -1000,
+      "maximum": 10000
+    },
+    "quantity": {
+      "description": "A quantity above zero, written as a plain decimal with at most three decimal places and no exponent.",
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "multipleOf": 0.001
+    },
+    "quantityOrZero": {
+      "description": "A quantity of zero or more, written as a plain decimal with at most three decimal places and no exponent.",
+      "type": "number",
+      "minimum": 0,
+      "multipleOf": 0.001
+    },
+    "goodAmounts": {
+      "description": "A map of good ID to a quantity above zero.",
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9]*(_[a-z0-9]+)*$": { "$ref": "#/$defs/quantity" }
+      },
+      "additionalProperties": false
+    },
+    "cost": {
+      "description": "A bill of materials: a map of good ID to quantity. The reserved key coin is coin rather than a good.",
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9]*(_[a-z0-9]+)*$": { "$ref": "#/$defs/quantity" }
+      },
+      "additionalProperties": false
+    },
+    "outputs": {
+      "description": "Knowledge, culture and coin produced, plus creativity per great-work type. Per day for a building; per 1,000 residents per day for a tier.",
+      "type": "object",
+      "properties": {
+        "knowledge": { "$ref": "#/$defs/quantityOrZero" },
+        "culture": { "$ref": "#/$defs/quantityOrZero" },
+        "coin": { "$ref": "#/$defs/quantityOrZero" },
+        "creativity": {
+          "description": "Creativity per day by great-work type ID.",
+          "type": "object",
+          "patternProperties": {
+            "^[a-z][a-z0-9]*(_[a-z0-9]+)*$": { "$ref": "#/$defs/quantity" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "goodCategory": { "enum": ["raw", "intermediate", "construction", "consumer"] },
+    "buildingCategory": {
+      "enum": ["production", "residence", "infrastructure", "service", "knowledge", "culture", "decoration", "monument", "wonder"]
+    },
+    "serviceKind": { "enum": ["market", "shrine", "tavern", "school", "theatre", "concert_hall", "gas"] },
+    "depositKind": { "enum": ["stone", "clay", "iron", "coal", "copper"] },
+    "cropKind": { "enum": ["grain", "flax", "hops", "apples", "grapes", "tea", "madder", "sugar_beet"] },
+    "terrainAccess": {
+      "enum": ["narrow_rivers", "wide_rivers", "hill_farming", "marsh_drainage", "highlands", "deep_water", "reefs"]
+    },
+    "featureKind": {
+      "description": "The features that need no argument. The fourth feature, great_works, is written great_works:<type> (see greatWorksFeature).",
+      "enum": ["expeditions", "coin", "visitors"]
+    },
+    "greatWorksFeature": {
+      "description": "Creating one type of great work: great_works:<great-work type ID>.",
+      "type": "string",
+      "pattern": "^great_works:[a-z][a-z0-9]*(_[a-z0-9]+)*$"
+    },
+    "traditionSlotType": { "enum": ["hearth", "craft", "heritage", "wild"] },
+    "stat": {
+      "enum": [
+        "productivity", "consumption", "constructionSpeed", "capacity", "workforce", "output.knowledge", "output.culture",
+        "output.coin", "attractiveness", "visitors", "cartSpeed", "materialCost", "declineGrace", "expeditionSpeed",
+        "comfortBonus", "festivalCost", "festivalDuration", "settlerArrival"
+      ]
+    },
+    "discoveryKind": {
+      "enum": [
+        "stone_deposit", "clay_deposit", "iron_deposit", "coal_deposit", "copper_deposit", "natural_wonder", "ruin", "shipwreck"
+      ]
+    },
+    "discoveryTarget": {
+      "description": "The discoveries that sit on the map, which a modifier can target.",
+      "enum": ["natural_wonder", "ruin", "shipwreck"]
+    },
+    "areaYieldKind": { "enum": ["radius", "footprint_fertility", "footprint_deposit"] },
+    "greatWorkSource": { "enum": ["creativity", "discovery"] },
+    "season": { "enum": ["spring", "summer", "autumn", "winter"] },
+
+    "modifierTarget": {
+      "description": "What a modifier or aura applies to: an object with exactly one key. Leaving a modifier's target out means island-wide.",
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "building": { "$ref": "#/$defs/id" },
+        "tag": { "$ref": "#/$defs/id" },
+        "category": { "$ref": "#/$defs/buildingCategory" },
+        "tier": { "$ref": "#/$defs/id" },
+        "good": { "$ref": "#/$defs/id" },
+        "discovery": { "$ref": "#/$defs/discoveryTarget" }
+      },
+      "additionalProperties": false
+    },
+
+    "siteCondition": {
+      "description": "Where a building must stand for a siteBonus to apply: an object with exactly one key.",
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "terrain": {
+          "description": "The building stands on one of these terrains.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/id" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "near": {
+          "description": "A building, or any building with a tag, stands within the radius (in tiles).",
+          "type": "object",
+          "properties": {
+            "building": { "$ref": "#/$defs/id" },
+            "tag": { "$ref": "#/$defs/id" },
+            "radius": { "type": "integer", "minimum": 1, "maximum": 64 }
+          },
+          "required": ["radius"],
+          "anyOf": [{ "required": ["building"] }, { "required": ["tag"] }],
+          "dependentSchemas": {
+            "building": { "properties": { "tag": false } }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "effect": {
+      "description": "Something a tech, civic, tradition, festival, monument or happening does: an object with exactly one key, the effect kind.",
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "unlockBuilding": { "$ref": "#/$defs/id" },
+        "unlockRecipe": { "$ref": "#/$defs/id" },
+        "unlockTier": { "$ref": "#/$defs/id" },
+        "unlockTradition": { "$ref": "#/$defs/id" },
+        "unlockFestival": { "$ref": "#/$defs/id" },
+        "unlockTerrainAccess": { "$ref": "#/$defs/terrainAccess" },
+        "unlockFeature": {
+          "anyOf": [{ "$ref": "#/$defs/featureKind" }, { "$ref": "#/$defs/greatWorksFeature" }]
+        },
+        "traditionSlot": { "$ref": "#/$defs/traditionSlotType" },
+        "modifier": {
+          "description": "Changes a stat by a percentage, optionally only for a target and while a condition holds.",
+          "type": "object",
+          "properties": {
+            "stat": { "$ref": "#/$defs/stat" },
+            "target": { "$ref": "#/$defs/modifierTarget" },
+            "percent": { "$ref": "#/$defs/percent" },
+            "when": { "$ref": "#/$defs/condition" }
+          },
+          "required": ["stat", "percent"],
+          "additionalProperties": false
+        },
+        "grantGoods": {
+          "description": "Grants goods once.",
+          "$ref": "#/$defs/goodAmounts",
+          "minProperties": 1
+        },
+        "grantPoints": {
+          "description": "Grants points once, by kind of point.",
+          "type": "object",
+          "properties": {
+            "knowledge": { "$ref": "#/$defs/quantity" },
+            "culture": { "$ref": "#/$defs/quantity" },
+            "coin": { "$ref": "#/$defs/quantity" }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        },
+        "revealCoastline": { "const": true },
+        "requestFestival": {
+          "description": "Makes the townsfolk ask for a festival, which costs less if the player agrees.",
+          "type": "object",
+          "properties": {
+            "festival": { "$ref": "#/$defs/id" },
+            "discountPercent": { "type": "integer", "minimum": 1, "maximum": 100 }
+          },
+          "required": ["festival", "discountPercent"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "effects": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/effect" }
+    },
+
+    "condition": {
+      "description": "A test on the game state: an object with exactly one key, the condition kind.",
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "count": {
+          "description": "Buildings standing, picked by building, tag or category (at most one) and optionally only on a terrain. A terrain alone counts every building on it.",
+          "type": "object",
+          "properties": {
+            "building": { "$ref": "#/$defs/id" },
+            "tag": { "$ref": "#/$defs/id" },
+            "category": { "$ref": "#/$defs/buildingCategory" },
+            "terrain": { "$ref": "#/$defs/id" },
+            "atLeast": { "$ref": "#/$defs/count" }
+          },
+          "required": ["atLeast"],
+          "anyOf": [
+            { "required": ["building"] },
+            { "required": ["tag"] },
+            { "required": ["category"] },
+            { "required": ["terrain"] }
+          ],
+          "dependentSchemas": {
+            "building": { "properties": { "tag": false, "category": false } },
+            "tag": { "properties": { "category": false } }
+          },
+          "additionalProperties": false
+        },
+        "produced": {
+          "description": "Cumulative production of a good.",
+          "type": "object",
+          "properties": { "good": { "$ref": "#/$defs/id" }, "atLeast": { "$ref": "#/$defs/quantity" } },
+          "required": ["good", "atLeast"],
+          "additionalProperties": false
+        },
+        "consumed": {
+          "description": "Cumulative consumption of a good.",
+          "type": "object",
+          "properties": { "good": { "$ref": "#/$defs/id" }, "atLeast": { "$ref": "#/$defs/quantity" } },
+          "required": ["good", "atLeast"],
+          "additionalProperties": false
+        },
+        "stock": {
+          "description": "The goods in the island pool right now.",
+          "type": "object",
+          "properties": { "good": { "$ref": "#/$defs/id" }, "atLeast": { "$ref": "#/$defs/quantity" } },
+          "required": ["good", "atLeast"],
+          "additionalProperties": false
+        },
+        "population": {
+          "description": "Residents of one tier, or all residents without a tier.",
+          "type": "object",
+          "properties": { "tier": { "$ref": "#/$defs/id" }, "atLeast": { "$ref": "#/$defs/count" } },
+          "required": ["atLeast"],
+          "additionalProperties": false
+        },
+        "roadTiles": {
+          "description": "Road tiles laid, of one road building type or of any.",
+          "type": "object",
+          "properties": { "road": { "$ref": "#/$defs/id" }, "atLeast": { "$ref": "#/$defs/count" } },
+          "required": ["atLeast"],
+          "additionalProperties": false
+        },
+        "expeditions": {
+          "type": "object",
+          "properties": { "atLeast": { "$ref": "#/$defs/count" } },
+          "required": ["atLeast"],
+          "additionalProperties": false
+        },
+        "festivalsHeld": {
+          "type": "object",
+          "properties": { "atLeast": { "$ref": "#/$defs/count" } },
+          "required": ["atLeast"],
+          "additionalProperties": false
+        },
+        "greatWorks": {
+          "description": "Great works created, or only those on display with displayed: true, of one type or of any.",
+          "type": "object",
+          "properties": {
+            "type": { "$ref": "#/$defs/id" },
+            "displayed": { "type": "boolean" },
+            "atLeast": { "$ref": "#/$defs/count" }
+          },
+          "required": ["atLeast"],
+          "additionalProperties": false
+        },
+        "visitorsPerDay": {
+          "type": "object",
+          "properties": { "atLeast": { "$ref": "#/$defs/count" } },
+          "required": ["atLeast"],
+          "additionalProperties": false
+        },
+        "researched": { "$ref": "#/$defs/id" },
+        "adopted": { "$ref": "#/$defs/id" },
+        "discovered": {
+          "description": "Discoveries made: either of a kind, or of regions of a terrain. Exactly one of kind or region.",
+          "type": "object",
+          "properties": {
+            "kind": { "$ref": "#/$defs/discoveryKind" },
+            "region": { "$ref": "#/$defs/id" },
+            "atLeast": { "$ref": "#/$defs/count" }
+          },
+          "required": ["atLeast"],
+          "anyOf": [{ "required": ["kind"] }, { "required": ["region"] }],
+          "dependentSchemas": {
+            "kind": { "properties": { "region": false } }
+          },
+          "additionalProperties": false
+        },
+        "season": { "$ref": "#/$defs/season" },
+        "era": { "$ref": "#/$defs/id" },
+        "all": {
+          "description": "Every sub-condition holds.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/condition" },
+          "minItems": 1
+        },
+        "any": {
+          "description": "At least one sub-condition holds.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/condition" },
+          "minItems": 1
+        },
+        "not": { "$ref": "#/$defs/condition" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

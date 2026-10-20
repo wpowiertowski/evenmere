@@ -1,0 +1,5 @@
+{
+  "id": "enlightenment",
+  "order": 3,
+  "requires": { "tech": "natural_philosophy", "civic": "humanism" }
+}

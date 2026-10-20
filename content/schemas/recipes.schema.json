@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evenmere.example/schemas/recipes.schema.json",
+  "title": "Recipe",
+  "description": "A production recipe: inputs to outputs over a cycle. The building supplies the workforce. One file per recipe in content/recipes/<id>.json.",
+  "type": "object",
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "inputs": {
+      "description": "Goods consumed per cycle; leave out for gatherers.",
+      "$ref": "common.schema.json#/$defs/goodAmounts"
+    },
+    "outputs": {
+      "description": "Goods produced per cycle; at least one.",
+      "$ref": "common.schema.json#/$defs/goodAmounts",
+      "minProperties": 1
+    },
+    "cycleSeconds": {
+      "description": "Game seconds per cycle at 100% productivity.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 86400
+    },
+    "start": {
+      "description": "Only needed for a recipe that no building names in its recipe field: available from the start without an unlockRecipe effect. A recipe that a building names is available with that building.",
+      "type": "boolean"
+    }
+  },
+  "required": ["id", "outputs", "cycleSeconds"],
+  "additionalProperties": false
+}

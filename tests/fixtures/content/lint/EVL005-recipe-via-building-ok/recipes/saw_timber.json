@@ -1,0 +1,6 @@
+{
+  "id": "saw_timber",
+  "inputs": { "wood": 1 },
+  "outputs": { "timber": 1 },
+  "cycleSeconds": 20
+}

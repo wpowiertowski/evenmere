@@ -1,0 +1,8 @@
+{
+  "recipe.catch_fish.name": "Catch fish",
+  "recipe.catch_fish.desc": "Net fish from the shallows.",
+  "recipe.cut_wood.name": "Cut wood",
+  "recipe.cut_wood.desc": "Fell and trim trees.",
+  "recipe.saw_timber.name": "Saw timber",
+  "recipe.saw_timber.desc": "Turn logs into planks."
+}

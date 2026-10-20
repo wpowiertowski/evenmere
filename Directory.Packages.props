@@ -11,6 +11,8 @@
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
     <PackageVersion Include="System.IO.Hashing" Version="10.0.13" />
+    <!-- 8.0.5 is the last MIT-licensed release. 9.x ships under the Open Source Maintenance Fee EULA (a fee for users with revenue of US$10,000 a year or more), so move to it only as a deliberate decision. The code is tested with both. -->
+    <PackageVersion Include="JsonSchema.Net" Version="8.0.5" />
   </ItemGroup>
 
 </Project>

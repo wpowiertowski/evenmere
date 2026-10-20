@@ -1,0 +1,12 @@
+{
+  "good.bread.name": "Bread",
+  "good.bread.desc": "A loaf for every table.",
+  "recipe.bake_bread.name": "Bake bread",
+  "recipe.bake_bread.desc": "Turn wood into loaves.",
+  "building.bakery.name": "Bakery",
+  "building.bakery.desc": "Bakes bread.",
+  "tech.brick_laying.name": "Brick-laying",
+  "tech.brick_laying.desc": "Opens the way to bakeries.",
+  "tier.townsfolk.name": "Townsfolk",
+  "tier.townsfolk.desc": "Townspeople who live on bread."
+}

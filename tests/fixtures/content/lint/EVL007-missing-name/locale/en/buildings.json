@@ -1,0 +1,15 @@
+{
+  "building.dirt_road.name": "Dirt road",
+  "building.dirt_road.desc": "A beaten track that carts can follow.",
+  "building.fishing_hut.name": "Fishing hut",
+  "building.fishing_hut.desc": "Fishers net the shallows and bring home fish.",
+  "building.founders_hall.name": "Founders' Hall",
+  "building.founders_hall.desc": "The heart of the settlement: a storehouse, a market and a meeting place.",
+  "building.sawpit.desc": "Sawyers turn logs into timber.",
+  "building.settler_house.name": "Settler house",
+  "building.settler_house.desc": "A simple home that grows with its residents.",
+  "building.storehouse.name": "Storehouse",
+  "building.storehouse.desc": "Keeps the settlement's goods and sends out carts.",
+  "building.woodcutters_hut.name": "Woodcutter's hut",
+  "building.woodcutters_hut.desc": "Woodcutters fell trees from the forest around it."
+}

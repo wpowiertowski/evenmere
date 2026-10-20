@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evenmere.example/schemas/traditions.schema.json",
+  "title": "Tradition",
+  "description": "A tradition card, placed in a typed slot. One file per tradition in content/traditions/<id>.json.",
+  "type": "object",
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "slot": { "description": "The slot type that takes the card.", "$ref": "common.schema.json#/$defs/traditionSlotType" },
+    "effects": { "description": "The effects while the card is slotted.", "$ref": "common.schema.json#/$defs/effects" },
+    "tags": { "$ref": "common.schema.json#/$defs/tags" },
+    "style": {
+      "description": "For architectural-style cards, the key the view maps to a mesh variant set.",
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "start": {
+      "description": "Whether the tradition is available from the start without an unlockTradition effect.",
+      "type": "boolean"
+    }
+  },
+  "required": ["id", "slot"],
+  "additionalProperties": false
+}

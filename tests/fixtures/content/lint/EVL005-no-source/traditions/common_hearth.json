@@ -1,0 +1,14 @@
+{
+  "id": "common_hearth",
+  "slot": "hearth",
+  "effects": [
+    {
+      "modifier": {
+        "stat": "capacity",
+        "target": { "tier": "settlers" },
+        "percent": 15
+      }
+    }
+  ],
+  "tags": ["hearth"]
+}

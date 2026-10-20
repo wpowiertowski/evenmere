@@ -1,0 +1,1 @@
+{ "id": "humanism", "era": 2, "cost": 400, "requires": ["village_moot"], "gateway": true }
