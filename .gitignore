@@ -23,3 +23,22 @@ mono_crash.*.json
 *.exe
 # Uncomment if your project does not version PCK files as runtime dependencies.
 # *.pck
+
+# Build output and tooling
+bin/
+obj/
+*.user
+.vs/
+.idea/
+TestResults/
+artifacts/
+
+# Staged by export
+game/content/
+
+# Saves (fixtures are versioned)
+*.evsave
+!tests/fixtures/**/*.evsave
+
+# Agent worktrees (Claude Code)
+.claude/worktrees/

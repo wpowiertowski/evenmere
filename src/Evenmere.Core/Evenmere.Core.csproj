@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Core references nothing but the BCL (System.IO.Hashing arrives with M0-02). See ADR-0002. -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+    <AdditionalFiles Include="..\BannedSymbols.txt" />
+  </ItemGroup>
+
+</Project>
