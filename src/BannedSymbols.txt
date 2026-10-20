@@ -1,0 +1,26 @@
+# Banned APIs for Evenmere.Core and Evenmere.Sim (ADR-0003: no hidden inputs).
+# Consumed by Microsoft.CodeAnalysis.BannedApiAnalyzers (RS0030). Format: <doc-comment ID>;<message>
+#
+# Stopwatch is allowed only in src/Evenmere.Sim/Diagnostics, through a single
+# #pragma warning disable RS0030 with a comment explaining why (profiling never feeds state).
+
+T:System.Random;Use the system's own Pcg32 held in state (ADR-0003).
+P:System.DateTime.Now;No wall-clock time in simulation code (ADR-0003).
+P:System.DateTime.UtcNow;No wall-clock time in simulation code (ADR-0003).
+P:System.DateTime.Today;No wall-clock time in simulation code (ADR-0003).
+P:System.DateTimeOffset.Now;No wall-clock time in simulation code (ADR-0003).
+P:System.DateTimeOffset.UtcNow;No wall-clock time in simulation code (ADR-0003).
+P:System.Environment.TickCount;No wall-clock time in simulation code (ADR-0003).
+P:System.Environment.TickCount64;No wall-clock time in simulation code (ADR-0003).
+M:System.Guid.NewGuid;Derive IDs from EntityIdAllocator, not from random GUIDs (ADR-0003).
+T:System.Threading.Tasks.Parallel;The simulation is single-threaded and ordered (ADR-0003).
+M:System.Threading.Tasks.Task.Run(System.Action);The simulation is single-threaded and ordered (ADR-0003).
+M:System.Threading.Tasks.Task.Run(System.Action,System.Threading.CancellationToken);The simulation is single-threaded and ordered (ADR-0003).
+M:System.Threading.Tasks.Task.Run(System.Func{System.Threading.Tasks.Task});The simulation is single-threaded and ordered (ADR-0003).
+M:System.Threading.Tasks.Task.Run(System.Func{System.Threading.Tasks.Task},System.Threading.CancellationToken);The simulation is single-threaded and ordered (ADR-0003).
+M:System.Threading.Tasks.Task.Run``1(System.Func{``0});The simulation is single-threaded and ordered (ADR-0003).
+M:System.Threading.Tasks.Task.Run``1(System.Func{``0},System.Threading.CancellationToken);The simulation is single-threaded and ordered (ADR-0003).
+M:System.Threading.Tasks.Task.Run``1(System.Func{System.Threading.Tasks.Task{``0}});The simulation is single-threaded and ordered (ADR-0003).
+M:System.Threading.Tasks.Task.Run``1(System.Func{System.Threading.Tasks.Task{``0}},System.Threading.CancellationToken);The simulation is single-threaded and ordered (ADR-0003).
+T:System.Threading.ThreadPool;The simulation is single-threaded and ordered (ADR-0003).
+T:System.Diagnostics.Stopwatch;Allowed only in Sim/Diagnostics, via a single documented #pragma (ADR-0003).

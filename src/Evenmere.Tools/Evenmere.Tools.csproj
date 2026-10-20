@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>evenmere</AssemblyName>
+    <RootNamespace>Evenmere.Tools</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Evenmere.Sim\Evenmere.Sim.csproj" />
+    <ProjectReference Include="..\Evenmere.Content\Evenmere.Content.csproj" />
+    <ProjectReference Include="..\Evenmere.Core\Evenmere.Core.csproj" />
+  </ItemGroup>
+
+</Project>
