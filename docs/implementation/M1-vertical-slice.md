@@ -44,7 +44,7 @@
 | M1-01 | Map model, map loading and building registry | sim | M1-00 | todo |
 | M1-02 | Vertical-slice content | content | M0-04 | done |
 | M1-03 | Starter island map | content | M1-01, M1-02 | todo |
-| M1-04 | Progression core: unlocks, effects, modifiers, ledger, counters | sim | M1-00 | todo |
+| M1-04 | Progression core: unlocks, effects, modifiers, ledger, counters | sim | M1-00 | done |
 | M1-05 | Roads, connectivity, reach and coverage fields | sim | M1-00 | todo |
 | M1-06 | Construction and placement validation | sim | M1-00 | todo |
 | M1-07 | Workforce | sim | M1-00 | todo |
