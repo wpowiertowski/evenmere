@@ -284,9 +284,10 @@ From M2 onward, every task lands through a **PR with green CI**.
 
 **Steps:**
 
-1. Implement the remaining kinds: `consumed`, `discovered`, `expeditions`, `festivalsHeld`, `greatWorks` (reads a counter that stays at zero until M3-03), `visitorsPerDay`, `season`, `era`, buildings-on-terrain counts ("buildings on hills") and `regionsRevealed` by biome.
-2. **Change-driven evaluation:** maintain a dirty set of counters, and re-evaluate only the conditions that depend on changed counters.
-3. **Tooling:** add a test-only command that dumps the evaluation status of every node's inspiration.
+1. Make `roadTiles` with a `road` type work. Today Roads keeps a single `RoadTilesLaid` counter, so add a per-type count, either as a counter keyed by road type or a Roads query, agreed with Roads.
+2. Implement the remaining kinds: `consumed`, `discovered`, `expeditions`, `festivalsHeld`, `greatWorks` (reads a counter that stays at zero until M3-03), `visitorsPerDay`, `season`, `era`, buildings-on-terrain counts ("buildings on hills") and `regionsRevealed` by biome.
+3. **Change-driven evaluation:** maintain a dirty set of counters, and re-evaluate only the conditions that depend on changed counters.
+4. **Tooling:** add a test-only command that dumps the evaluation status of every node's inspiration.
 
 **Acceptance:**
 

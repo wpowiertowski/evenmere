@@ -644,6 +644,7 @@
 1. **`SaveGame.Write(Stream, ISimulation, SaveMeta)`** writes the magic `EVMR`, the format version 1, a MessagePack header (with string-ID tables for every content type) and an LZ4 body. `SaveGame.WriteJson` is the debug variant.
 2. **`SaveGame.Read(Stream, ContentDb) → (ISimulation, SaveReport)`**:
    - Runs migrations (none yet, but the framework is in place), remaps integer IDs from the string tables, and turns unknown building types into `Ruin`s with a full refund.
+   - Some state holds content IDs as raw numbers, which the generic remap can't see. In particular `RoadsState.Layer` stores `BuildingTypeId.Value + 1` per tile. Remap those explicitly, and drop tiles whose road type no longer exists.
    - The `SaveReport` lists anything remapped or missing.
 3. **Command log:**
    - `CommandLogWriter` and `CommandLogReader` (MessagePack, (tick, command) pairs).
