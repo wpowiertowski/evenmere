@@ -13,7 +13,7 @@ Projects and their allowed references:
 | Project | May reference |
 | --- | --- |
 | `Evenmere.Core` | BCL plus `System.IO.Hashing` only |
-| `Evenmere.Content` | Core, System.Text.Json, JsonSchema.Net |
+| `Evenmere.Content` | Core, System.Text.Json, JsonSchema.Net (pinned to 8.x, the last MIT release; 9.x+ ships under a revenue-based fee EULA, so never upgrade without a licence review) |
 | `Evenmere.Sim` | Content, Core, MessagePack |
 | `Evenmere.Tools` | Sim, Content, Core, System.CommandLine |
 | `Evenmere.Game` (in `game/`) | Sim, Content, Core, Godot |

@@ -1021,7 +1021,7 @@
 
 | Lane | Depends on | Owns |
 | --- | --- | --- |
-| game | M1-13, M1-20, M1-27 | `game/host/Smoke/**`, `scripts/godot-smoke.sh`, `scripts/verify.sh` (section `godot` only) |
+| game | M1-13, M1-20, M1-27 | `game/host/Smoke/**`, `scripts/godot-smoke.sh`, `scripts/verify.sh` (section `godot` only), `tests/Evenmere.Game.Tests/**` (new), `Evenmere.sln` (add that test project only) |
 
 **Reads:** M0-09; ADR-0006.
 
@@ -1033,7 +1033,9 @@
 2. **Hash check:** the smoke prints the final hash. The script compares it with `evenmere run` replaying the same scenario.
 3. **Boundary check:** state classes live in `Evenmere.Sim.Systems.<Name>` namespaces, so a namespace grep can't catch misuse. Instead, add a reflection test (in `tests/Evenmere.Sim.Tests/Architecture/GameBoundaryTests.cs`, owned by this task). It loads the built `Evenmere.Game` assembly from its build output and fails if any type, field, method signature or IL member reference in it uses `WorldState`, or any type reachable from `WorldState`'s fields. Reuse the M0-06 reachability walker.
 
-**Acceptance:** `REQUIRE_GODOT=1 scripts/verify.sh` passes locally, and an intentional reference to `WorldState` or to a system's state class in `game/` fails the boundary test.
+4. **Game unit tests:** create `tests/Evenmere.Game.Tests` (xUnit v3, referencing `game/Evenmere.Game.csproj`) for the Godot-free pieces: `FixedStepper` (exact tick counts at each speed, the backlog cap, pause, the 8-tick cap), `ContentPaths.Resolve(env, exported, projectDir)` and `LaunchOptions`. These were verified only manually in M0-09. If referencing the Godot project from a test project proves impractical, move these pure classes into a small `game/host/Pure/` folder and explain the approach in the report.
+
+**Acceptance:** `REQUIRE_GODOT=1 scripts/verify.sh` passes locally, an intentional reference to `WorldState` or to a system's state class in `game/` fails the boundary test, and the game unit tests run under `dotnet test`.
 
 **Out of scope:** performance assertions (M2-16).
 
