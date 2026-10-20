@@ -386,9 +386,9 @@ All game content is data, not code: adding a good, building, tech or tradition m
 | EVL002 | Every reference resolves (recipe goods, unlock targets, prerequisites, locale keys) |
 | EVL003 | Tech and civic trees are acyclic, and every node is reachable from the roots |
 | EVL004 | Every good has at least one producer and one consumer (construction costs count as consumers) |
-| EVL005 | Every building, recipe, tier and tradition is unlocked by exactly one source, or marked `"start": true` |
-| EVL006 | Every tier's basic needs can be met using only items unlocked by nodes of the same era or earlier |
-| EVL007 | Every display string exists in `locale/en` |
+| EVL005 | Every building, tier, tradition and festival is unlocked by exactly one source (a tech, civic or monument effect), or marked `"start": true`. A recipe named by a building is available with that building. |
+| EVL006 | Every tier's basic needs can be met using only items unlocked by nodes of the tier's declared era or earlier, and that era may not precede the era of the tier's unlock source. A gateway tier may be one era later than its source. |
+| EVL007 | Every item has a display name in `locale/en`; a missing description is a warning |
 | EVL008 | Era gateways exist (one tech and one civic per era transition), and every era's nodes need only that era or earlier |
 | EVL009 | Era I buildings declare no `upkeepCoin` (added in M3) |
 | EVL010 | A tier's basic goods and services are produced and staffed only by lower tiers (added in M2) |
