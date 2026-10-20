@@ -22,6 +22,6 @@ dotnet test -c Release --no-build
 echo "lint: not yet wired"
 
 # --- section: godot ---
-echo "godot smoke: not yet wired"
+scripts/godot-smoke.sh
 
 echo "verify: OK"

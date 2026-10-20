@@ -1,0 +1,16 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+
+  <PropertyGroup>
+    <!-- Godot 4.7.2 builds against net10.0 (ADR-0001), so the game shares the target framework of the sim projects. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>Evenmere.Game</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\Evenmere.Core\Evenmere.Core.csproj" />
+    <ProjectReference Include="..\src\Evenmere.Content\Evenmere.Content.csproj" />
+    <ProjectReference Include="..\src\Evenmere.Sim\Evenmere.Sim.csproj" />
+  </ItemGroup>
+
+</Project>
