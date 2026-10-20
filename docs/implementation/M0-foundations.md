@@ -32,7 +32,7 @@
 | M0-06 | Architecture and determinism guard tests | sim | M0-05 | todo |
 | M0-07 | Tools CLI v0 | tools | M0-04, M0-05 | todo |
 | M0-08 | Scenario test harness | sim | M0-05 | todo |
-| M0-09 | Godot project and SimHost bridge | game | M0-05 | todo |
+| M0-09 | Godot project and SimHost bridge | game | M0-05 | done |
 
 ---
 
