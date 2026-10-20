@@ -4,11 +4,11 @@
 
 **Gate:**
 
-- [ ] `scripts/verify.sh` passes on a clean clone on macOS, and on Linux if one is available.
-- [ ] `evenmere run --content tests/fixtures/content/minimal --ticks 10000 --seed 42` prints the same state hash on two runs. (`content/` stays empty until M1-02, so M0 runs against the minimal fixture pack.)
-- [ ] A save-to-bytes / load round trip at tick 5,000 continues to the same hash at tick 10,000.
-- [ ] `scripts/godot-smoke.sh` prints `SMOKE OK`, and its hash matches `evenmere run` for the same seed and tick count.
-- [ ] The architecture and determinism guard tests pass.
+- [x] `scripts/verify.sh` passes on a clean clone on macOS, and on Linux if one is available. (macOS verified; Linux is covered by CI from M1-29.)
+- [x] `evenmere run --content tests/fixtures/content/minimal --ticks 10000 --seed 42` prints the same state hash on two runs. (`content/` stays empty until M1-02, so M0 runs against the minimal fixture pack.)
+- [x] A save-to-bytes / load round trip at tick 5,000 continues to the same hash at tick 10,000.
+- [x] `scripts/godot-smoke.sh` prints `SMOKE OK`, and its hash matches `evenmere run` for the same seed and tick count.
+- [x] The architecture and determinism guard tests pass.
 
 **Waves** (tasks in the same wave can run in parallel):
 
@@ -413,4 +413,30 @@
 
 ## Gate record
 
-_Filled in by the orchestrator when M0 closes: date, commit, hash outputs, and the platforms verified._
+**Closed 2026-10-19 at commit `7b66c3f`.** Verified on a fresh clone from GitHub, on the development Mac (Apple Silicon, macOS 27.0.1, .NET SDK 10.0.402, Godot 4.7.2.stable.mono). `verify.sh` ran with a stripped environment (no `dotnet` on `PATH`) and `REQUIRE_GODOT=1`.
+
+| Check | Result |
+| --- | --- |
+| `scripts/verify.sh` (clean clone) | exit 0; 0 build warnings; 1,534 tests passed; lint clean (content hash `90197505080b9dc1`); `SMOKE OK hash=c5dcb1fe50f43d98` |
+| `evenmere run … --ticks 10000 --seed 42`, run twice | `hash=6114913bc26ea39a` both times, equal to the `empty_world_10k` scenario golden |
+| Same with `--seed 43` | `hash=6efda26911e0e8ff` (differs, as expected) |
+| Godot smoke vs CLI at 1,000 ticks, seed 42 | both `c5dcb1fe50f43d98` |
+| Save round trip (5,000 → 10,000) and guard tests | `DeterminismTests` and `Architecture/*`: 120 passed |
+| Linux | not run locally; first covered by CI in M1-29 |
+
+**Process notes:** every task went to a Sonnet subagent in its own worktree, and every diff was reviewed before commit. Six of nine tasks needed one feedback round:
+
+| Task | Feedback round fixed |
+| --- | --- |
+| M0-01 | worktree ignore, wall-clock bans, solution platforms |
+| M0-02 | IdTable tombstone compaction |
+| M0-03 | vocabulary gaps, content-hash scope |
+| M0-04 | tier-era rule, duplicate reports |
+| M0-09 | integer-microsecond stepper |
+
+**Decisions recorded along the way:**
+- JsonSchema.Net is pinned to 8.x for licence reasons.
+- The content vocabulary was extended (new stats, discovery targets, siteBonus and aura).
+- The view boundary check is reachability-based, not namespace-based.
+- Follow-ups were folded into the M1 cards: game unit tests (M1-28), the save-key baseline (M1-14) and scenario converters (M1-00).
+- Still open: a Tools test project (proposed by M0-07), and optionally setting `PrivateAssets` on Sim's MessagePack reference so its generator stops reaching test projects.
