@@ -1,0 +1,24 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" uid="uid://xn3po2j1tdo2" path="res://rendering/camera/CameraRig.cs" id="1_rig"]
+[ext_resource type="Script" uid="uid://b381j3j1sk57g" path="res://controls/InputModeTracker.cs" id="2_mode"]
+[ext_resource type="Script" uid="uid://768vo0o81mup" path="res://rendering/camera/VirtualCursor.cs" id="3_cursor"]
+[ext_resource type="Script" uid="uid://c6ucpqy8emeo6" path="res://rendering/camera/TestGround.cs" id="4_ground"]
+
+[node name="CameraRig" type="Node3D"]
+script = ExtResource("1_rig")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+current = true
+fov = 45.0
+near = 0.5
+far = 1500.0
+
+[node name="InputModeTracker" type="Node" parent="."]
+script = ExtResource("2_mode")
+
+[node name="VirtualCursor" type="Node3D" parent="."]
+script = ExtResource("3_cursor")
+
+[node name="TestGround" type="MeshInstance3D" parent="."]
+script = ExtResource("4_ground")
