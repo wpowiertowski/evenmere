@@ -1,0 +1,15 @@
+{
+  "id": "woodcutters_hut",
+  "category": "production",
+  "era": 1,
+  "footprint": [2, 2],
+  "placement": {
+    "areaYield": { "kind": "radius", "terrain": ["forest"], "radius": 4, "fullAt": 24 }
+  },
+  "cost": { "timber": 3 },
+  "buildDays": 1,
+  "workforce": { "tier": "settlers", "count": 3 },
+  "recipe": "cut_wood",
+  "start": true,
+  "tags": ["gatherer", "wood"]
+}

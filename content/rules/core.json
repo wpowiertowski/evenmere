@@ -1,0 +1,9 @@
+{
+  "cartTicksPerTile": 2,
+  "outputBuffer": 4,
+  "cartLoad": 2,
+  "declineGraceDays": 10,
+  "advanceStreakDays": 3,
+  "inspirationDiscountPerMille": 400,
+  "marketGating": true
+}

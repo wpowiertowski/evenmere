@@ -1,0 +1,11 @@
+{
+  "id": "market",
+  "category": "service",
+  "era": 1,
+  "footprint": [3, 3],
+  "cost": { "timber": 6 },
+  "buildDays": 2,
+  "workforce": { "tier": "settlers", "count": 2 },
+  "service": { "kind": "market", "coverage": 16 },
+  "start": true
+}

@@ -1,0 +1,16 @@
+{
+  "id": "fishing_hut",
+  "category": "production",
+  "era": 1,
+  "footprint": [2, 2],
+  "placement": {
+    "coastline": true,
+    "areaYield": { "kind": "radius", "terrain": ["sea"], "radius": 5, "fullAt": 30, "exclusive": true }
+  },
+  "cost": { "timber": 3 },
+  "buildDays": 1,
+  "workforce": { "tier": "settlers", "count": 3 },
+  "recipe": "catch_fish",
+  "start": true,
+  "tags": ["fishing", "gatherer"]
+}

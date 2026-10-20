@@ -1,0 +1,5 @@
+{
+  "id": "grow_grain",
+  "outputs": { "grain": 1 },
+  "cycleSeconds": 40
+}

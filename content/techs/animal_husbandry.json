@@ -1,0 +1,13 @@
+{
+  "id": "animal_husbandry",
+  "era": 1,
+  "cost": 30,
+  "effects": [
+    { "unlockBuilding": "sheep_farm" }
+  ],
+  "inspiration": {
+    "when": {
+      "population": { "tier": "settlers", "atLeast": 40 }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "id": "hearth_and_shrine",
+  "era": 1,
+  "cost": 20,
+  "effects": [
+    { "unlockBuilding": "shrine" }
+  ],
+  "inspiration": {
+    "when": {
+      "count": { "tag": "house", "atLeast": 5 }
+    }
+  }
+}

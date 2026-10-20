@@ -1,0 +1,10 @@
+{
+  "id": "settler_house",
+  "category": "residence",
+  "era": 1,
+  "footprint": [2, 2],
+  "cost": { "timber": 1 },
+  "buildDays": 1,
+  "start": true,
+  "tags": ["house"]
+}

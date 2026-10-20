@@ -1,0 +1,14 @@
+{
+  "id": "weaving",
+  "era": 1,
+  "cost": 50,
+  "requires": ["animal_husbandry"],
+  "effects": [
+    { "unlockBuilding": "weavers_cottage" }
+  ],
+  "inspiration": {
+    "when": {
+      "produced": { "good": "wool", "atLeast": 20 }
+    }
+  }
+}

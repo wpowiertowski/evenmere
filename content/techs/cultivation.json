@@ -1,0 +1,13 @@
+{
+  "id": "cultivation",
+  "era": 1,
+  "cost": 30,
+  "effects": [
+    { "unlockBuilding": "grain_farm" }
+  ],
+  "inspiration": {
+    "when": {
+      "count": { "tag": "house", "atLeast": 8 }
+    }
+  }
+}

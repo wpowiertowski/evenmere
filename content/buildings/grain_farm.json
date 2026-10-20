@@ -1,0 +1,16 @@
+{
+  "id": "grain_farm",
+  "category": "production",
+  "era": 1,
+  "footprint": [5, 5],
+  "placement": {
+    "terrain": ["plains"],
+    "fertility": { "crop": "grain", "minPercent": 25 },
+    "areaYield": { "kind": "footprint_fertility" }
+  },
+  "cost": { "timber": 4 },
+  "buildDays": 2,
+  "workforce": { "tier": "settlers", "count": 4 },
+  "recipe": "grow_grain",
+  "tags": ["farm", "gatherer", "seasonal"]
+}

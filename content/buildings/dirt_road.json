@@ -1,0 +1,11 @@
+{
+  "id": "dirt_road",
+  "category": "infrastructure",
+  "era": 1,
+  "footprint": [1, 1],
+  "placement": { "roadAccess": false },
+  "buildDays": 0,
+  "roadCost": 1000,
+  "start": true,
+  "tags": ["road"]
+}

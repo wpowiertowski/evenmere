@@ -1,0 +1,15 @@
+{
+  "id": "milling",
+  "era": 1,
+  "cost": 60,
+  "requires": ["cultivation"],
+  "effects": [
+    { "unlockBuilding": "windmill" },
+    { "unlockBuilding": "bakery" }
+  ],
+  "inspiration": {
+    "when": {
+      "produced": { "good": "grain", "atLeast": 30 }
+    }
+  }
+}

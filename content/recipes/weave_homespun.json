@@ -1,0 +1,6 @@
+{
+  "id": "weave_homespun",
+  "inputs": { "wool": 1 },
+  "outputs": { "homespun": 1 },
+  "cycleSeconds": 30
+}

@@ -1,0 +1,12 @@
+{
+  "id": "sheep_farm",
+  "category": "production",
+  "era": 1,
+  "footprint": [4, 4],
+  "placement": { "terrain": ["plains"] },
+  "cost": { "timber": 4 },
+  "buildDays": 2,
+  "workforce": { "tier": "settlers", "count": 3 },
+  "recipe": "shear_wool",
+  "tags": ["farm", "gatherer"]
+}
