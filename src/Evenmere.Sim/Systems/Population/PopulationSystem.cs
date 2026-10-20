@@ -1,6 +1,8 @@
 using Evenmere.Sim.Commands;
 using Evenmere.Sim.Pipeline;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Services;
+using Evenmere.Sim.Systems.Population.Commands;
 
 namespace Evenmere.Sim.Systems.Population;
 
@@ -19,7 +21,8 @@ internal sealed class PopulationSystem : ISimSystem
     /// <inheritdoc />
     public void Register(CommandRouter router)
     {
-        // M1-10 registers this system's command handlers here.
+        // M1-10 replaces the placeholder with its real handler.
+        router.Register(new NotImplementedCommandHandler<SetHouseUpgradeLock>("M1-10"));
     }
 
     /// <inheritdoc />

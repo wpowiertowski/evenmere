@@ -336,12 +336,13 @@ public sealed class ScenarioRunnerTests
     [Fact]
     public void Run_UnknownCommandType_FailsNamingTheFileAndTheCommandIndex()
     {
-        string json = Make(commands: CommandList(RecordTickAt(1), """{ "tick": 2, "type": "PlaceBuilding", "args": {} }"""));
+        // The name must stay unknown for good, so it is not one a real command could take (PlaceBuilding became real in M1-00).
+        string json = Make(commands: CommandList(RecordTickAt(1), """{ "tick": 2, "type": "BuildTheMoon", "args": {} }"""));
 
         ScenarioException error = Should.Throw<ScenarioException>(() => Run(json));
 
         error.Message.ShouldContain("harness-test.json");
-        error.Message.ShouldContain("commands[1].type: unknown command type \"PlaceBuilding\"");
+        error.Message.ShouldContain("commands[1].type: unknown command type \"BuildTheMoon\"");
         error.Message.ShouldContain("Known command types:");
     }
 

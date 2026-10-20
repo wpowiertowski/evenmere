@@ -1,6 +1,8 @@
 using Evenmere.Sim.Commands;
 using Evenmere.Sim.Pipeline;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Services;
+using Evenmere.Sim.Systems.Research.Commands;
 
 namespace Evenmere.Sim.Systems.Research;
 
@@ -19,7 +21,9 @@ internal sealed class ResearchSystem : ISimSystem
     /// <inheritdoc />
     public void Register(CommandRouter router)
     {
-        // M1-11 registers this system's command handlers here.
+        // M1-11 replaces each placeholder with its real handler.
+        router.Register(new NotImplementedCommandHandler<SetResearchTarget>("M1-11"));
+        router.Register(new NotImplementedCommandHandler<SetResearchQueue>("M1-11"));
     }
 
     /// <inheritdoc />

@@ -1,6 +1,8 @@
 using Evenmere.Sim.Commands;
 using Evenmere.Sim.Pipeline;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Services;
+using Evenmere.Sim.Systems.Production.Commands;
 
 namespace Evenmere.Sim.Systems.Production;
 
@@ -19,7 +21,8 @@ internal sealed class ProductionSystem : ISimSystem
     /// <inheritdoc />
     public void Register(CommandRouter router)
     {
-        // M1-08 registers this system's command handlers here.
+        // M1-08 replaces the placeholder with its real handler.
+        router.Register(new NotImplementedCommandHandler<SetBuildingPaused>("M1-08"));
     }
 
     /// <inheritdoc />

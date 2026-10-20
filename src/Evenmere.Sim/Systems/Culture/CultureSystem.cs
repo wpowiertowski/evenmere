@@ -1,6 +1,8 @@
 using Evenmere.Sim.Commands;
 using Evenmere.Sim.Pipeline;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Services;
+using Evenmere.Sim.Systems.Culture.Commands;
 
 namespace Evenmere.Sim.Systems.Culture;
 
@@ -19,7 +21,9 @@ internal sealed class CultureSystem : ISimSystem
     /// <inheritdoc />
     public void Register(CommandRouter router)
     {
-        // M1-11 registers this system's command handlers here.
+        // M1-11 replaces each placeholder with its real handler.
+        router.Register(new NotImplementedCommandHandler<SetCivicTarget>("M1-11"));
+        router.Register(new NotImplementedCommandHandler<SetCivicQueue>("M1-11"));
     }
 
     /// <inheritdoc />

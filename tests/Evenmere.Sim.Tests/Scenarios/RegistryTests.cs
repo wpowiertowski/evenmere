@@ -75,7 +75,15 @@ public sealed class RegistryTests
         message.ShouldContain("unknown command type \"recordtick\"");
         message.ShouldContain("Did you mean \"RecordTick\"?");
         message.ShouldContain("Known command types:");
-        message.ShouldContain("GrantGoods, RecordTick, UnservedCommand");
+
+        // The list is in ordinal order, and the real M1 commands (PlaceBuilding and so on) sit between the harness's own.
+        string known = message[message.IndexOf("Known command types:", StringComparison.Ordinal)..];
+        int grantGoods = known.IndexOf("GrantGoods", StringComparison.Ordinal);
+        int recordTick = known.IndexOf("RecordTick", StringComparison.Ordinal);
+        int unservedCommand = known.IndexOf("UnservedCommand", StringComparison.Ordinal);
+        grantGoods.ShouldBeGreaterThan(0);
+        recordTick.ShouldBeGreaterThan(grantGoods);
+        unservedCommand.ShouldBeGreaterThan(recordTick);
     }
 
     [Fact]

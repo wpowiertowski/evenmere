@@ -3,7 +3,7 @@ using Evenmere.Core.Numerics;
 
 namespace Evenmere.Sim.Queries;
 
-/// <summary>Read-only queries over the island storage pool. M1-00 may add more; <see cref="Stock"/> is final.</summary>
+/// <summary>Read-only queries over the island storage pool. Implemented by the storage service (M0-05); <see cref="Stock"/> is the whole interface in M1.</summary>
 public interface IStorageQueries
 {
     /// <summary>Gets how much of a good the island holds.</summary>

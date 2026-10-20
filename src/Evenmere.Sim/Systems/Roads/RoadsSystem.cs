@@ -1,6 +1,8 @@
 using Evenmere.Sim.Commands;
 using Evenmere.Sim.Pipeline;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Services;
+using Evenmere.Sim.Systems.Roads.Commands;
 
 namespace Evenmere.Sim.Systems.Roads;
 
@@ -20,7 +22,9 @@ internal sealed class RoadsSystem : ISimSystem
     /// <inheritdoc />
     public void Register(CommandRouter router)
     {
-        // M1-05 registers this system's command handlers here.
+        // M1-05 replaces each placeholder with its real handler.
+        router.Register(new NotImplementedCommandHandler<PlaceRoad>("M1-05"));
+        router.Register(new NotImplementedCommandHandler<RemoveRoad>("M1-05"));
     }
 
     /// <inheritdoc />
