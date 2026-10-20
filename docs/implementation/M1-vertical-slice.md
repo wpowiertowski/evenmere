@@ -78,7 +78,7 @@
 
 | Lane | Depends on | Owns |
 | --- | --- | --- |
-| sim | M0 gate | `src/Evenmere.Sim/Queries/**`, `src/Evenmere.Sim/Services/**`, `src/Evenmere.Sim/Systems/*/Commands/*.cs` (records only), `src/Evenmere.Sim/Systems/*/Events.cs`, `tests/Evenmere.Sim.Tests/Fakes/**` |
+| sim | M0 gate | `src/Evenmere.Sim/Queries/**`, `src/Evenmere.Sim/Services/**`, `src/Evenmere.Sim/Systems/*/Commands/*.cs` (records only), `src/Evenmere.Sim/Systems/*/Events.cs`, `tests/Evenmere.Sim.Tests/Fakes/**`, `tests/Evenmere.Sim.Tests/Scenarios/ScenarioJson.cs` (converters for new command parameter types only) |
 
 **Reads:** architecture.md (§Simulation core, §Gameplay systems); ADR-0002, ADR-0005; progression.md (§How needs work).
 
@@ -135,7 +135,8 @@
    - `TechResearched`, `CivicAdopted`, `InspirationTriggered`
    - `AdviceRaised`, `AdviceCleared`
 6. **Fakes** in `tests/Evenmere.Sim.Tests/Fakes/`: settable fakes for every query interface and write service, so each system can be unit-tested in isolation.
-7. **Stub implementations:** each M0-05 system stub implements its interface by throwing `NotImplementedException("M1-NN")`, naming the owning task. This is the only edit this task makes inside system folders, apart from `Commands/` and `Events.cs`.
+7. **Scenario converters:** for every command parameter type that isn't a content ID, `Amount` or `EntityId` (for example `TileCoord`, `TileCoord[]`, `Rotation`, `TechId[]`), add a System.Text.Json converter in `tests/Evenmere.Sim.Tests/Scenarios/ScenarioJson.cs`. Without one, scenario args silently read as zero. Add a registry test proving each M1 command deserialises from scenario JSON.
+8. **Stub implementations:** each M0-05 system stub implements its interface by throwing `NotImplementedException("M1-NN")`, naming the owning task. This is the only edit this task makes inside system folders, apart from `Commands/` and `Events.cs`.
 
 **Acceptance:**
 
