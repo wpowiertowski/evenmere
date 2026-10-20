@@ -647,6 +647,7 @@
    - `Replay.Run(save, log, untilTick) → hash`.
 4. **Tools:** `evenmere hash --save <file>` prints the save's state hash.
 5. **Fixture:** commit `tests/fixtures/saves/v1-slice.evsave`, generated from `slice_villagers` at tick 20,000.
+6. **Key baseline:** ADR-0007 says MessagePack keys are never removed or reused. Commit `tests/fixtures/saves/state-keys.json`, listing every `[MessagePackObject]` type reachable from `WorldState` (via M0-06's `StateTypeWalker`) with its key → member name and type. Add a test that fails if a key disappears, changes member type, or is reused. Adding keys is allowed, and the test prints how to refresh the baseline.
 
 **Acceptance:**
 
@@ -1032,7 +1033,7 @@
 
 1. **Smoke mode:** loads `Main.tscn` with the starter island, enqueues the commands of `tests/fixtures/scenarios/slice_first_houses.json` at their ticks, and runs 1,000 ticks with the renderers active. It fails if any error is logged.
 2. **Hash check:** the smoke prints the final hash. The script compares it with `evenmere run` replaying the same scenario.
-3. **Boundary check:** state classes live in `Evenmere.Sim.Systems.<Name>` namespaces, so a namespace grep can't catch misuse. Instead, add a reflection test (in `tests/Evenmere.Sim.Tests/Architecture/GameBoundaryTests.cs`, owned by this task). It loads the built `Evenmere.Game` assembly from its build output and fails if any type, field, method signature or IL member reference in it uses `WorldState`, or any type reachable from `WorldState`'s fields. Reuse the M0-06 reachability walker.
+3. **Boundary check:** state classes live in `Evenmere.Sim.Systems.<Name>` namespaces, so a namespace grep can't catch misuse. Policy: the game may use Core *value* types that appear in queries (`Amount`, `Ratio`, `EntityId`, the content IDs, `GameClock`, `Season`), but never `WorldState`, a system state class, `Pcg32`, `EntityIdAllocator` or `IdTable<T>`. Use `StateTypeWalker.Walk(typeof(WorldState)).TypesDeclaredIn(...)` for the Sim assembly, plus those three Core types. Instead, add a reflection test (in `tests/Evenmere.Sim.Tests/Architecture/GameBoundaryTests.cs`, owned by this task). It loads the built `Evenmere.Game` assembly from its build output and fails if any type, field, method signature or IL member reference in it uses `WorldState`, or any type reachable from `WorldState`'s fields. Reuse the M0-06 reachability walker.
 
 4. **Game unit tests:** create `tests/Evenmere.Game.Tests` (xUnit v3, referencing `game/Evenmere.Game.csproj`) for the Godot-free pieces: `FixedStepper` (exact tick counts at each speed, the backlog cap, pause, the 8-tick cap), `ContentPaths.Resolve(env, exported, projectDir)` and `LaunchOptions`. These were verified only manually in M0-09. If referencing the Godot project from a test project proves impractical, move these pure classes into a small `game/host/Pure/` folder and explain the approach in the report.
 
