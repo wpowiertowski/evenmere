@@ -176,7 +176,7 @@
    - `ContentHash`: XxHash64 over the files sorted by relative path, with CRLF normalised to LF.
 6. **Locale:** `LocaleTable.Load(root, lang)` merges every `locale/<lang>/*.json` file. A duplicate key produces a diagnostic, and lookups use `Get(key)`.
 7. **Minimal fixture pack** in `tests/fixtures/content/minimal/`, valid against the shapes above:
-   - 2 eras, 4 terrains, 3 goods (`wood`, `timber`, `fish`), a building for each `Required` ID plus `woodcutters_hut`, `sawpit` and `fishing_hut`, and 2 recipes.
+   - 2 eras, 4 terrains, 3 goods (`wood`, `timber`, `fish`), a building for each `Required` ID plus `woodcutters_hut`, `sawpit` and `fishing_hut`, and 3 recipes (one per producing building).
    - 2 tiers, 2 techs, 1 civic and 1 tradition.
    - `rules/core.json`.
    - English locale for all of them.

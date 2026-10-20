@@ -360,14 +360,23 @@ All game content is data, not code: adding a good, building, tech or tradition m
 
 - Unlocks: `unlockBuilding`, `unlockRecipe`, `unlockTier`, `unlockTradition`, `unlockFestival`, `unlockTerrainAccess` (`narrow_rivers`, `wide_rivers`, `hill_farming`, `marsh_drainage`, `highlands`, `deep_water`, `reefs`), `unlockFeature` (`expeditions`, `coin`, `visitors`, `great_works:<type>`)
 - `traditionSlot` (`hearth`, `craft`, `heritage`, `wild`)
-- `modifier` with a `stat` (`productivity`, `consumption`, `constructionSpeed`, `capacity`, `workforce`, `output.knowledge`, `output.culture`, `output.coin`, `attractiveness`, `visitors`, `cartSpeed`, `materialCost`, `declineGrace`), a `target` selector (`building`, `tag`, `category`, `tier`, `good`, or none for island-wide), an integer `percent`, and an optional `when` condition
-- One-off grants: `grantGoods`, `grantPoints`
+- `modifier`:
+  - A `stat`: `productivity`, `consumption`, `constructionSpeed`, `capacity`, `workforce`, `output.knowledge`, `output.culture`, `output.coin`, `attractiveness`, `visitors`, `cartSpeed`, `materialCost`, `declineGrace`, `expeditionSpeed`, `comfortBonus`, `festivalCost`, `festivalDuration` or `settlerArrival`.
+  - A `target` selector: `building`, `tag`, `category`, `tier`, `good` or `discovery` (`natural_wonder`, `ruin`, `shipwreck`), or none for island-wide.
+  - An integer `percent`, and an optional `when` condition.
+- One-off actions: `grantGoods`, `grantPoints`, `revealCoastline` (value `true`), and `requestFestival` (`{ "festival", "discountPercent" }`, for happenings).
+
+**Building-local bonuses** (in a building definition, not effects; evaluated when the building is placed or its surroundings change):
+
+- `siteBonus`: a list of `{ "when": { "terrain": [...] } | { "near": { "building" | "tag", "radius" } }, "stat", "percent" }`. For example: a Windmill +15% productivity on hills, an Observatory +25% `output.knowledge` on hills or highlands, an Apiary +20% near orchards.
+- `aura`: `{ "stat", "percent", "target", "coverage" }`, applied to the matching buildings within road coverage. For example, a Bathhouse gives houses in range +10% `capacity`.
 
 **Conditions vocabulary** (used by inspirations, happenings, advisors and tutorial steps):
 
-- Counts: `count` (buildings by id, tag or category), `produced` and `consumed` (cumulative goods), `population` (by tier or total), `roadTiles`, `expeditions`, `festivalsHeld`, `greatWorks`, `visitorsPerDay`
+- Counts: `count` (buildings by id, tag or category, optionally on a `terrain`), `produced` and `consumed` (cumulative goods), `stock` (current pool stock of a good), `population` (by tier or total), `roadTiles`, `expeditions`, `festivalsHeld`, `greatWorks`, `visitorsPerDay`
 - Flags: `researched`, `adopted`, `discovered`, `season`, `era`
 - Combinators: `all`, `any`, `not`
+- Every count condition holds its threshold inside its value object: `{ "count": { "building": "fishing_hut", "atLeast": 5 } }`.
 
 ### Content linter (CLI and CI)
 

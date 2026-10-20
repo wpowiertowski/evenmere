@@ -211,7 +211,7 @@
    - Buffer sizes: output 4, cart load 2.
    - Grace: decline 10 days, advance streak 3 days.
    - Inspiration discount: 400 per-mille.
-   - Starting unlocks.
+   - Road types are buildings with `roadCost` (and `bridgeSpan` for bridges); starting unlocks are `"start": true` on items, never in rules.
    - Market gating on.
 4. **Goods, buildings, recipes, tiers, techs and civics** for the slice list at the top of this file, with values from progression.md and the tree docs.
    - Villagers list only their basic needs; comfort needs are added in M2-13.

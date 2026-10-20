@@ -202,5 +202,5 @@ flowchart LR
 
 - A tech file lists every unlock in `effects`; buildings never name their tech (lint EVL005).
 - The repeatable tech sets `"repeatable": { "costGrowthPercent": 10 }`.
-- Inspiration conditions use the shared condition vocabulary, for example `{ "count": { "building": "fishing_hut" }, "atLeast": 5 }` or `{ "population": { "tier": "villagers" }, "atLeast": 50 }`.
+- Inspiration conditions use the shared condition vocabulary, with the threshold inside the value object. For example: `{ "count": { "building": "fishing_hut", "atLeast": 5 } }`, `{ "population": { "tier": "villagers", "atLeast": 50 } }`, or `{ "stock": { "good": "timber", "atLeast": 40 } }` for the stockpile inspirations.
 - Gateways set `"gateway": true`. Lint EVL008 checks that each era transition has exactly one tech gateway and one civic gateway.
