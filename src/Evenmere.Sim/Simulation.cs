@@ -34,11 +34,11 @@ public sealed class Simulation : ISimulation, IProfilerReadout
         _clockSlot = _profiler.Register("clock");
         _commandsSlot = _profiler.Register("commands");
 
-        var roster = new SystemRoster(world);
+        var roster = new SystemRoster(world, content);
         _pipeline = new SystemPipeline(roster.Entries, _profiler);
         _pipeline.RegisterCommands(_router);
         Query = roster.Queries;
-        _context = new SimContext(content, world, roster.Queries, _events, roster.Storage);
+        _context = new SimContext(content, world, roster.Queries, _events, roster.Services);
     }
 
     /// <inheritdoc />

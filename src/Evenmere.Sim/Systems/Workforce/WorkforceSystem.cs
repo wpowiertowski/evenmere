@@ -1,6 +1,8 @@
 using Evenmere.Sim.Commands;
 using Evenmere.Sim.Pipeline;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Services;
+using Evenmere.Sim.Systems.Workforce.Commands;
 
 namespace Evenmere.Sim.Systems.Workforce;
 
@@ -19,7 +21,8 @@ internal sealed class WorkforceSystem : ISimSystem
     /// <inheritdoc />
     public void Register(CommandRouter router)
     {
-        // M1-07 registers this system's command handlers here.
+        // M1-07 replaces the placeholder with its real handler.
+        router.Register(new NotImplementedCommandHandler<SetWorkforcePriority>("M1-07"));
     }
 
     /// <inheritdoc />

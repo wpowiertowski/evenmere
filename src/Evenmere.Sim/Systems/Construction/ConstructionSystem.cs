@@ -1,11 +1,13 @@
 using Evenmere.Sim.Commands;
 using Evenmere.Sim.Pipeline;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Services;
+using Evenmere.Sim.Systems.Construction.Commands;
 
 namespace Evenmere.Sim.Systems.Construction;
 
 /// <summary>
-/// The construction system: construction sites and placement validation. Its cadence is <see cref="Cadence.EveryTick"/>.
+/// The construction system: sites, building placement, demolition and in-place upgrades. Its cadence is <see cref="Cadence.EveryTick"/>.
 /// It is a stub in M0; M1-06 fills it.
 /// </summary>
 internal sealed class ConstructionSystem : ISimSystem
@@ -19,7 +21,10 @@ internal sealed class ConstructionSystem : ISimSystem
     /// <inheritdoc />
     public void Register(CommandRouter router)
     {
-        // M1-06 registers this system's command handlers here.
+        // M1-06 replaces each placeholder with its real handler.
+        router.Register(new NotImplementedCommandHandler<PlaceBuilding>("M1-06"));
+        router.Register(new NotImplementedCommandHandler<Demolish>("M1-06"));
+        router.Register(new NotImplementedCommandHandler<UpgradeBuilding>("M1-06"));
     }
 
     /// <inheritdoc />

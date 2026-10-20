@@ -3,25 +3,28 @@ using Evenmere.Core.Ids;
 using Evenmere.Core.Rng;
 using Evenmere.Core.Time;
 using Evenmere.Sim.Queries;
-using Evenmere.Sim.Systems.Storage;
+using Evenmere.Sim.Services;
 using Evenmere.Sim.State;
 
 namespace Evenmere.Sim.Pipeline;
 
 /// <summary>
 /// Everything a system or command handler needs while it runs: the immutable content, the world state, the clock, the
-/// event sink, the read-only queries and the current system's random stream. One context lives as long as its
-/// simulation; the pipeline points <see cref="CurrentSystem"/> at the system it is about to run.
+/// event sink, the read-only queries, the write services and the current system's random stream. One context lives as
+/// long as its simulation; the pipeline points <see cref="CurrentSystem"/> at the system it is about to run.
 /// </summary>
 public sealed class SimContext
 {
-    internal SimContext(ContentDb content, WorldState world, ISimQueries queries, EventSink events, StoragePool storage)
+    private readonly SimServices _services;
+
+    internal SimContext(ContentDb content, WorldState world, ISimQueries queries, EventSink events, SimServices services)
     {
         Content = content;
         World = world;
         Queries = queries;
         Events = events;
-        Storage = storage;
+        _services = services;
+        services.BindTo(this);
     }
 
     /// <summary>Gets the immutable game content.</summary>
@@ -49,8 +52,32 @@ public sealed class SimContext
     /// </summary>
     public ref Pcg32 Rng => ref World.SystemRngs[(int)CurrentSystem];
 
-    /// <summary>Gets the island storage pool, the write side of <see cref="IStorageQueries"/>. Other services will join it here.</summary>
-    internal StoragePool Storage { get; }
+    /// <summary>Gets the island storage pool, the write side of <see cref="IStorageQueries"/>.</summary>
+    internal IStorageService Storage => _services.Storage;
+
+    /// <summary>Gets the building registry, the write side of <see cref="IMapQueries"/> (M1-01).</summary>
+    internal IBuildingRegistry BuildingRegistry => _services.BuildingRegistry;
+
+    /// <summary>Gets the subscription list for building lifecycle notifications (M1-01).</summary>
+    internal IBuildingLifecycle BuildingLifecycle => _services.BuildingLifecycle;
+
+    /// <summary>Gets the dirty-chunk tracker, which the roads service calls when roads change (M1-01).</summary>
+    internal IChunkDirtyTracker DirtyChunks => _services.DirtyChunks;
+
+    /// <summary>Gets the service that applies the effects of researched techs, adopted civics and the like (M1-04).</summary>
+    internal IProgressionService ProgressionService => _services.ProgressionService;
+
+    /// <summary>Gets the ledger of knowledge, culture and coin credited since Research and Culture last took it (M1-04).</summary>
+    internal IPointsLedger PointsLedger => _services.PointsLedger;
+
+    /// <summary>Gets the milestone counters that conditions read (M1-04).</summary>
+    internal ICounters Counters => _services.Counters;
+
+    /// <summary>Gets Production's buffers as Logistics uses them (M1-08).</summary>
+    internal IProductionBuffers ProductionBuffers => _services.ProductionBuffers;
+
+    /// <summary>Gets the workforce supply that Population sets once a day (M1-07).</summary>
+    internal IWorkforceSupply WorkforceSupply => _services.WorkforceSupply;
 
     /// <summary>Gets or sets the system whose stream <see cref="Rng"/> returns; the pipeline and the command router set it.</summary>
     internal SystemId CurrentSystem { get; set; }

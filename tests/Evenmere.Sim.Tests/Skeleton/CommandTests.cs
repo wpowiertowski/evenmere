@@ -193,11 +193,16 @@ public sealed class CommandTests
             SystemId.Roads,
             new SpySystem(SystemId.Roads, [], onRegister: router => router.Register(
                 new LambdaHandler<PingCommand>(null, (ctx, _) => ctx.Rng.NextUInt()))));
-        sim.Pipeline.RegisterCommands(sim.Router);
+
+        // A fresh router: the simulation's own already holds the real systems' handlers (M1-00 registers one for every M1
+        // command), and a command type can be registered only once. The queue is applied directly, as Tick would.
+        var router = new CommandRouter();
+        sim.Pipeline.RegisterCommands(router);
         Pcg32[] before = [.. sim.World.SystemRngs];
 
-        sim.Enqueue(new PingCommand("draw"));
-        sim.Tick();
+        var queue = new CommandQueue();
+        queue.Enqueue(new PingCommand("draw"));
+        router.ApplyQueued(queue, sim.Context);
 
         Pcg32[] after = sim.World.SystemRngs;
         for (int i = 0; i < after.Length; i++)

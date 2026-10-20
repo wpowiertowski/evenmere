@@ -2,8 +2,9 @@ namespace Evenmere.Sim.Queries;
 
 /// <summary>
 /// The read-only view of the simulation: one query interface per system, plus placement and explain queries that span
-/// systems. The view and the tools read state only through these, and only between ticks (ADR-0006). The per-system
-/// interfaces are empty in M0; M1-00 declares their methods.
+/// systems. The view and the tools read state only through these, and only between ticks (ADR-0006). The M1 methods of
+/// the interfaces were frozen by M1-00 (changed only by ADR); the exploration, economy, happenings and modifiers
+/// interfaces stay empty until a later milestone needs them.
 /// </summary>
 public interface ISimQueries
 {

@@ -1,4 +1,6 @@
+using Evenmere.Content;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Services;
 using Evenmere.Sim.State;
 using Evenmere.Sim.Systems.Advisors;
 using Evenmere.Sim.Systems.Construction;
@@ -23,38 +25,106 @@ namespace Evenmere.Sim.Pipeline;
 
 /// <summary>
 /// The composition root: builds every system over a world state, and from them the pipeline entries (the one place
-/// that fixes the tick order and the cadences) and the query facade. When a stub system grows a constructor that
-/// takes its state slice or another service, the task that fills it passes that here.
+/// that fixes the tick order and the cadences), the write services and the query facade. When a stub system grows a
+/// constructor that takes its state slice, the content or another service, the task that fills it passes that here.
 /// </summary>
+/// <remarks>
+/// Ten tasks edit this file in parallel, each on its own lines. Keep every task's lines apart (a blank line between
+/// groups), because neighbouring edits by different tasks are merge conflicts.
+/// </remarks>
 internal sealed class SystemRoster
 {
-    public SystemRoster(WorldState world)
+    public SystemRoster(WorldState world, ContentDb content)
     {
         ArgumentNullException.ThrowIfNull(world);
 
+        // The content is passed so a task whose system needs it in a constructor does not have to change this signature.
+        ArgumentNullException.ThrowIfNull(content);
+
         // Services first: they are never ticked, but they register command handlers and answer queries.
+        // M1-01 changes the next line to pass the map state, the entity ID allocator and the content.
         var map = new MapSystem();
+
+        // M1-05 changes the next line to pass the roads state.
         var roads = new RoadsSystem();
+
         var storage = new StorageSystem(world.Storage);
+
+        // M1-04 changes the next line to pass the modifiers state.
         var modifiers = new ModifiersSystem();
 
         // Ticked systems, in the exact order of architecture.md (System order), steps 2 to 15.
+        // M1-06 changes the next line to pass the construction state.
         var construction = new ConstructionSystem();
+
+        // M1-07 changes the next line to pass the workforce state.
         var workforce = new WorkforceSystem();
+
+        // M1-08 changes the next line to pass the production state.
         var production = new ProductionSystem();
+
+        // M1-09 changes the next line to pass the logistics state.
         var logistics = new LogisticsSystem();
+
         var exploration = new ExplorationSystem();
+
+        // M1-10 changes the next line to pass the needs state.
         var needs = new NeedsSystem();
+
+        // M1-10 changes the next line to pass the population state.
         var population = new PopulationSystem();
+
         var economy = new EconomySystem();
+
+        // M1-11 changes the next line to pass the research state.
         var research = new ResearchSystem();
+
+        // M1-11 changes the next line to pass the culture state.
         var culture = new CultureSystem();
+
+        // M1-04 changes the next line to pass the progression state.
         var progression = new ProgressionSystem();
+
         var happenings = new HappeningsSystem();
+
+        // M1-15 changes the next line to pass the advisors state.
         var advisors = new AdvisorsSystem();
+
+        // M1-12 changes the next line to pass the statistics state.
         var statistics = new StatisticsSystem();
 
-        Storage = storage.Pool;
+        // The write services. Each is a throwing stand-in until the task named beside it replaces its line(s).
+        Services = new SimServices
+        {
+            // M1-01: the map service (building registry, lifecycle, dirty chunks).
+            BuildingRegistry = new UnimplementedBuildingRegistry(),
+            BuildingLifecycle = new UnimplementedBuildingLifecycle(),
+            DirtyChunks = new UnimplementedChunkDirtyTracker(),
+
+            // M0-05: the island goods pool.
+            Storage = new StorageService(storage.Pool),
+
+            // M1-04: progression (effects, points ledger, counters).
+            ProgressionService = new UnimplementedProgressionService(),
+            PointsLedger = new UnimplementedPointsLedger(),
+            Counters = new UnimplementedCounters(),
+
+            // M1-08: production buffers, as Logistics sees them.
+            ProductionBuffers = new UnimplementedProductionBuffers(),
+
+            // M1-07: the workforce supply that Population sets.
+            WorkforceSupply = new UnimplementedWorkforceSupply(),
+        };
+
+        // Lifecycle subscriptions: M1-13 subscribes the listeners here, in pipeline order, once M1-01 has landed.
+
+        // The two halves of IPlacementQueries. PlacementQueries forwards to them.
+        // M1-06: Construction's building placement check.
+        IBuildingPlacement buildingPlacement = new UnimplementedBuildingPlacement();
+
+        // M1-05: Roads' road placement check.
+        IRoadPlacement roadPlacement = new UnimplementedRoadPlacement();
+
         Entries =
         [
             new(SystemId.Map, map, Cadence.None),
@@ -97,7 +167,9 @@ internal sealed class SystemRoster
             Happenings = happenings.Queries,
             Advisors = advisors.Queries,
             Statistics = statistics.Queries,
-            Placement = new PlacementQueries(),
+            Placement = new PlacementQueries(buildingPlacement, roadPlacement),
+
+            // M1-12: the explain service.
             Explain = new ExplainQueries(),
         };
     }
@@ -108,6 +180,6 @@ internal sealed class SystemRoster
     /// <summary>Gets the query facade over every system.</summary>
     public SimQueries Queries { get; }
 
-    /// <summary>Gets the write side of the storage service, for <see cref="SimContext"/>.</summary>
-    public StoragePool Storage { get; }
+    /// <summary>Gets the write services that <see cref="SimContext"/> exposes to the systems.</summary>
+    public SimServices Services { get; }
 }

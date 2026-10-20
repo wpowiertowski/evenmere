@@ -2,7 +2,8 @@ namespace Evenmere.Sim;
 
 /// <summary>
 /// Why a command was refused. Later tasks extend the set: add members at the end and never renumber, because
-/// hosts and command logs may store the numeric code.
+/// hosts and command logs may store the numeric code. The view maps each code to player text; the event's detail is
+/// for developers and logs.
 /// </summary>
 public enum RejectReason
 {
@@ -11,4 +12,22 @@ public enum RejectReason
 
     /// <summary>The handler found the command invalid in the current state; the event's detail says why.</summary>
     Invalid = 1,
+
+    /// <summary>The command is declared but its handler has not been written yet (M1-00 registers a placeholder for every M1 command); the event's detail names the task that adds it.</summary>
+    NotImplemented = 2,
+
+    /// <summary>The building, house, advice note or other target the command names does not exist.</summary>
+    UnknownTarget = 3,
+
+    /// <summary>A placement was refused because the placement check found an error (occupied, wrong terrain, locked, and so on); the event's detail names the first error.</summary>
+    PlacementInvalid = 4,
+
+    /// <summary>A research or civic target is not available: already done, a prerequisite is missing, or its era has not begun.</summary>
+    NodeNotAvailable = 5,
+
+    /// <summary>The target exists but the command makes no sense for it, such as pausing a house or locking the upgrades of a farm.</summary>
+    NotApplicable = 6,
+
+    /// <summary>The target may not be changed this way, such as demolishing the Founders' Hall.</summary>
+    Protected = 7,
 }

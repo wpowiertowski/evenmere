@@ -1,6 +1,8 @@
 using Evenmere.Sim.Commands;
 using Evenmere.Sim.Pipeline;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Services;
+using Evenmere.Sim.Systems.Advisors.Commands;
 
 namespace Evenmere.Sim.Systems.Advisors;
 
@@ -19,7 +21,8 @@ internal sealed class AdvisorsSystem : ISimSystem
     /// <inheritdoc />
     public void Register(CommandRouter router)
     {
-        // M1-15 registers this system's command handlers here.
+        // M1-15 replaces the placeholder with its real handler.
+        router.Register(new NotImplementedCommandHandler<DismissAdvice>("M1-15"));
     }
 
     /// <inheritdoc />

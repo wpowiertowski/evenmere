@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Evenmere.Content;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
+using Evenmere.Sim.Queries.Types;
 
 namespace Evenmere.Sim.Tests.Scenarios;
 
@@ -11,8 +12,9 @@ namespace Evenmere.Sim.Tests.Scenarios;
 /// The System.Text.Json settings for reading a command's <c>args</c>. Property names match the record's constructor
 /// parameters ignoring case, unknown and missing properties are errors, and the Core value types that System.Text.Json
 /// would otherwise read wrongly (and silently, as zero) have converters: content IDs are written as their string id,
-/// <see cref="Amount"/> as a decimal and <see cref="EntityId"/> as an integer. A task that adds a command parameter of
-/// another value type adds its converter here.
+/// <see cref="Amount"/> as a decimal, <see cref="EntityId"/> as an integer, <see cref="TileCoord"/> as <c>[x, y]</c> and
+/// <see cref="Rotation"/> as 0 to 3. Arrays of these (<c>TechId[]</c>, <c>TileCoord[]</c>) need nothing extra. A task that
+/// adds a command parameter of another value type adds its converter here.
 /// </summary>
 internal static class ScenarioJson
 {
@@ -29,6 +31,8 @@ internal static class ScenarioJson
         {
             new AmountJsonConverter(),
             new EntityIdJsonConverter(),
+            new TileCoordJsonConverter(),
+            new RotationJsonConverter(),
             new ContentIdJsonConverterFactory(content),
         },
     };
@@ -69,6 +73,61 @@ internal static class ScenarioJson
 
         public override void Write(Utf8JsonWriter writer, EntityId value, JsonSerializerOptions options) =>
             writer.WriteNumberValue(value.Value);
+    }
+
+    /// <summary>
+    /// Reads a <see cref="TileCoord"/> from a two-number JSON array <c>[x, y]</c>. An array of tiles (<c>TileCoord[]</c>) needs
+    /// no converter of its own: System.Text.Json reads it element by element, as <c>[[x, y], …]</c>.
+    /// </summary>
+    private sealed class TileCoordJsonConverter : JsonConverter<TileCoord>
+    {
+        public override TileCoord Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            const string Expected = "A tile must be a two-number array [x, y].";
+            if (reader.TokenType != JsonTokenType.StartArray)
+            {
+                throw new JsonException(Expected);
+            }
+
+            int[] parts = new int[2];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (!reader.Read() || reader.TokenType != JsonTokenType.Number || !reader.TryGetInt32(out parts[i]))
+                {
+                    throw new JsonException(Expected);
+                }
+            }
+
+            if (!reader.Read() || reader.TokenType != JsonTokenType.EndArray)
+            {
+                throw new JsonException(Expected);
+            }
+
+            return new TileCoord(parts[0], parts[1]);
+        }
+
+        public override void Write(Utf8JsonWriter writer, TileCoord value, JsonSerializerOptions options)
+        {
+            writer.WriteStartArray();
+            writer.WriteNumberValue(value.X);
+            writer.WriteNumberValue(value.Y);
+            writer.WriteEndArray();
+        }
+    }
+
+    /// <summary>
+    /// Reads a <see cref="Rotation"/> from the number of quarter turns, 0 to 3. Without this converter System.Text.Json would
+    /// accept any number and produce an undefined enum value.
+    /// </summary>
+    private sealed class RotationJsonConverter : JsonConverter<Rotation>
+    {
+        public override Rotation Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+            reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out int quarters) && quarters is >= 0 and <= 3
+                ? (Rotation)quarters
+                : throw new JsonException("A rotation must be a number of quarter turns, 0 to 3.");
+
+        public override void Write(Utf8JsonWriter writer, Rotation value, JsonSerializerOptions options) =>
+            writer.WriteNumberValue((int)value);
     }
 
     /// <summary>Makes a converter for each content ID type (<c>GoodId</c>, <c>BuildingTypeId</c> and so on) that reads the item's string id.</summary>
