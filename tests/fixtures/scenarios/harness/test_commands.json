@@ -1,0 +1,28 @@
+{
+  "description": "Exercises the scenario command path with the harness's own test-only commands (tests/Evenmere.Sim.Tests/Scenarios/HarnessCommands.cs): commands applied on the tick they name, in file order, goods landing in the island stock, a rejected command, and a command nothing serves.",
+  "content": "tests/fixtures/content/minimal",
+  "map": null,
+  "seed": 7,
+  "ticks": 240,
+  "commands": [
+    { "tick": 1, "type": "RecordTick", "args": { "label": "first tick" } },
+    { "tick": 30, "type": "GrantGoods", "args": { "good": "timber", "amount": "12.5" } },
+    { "tick": 30, "type": "RecordTick", "args": { "label": "same tick, after the grant" } },
+    { "tick": 120, "type": "GrantGoods", "args": { "Good": "timber", "AMOUNT": 7.5 } },
+    { "tick": 150, "type": "GrantGoods", "args": { "good": "fish", "amount": "-1" } },
+    { "tick": 200, "type": "UnservedCommand" },
+    { "tick": 240, "type": "RecordTick", "args": { "label": "last tick" } }
+  ],
+  "expect": {
+    "hash": "d30ba5de5d23b100",
+    "events": [
+      { "type": "TickRecorded", "exactly": 3 },
+      { "type": "GoodsGranted", "exactly": 2 },
+      { "type": "CommandRejected", "exactly": 2 }
+    ],
+    "stock": {
+      "timber": "== 20",
+      "fish": "== 0"
+    }
+  }
+}

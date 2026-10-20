@@ -1,0 +1,11 @@
+{
+  "description": "An empty world on the minimal content, ticked 10,000 times with no commands. Pins the state hash of the bare skeleton, so any change to the clock, the RNG streams or the state layout shows up here.",
+  "content": "tests/fixtures/content/minimal",
+  "map": null,
+  "seed": 42,
+  "ticks": 10000,
+  "commands": [],
+  "expect": {
+    "hash": "6114913bc26ea39a"
+  }
+}
