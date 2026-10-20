@@ -16,6 +16,7 @@ Each file records one decision: its context, the decision itself and its consequ
 | [0008](0008-platform-targets.md) | macOS and Linux/Steam Deck first, Windows last | Accepted |
 | [0009](0009-economy-staging.md) | Goods-only Era I; coin introduced by Coinage | Accepted |
 | [0010](0010-progression-gating.md) | Dual era gateways, alternating tier unlocks, decline always on | Accepted |
+| [0011](0011-m1-simulation-contract.md) | The M1 simulation contract | Accepted |
 
 ## Template
 

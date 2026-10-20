@@ -113,7 +113,8 @@ A few files are touched by many tasks. Each card names the section it may edit.
 | `Evenmere.sln` | Only M0-01 creates it and M0-09 adds the game project. Later tasks never add projects without an ADR. |
 | `Directory.Packages.props` | A card that names a new package adds one `PackageVersion` line. The orchestrator resolves conflicts. |
 | `scripts/verify.sh` | Sections are marked `# --- section: <name> ---`. Cards name the section they may edit. |
-| `src/Evenmere.Sim/Simulation/SystemPipeline.cs` | Written once in M0-05 with every system pre-registered in architecture order. Only an ADR changes the order. |
+| `src/Evenmere.Sim/Pipeline/SystemPipeline.cs` | Written once in M0-05 with every system pre-registered in architecture order. Only an ADR changes the order. |
+| `src/Evenmere.Sim/Pipeline/SystemRoster.cs` | The composition root. Each stand-in line is tagged with the task that replaces it; a task edits only its own tagged lines (ADR-0011). |
 | `src/Evenmere.Sim/State/WorldState.cs` | M0-05 pre-declares one state slot per system. Tasks fill their own `Systems/<Name>/<Name>State.cs`. |
 | `src/Evenmere.Sim/Queries/*.cs` | M0-05 creates the interfaces and M1-00 declares the cross-system methods. Afterwards, only an ADR or a card that explicitly names a method adds one. |
 | `content/locale/en/*.json` | Each content task creates its own file. Never edit another task's locale file. |

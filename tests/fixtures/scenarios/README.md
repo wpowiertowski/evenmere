@@ -27,7 +27,7 @@ The harness lives in `tests/Evenmere.Sim.Tests/Scenarios/`.
 }
 ```
 
-`GrantGoods` is one of the harness's test-only commands; real commands such as `PlaceBuilding` are used the same way once they exist. The hash above is a placeholder: use the one your run reports (see Golden updates).
+`GrantGoods` is one of the harness's test-only commands; real commands such as `PlaceBuilding` are used the same way. Until their system's task lands, they are rejected with `NotImplemented`. The hash above is a placeholder: use the one your run reports (see Golden updates).
 
 The file is read strictly, like content: no comments, no trailing commas, no duplicate properties, and no unknown properties, so a typo such as `"tick"` for `"ticks"` is an error. Every error message starts with the file and the property it is about, and names the index of a bad command (`commands[2].args: ...`).
 

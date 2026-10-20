@@ -40,7 +40,7 @@
 
 | ID | Title | Lane | Depends on | Status |
 | --- | --- | --- | --- | --- |
-| M1-00 | Cross-system interfaces, commands, events and test fakes | sim | M0 gate | todo |
+| M1-00 | Cross-system interfaces, commands, events and test fakes | sim | M0 gate | done |
 | M1-01 | Map model, map loading and building registry | sim | M1-00 | todo |
 | M1-02 | Vertical-slice content | content | M0-04 | done |
 | M1-03 | Starter island map | content | M1-01, M1-02 | todo |
@@ -83,6 +83,8 @@
 **Reads:** architecture.md (§Simulation core, §Gameplay systems); ADR-0002, ADR-0005; progression.md (§How needs work).
 
 **Goal:** freeze the M1 cross-system surface (queries, write services, commands and events), so that ten sim tasks and the game tasks can run in parallel against it.
+
+**Done:** the final signatures live in code, and [ADR-0011](../adr/0011-m1-simulation-contract.md) records them along with the follow-up decisions (pausing, building outputs, request de-duplication, SystemRoster line ownership). Where this card's table and the code differ, the code wins.
 
 **Steps:**
 
@@ -424,7 +426,7 @@
 **Steps:**
 
 1. **Production state:** on `OnActivated` for a building with a recipe, create its state: cycle progress, input and output buffers, last stall reason and an area-yield cache.
-2. **Area yield**, computed on activation and when a nearby map, road or building change is notified:
+2. **Area yield**, computed on activation and whenever a nearby building is activated or removed (lifecycle; roads don't affect yield, per ADR-0011):
    - Woodcutter: forest tiles within radius 4, divided by 24.
    - Fishing hut: water tiles within radius 5 not claimed by a lower-ID hut, divided by 30.
    - Farms: the share of footprint tiles fertile for the crop.
@@ -547,11 +549,12 @@
 
 **Steps:**
 
-1. **Daily accrual:** `TakeToday(Knowledge)` adds to the target's progress, with any overflow going to the next queued node. Culture works the same way for civics.
-2. **Availability:** all prerequisites are done, the node's era has begun (`IProgressionQueries.CurrentEra` ≥ the node's era), and the node isn't done. Repeatable nodes come in M5.
-3. **Completion:** apply the effects through `IProgressionService`, emit `TechResearched` or `CivicAdopted`, and pop the queue.
-4. **Inspirations** (evaluated daily): when a node's condition first becomes true, mark it inspired, which subtracts 40% of the full cost (from `rules.core`) from the remaining cost, floored at the progress already made, and emit `InspirationTriggered`.
-5. **Commands:** handlers for `SetResearchTarget`, `SetResearchQueue`, `SetCivicTarget` and `SetCivicQueue`. Validation rejects unavailable nodes with `NodeNotAvailable`.
+1. **Building outputs (ADR-0011):** just before taking the day's points, credit each active building's own `outputs`. Research credits knowledge and Culture credits culture. The amount is outputs × workforce fill × (1000 + `output.knowledge` or `output.culture` bonus) / 1000; a building with no workforce counts as fully staffed.
+2. **Daily accrual:** `TakeToday(Knowledge)` adds to the target's progress, with any overflow going to the next queued node. Culture works the same way for civics.
+3. **Availability:** all prerequisites are done, the node's era has begun (`IProgressionQueries.CurrentEra` ≥ the node's era), and the node isn't done. Repeatable nodes come in M5.
+4. **Completion:** apply the effects through `IProgressionService`, emit `TechResearched` or `CivicAdopted`, and pop the queue.
+5. **Inspirations** (evaluated daily): when a node's condition first becomes true, mark it inspired, which subtracts 40% of the full cost (from `rules.core`) from the remaining cost, floored at the progress already made, and emit `InspirationTriggered`.
+6. **Commands:** handlers for `SetResearchTarget`, `SetResearchQueue`, `SetCivicTarget` and `SetCivicQueue`. Validation rejects unavailable nodes with `NodeNotAvailable`.
 
 **Acceptance:**
 

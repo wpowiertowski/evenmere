@@ -610,13 +610,13 @@ From M2 onward, every task lands through a **PR with green CI**.
 
 | Lane | Depends on | Owns |
 | --- | --- | --- |
-| game + sim | M2-00 | `game/ui/debug/**`, `src/Evenmere.Sim/Systems/Debug/**`, `docs/adr/0011-cheat-commands.md` |
+| game + sim | M2-00 | `game/ui/debug/**`, `src/Evenmere.Sim/Systems/Debug/**`, `docs/adr/0012-cheat-commands.md` |
 
 **Goal:** tools for testers that cannot leak into normal play.
 
 **Steps:**
 
-1. **ADR-0011:** cheat commands are processed only when `WorldState.CheatsEnabled` is set. The flag is set at new-game time in debug builds or with a launch flag, is stored in saves, and is visible in the save header.
+1. **ADR-0012:** cheat commands are processed only when `WorldState.CheatsEnabled` is set. The flag is set at new-game time in debug builds or with a launch flag, is stored in saves, and is visible in the save header.
 2. **Commands:** `CheatGrantGoods`, `CheatCompleteNode`, `CheatSetEra`, `CheatRevealAll` and `CheatAddResidents`.
 3. **Overlay** (F3): fps, tick time per system (from the profiler), entity counts, the selected entity's raw state, and the hash.
 4. **Console** (backtick): parses and enqueues cheat commands.
