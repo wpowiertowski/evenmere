@@ -378,8 +378,7 @@
    - Default window 1600 × 900, minimum 1280 × 800.
    - Stretch mode `canvas_items`, aspect `expand`.
    - Main scene `res://scenes/Main.tscn`.
-2. **Game project file:** `game/Evenmere.Game.csproj` uses the `Godot.NET.Sdk/4.7.x` SDK from NuGet, targets the framework from ADR-0001, and has `ProjectReference`s to Core, Content and Sim. Add it to `Evenmere.sln` under a `game` solution folder.
-   - **Verify ADR-0001's assumption:** check that the project builds on `net10.0`. If Godot 4.7 refuses it, fall back as ADR-0001 says and report the change so the orchestrator can amend the ADR and the other projects.
+2. **Game project file:** `game/Evenmere.Game.csproj` uses the `Godot.NET.Sdk/4.7.2` SDK from NuGet, targets `net10.0` with `EnableDynamicLoading=true`, and has `ProjectReference`s to Core, Content and Sim. Add it to `Evenmere.sln` under a `game` solution folder. The `net10.0` setup was verified on 2026-10-19 (see ADR-0001).
 3. **`game/host/ContentPaths.cs`:** resolves the content root as `$EVENMERE_CONTENT` if set, else `res://content` if it exists (exported builds), else `<repo>/content` found by walking up from `ProjectSettings.GlobalizePath("res://")`.
 4. **`game/host/SimHost.cs`** (a `Node`):
    - Loads `ContentDb` and creates or loads an `ISimulation`.
@@ -397,6 +396,8 @@
    - Until `content/eras/` exists, export `EVENMERE_CONTENT=<repo>/tests/fixtures/content/minimal`, using the same rule as the lint section.
    - Run `dotnet build game/Evenmere.Game.csproj -c Debug`, then `"$GODOT" --headless --path game --import`, then `"$GODOT" --headless --path game -- --smoke-ticks=1000 --seed=42`.
    - Grep for `SMOKE OK`.
+   - Guard every Godot run against hangs **without** GNU `timeout`, which macOS lacks. Use `perl -e 'alarm 300; exec @ARGV' "$GODOT" …` or Godot's own `--quit-after`.
+   - If `dotnet` isn't on `PATH` but `/usr/local/share/dotnet/dotnet` exists, prepend that directory. Shells started before the SDK was installed miss it.
 8. **Verify script:** wire the `godot` section of `scripts/verify.sh` to call `scripts/godot-smoke.sh`.
 
 **Acceptance:**

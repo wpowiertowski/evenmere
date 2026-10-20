@@ -1054,7 +1054,7 @@
 1. **`.github/workflows/ci.yml`:**
    - Triggers: `pull_request` and `push` to `main`, with a concurrency group per ref.
    - Matrix: `ubuntu-latest` and `macos-latest`.
-   - Steps: checkout, `actions/setup-dotnet` (10.0.x), NuGet cache, install Godot 4.7 .NET with a pinned version (for example `chickensoft-games/setup-godot` with `use-dotnet: true`), then `REQUIRE_GODOT=1 scripts/verify.sh`.
+   - Steps: checkout, `actions/setup-dotnet` (10.0.x), NuGet cache, install Godot 4.7.2 .NET, pinned to the same version as the development Mac (for example `chickensoft-games/setup-godot` with `use-dotnet: true`), then `REQUIRE_GODOT=1 scripts/verify.sh`.
    - Upload test results (TRX) as artifacts.
 2. **`.github/workflows/nightly.yml`:** a scheduled run of the balance bot `slice.json` on seeds 1–3, uploading the reports. M2 adds perf.
 3. **`.github/pull_request_template.md`:** Task ID, Summary, Acceptance evidence, and a checklist (verify passes, Owns respected, docs updated).

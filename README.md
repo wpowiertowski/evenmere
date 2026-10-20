@@ -61,8 +61,8 @@ A calm, single-player island city builder. You grow a settlement through Anno-st
 
 Prerequisites:
 
-- [.NET SDK 10.0](https://dotnet.microsoft.com/download), pinned in `global.json` from M0-01.
-- [Godot 4.7 .NET edition](https://godotengine.org/download), needed only for the game layer. Point `$GODOT` at the binary if it isn't on your `PATH`.
+- [.NET SDK 10.0](https://dotnet.microsoft.com/download) (10.0.4xx), pinned in `global.json` from M0-01.
+- [Godot 4.7.2 .NET edition](https://godotengine.org/download), needed only for the game layer. Scripts look for `$GODOT`, then `godot` on `PATH`, then `/Applications/Godot_mono.app`.
 
 Once M0 has landed:
 

@@ -13,6 +13,9 @@ Evenmere is built largely by coding agents, supervised by one developer on macOS
 - Keep the economy, research and culture in **engine-free .NET libraries** (`Evenmere.Core`, `Evenmere.Content`, `Evenmere.Sim`) that build and test with the plain .NET SDK.
 - **Target .NET 10 (LTS)** in every project. Task M0-01 verifies that Godot 4.7's `Godot.NET.Sdk` builds a `net10.0` game project. If it can't, use the newest framework Godot supports in all projects and amend this ADR.
 - Build the Godot project as part of `Evenmere.sln` through the NuGet `Godot.NET.Sdk`, so `dotnet build` type-checks the game layer without the editor.
+- **Pinned versions:** Godot 4.7.2 .NET (`Godot.NET.Sdk/4.7.2`) and .NET SDK 10.0.4xx. Upgrades are deliberate, single-purpose changes.
+
+**Verified 2026-10-19** on the development Mac (Apple Silicon, macOS 27): a throwaway `Godot.NET.Sdk/4.7.2` project targeting `net10.0`, with a `ProjectReference` to a `net10.0` class library, built with `dotnet build` and ran headless in Godot 4.7.2.stable.mono on the .NET 10.0.13 runtime. No fallback is needed.
 
 ## Consequences
 
