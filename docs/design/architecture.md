@@ -464,7 +464,7 @@ evenmere/
 │   ├── Evenmere.Sim.Tests/    unit tests + Scenarios/
 │   └── fixtures/              tiny content packs, maps and saves
 └── game/                      Godot 4.7 .NET project (Evenmere.Game.csproj)
-    ├── host/  scenes/  rendering/  ui/  input/  audio/
+    ├── host/  scenes/  rendering/  ui/  controls/  audio/
     ├── data/visuals/          content-ID → scene, colour and icon mapping
     └── assets/
 ```
