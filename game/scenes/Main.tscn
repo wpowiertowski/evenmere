@@ -1,0 +1,38 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" uid="uid://bub5wqwnne33" path="res://host/Main.cs" id="1_main"]
+[ext_resource type="Script" uid="uid://dcmhwhll1gsvl" path="res://host/SimHost.cs" id="2_host"]
+[ext_resource type="Script" uid="uid://xvdxwc4p8uj8" path="res://ui/HudLabel.cs" id="3_hud"]
+
+[sub_resource type="Environment" id="Environment_sky"]
+background_mode = 1
+background_color = Color(0.62, 0.78, 0.88, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.85, 0.88, 0.92, 1)
+ambient_light_energy = 0.6
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="SimHost" type="Node" parent="."]
+script = ExtResource("2_host")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_sky")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.81373, 0.58124, 0, -0.58124, 0.81373, 0, 10, 14)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 10, 0)
+shadow_enabled = true
+
+[node name="Hud" type="CanvasLayer" parent="."]
+
+[node name="HudLabel" type="Label" parent="Hud"]
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 616.0
+offset_bottom = 38.0
+text = "No simulation"
+script = ExtResource("3_hud")

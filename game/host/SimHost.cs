@@ -1,0 +1,156 @@
+using System.Diagnostics;
+using Evenmere.Content;
+using Evenmere.Core.Time;
+using Evenmere.Sim;
+using Evenmere.Sim.Queries;
+using Godot;
+
+namespace Evenmere.Game.Host;
+
+/// <summary>
+/// The bridge between Godot and the simulation (architecture.md, "Bridging sim and view"; ADR-0006). It owns the
+/// <see cref="ISimulation"/> and nothing else in the game holds it. Each frame it turns real time into whole ticks
+/// with a fixed-step accumulator, runs them on the main thread within a tick and time budget, drains the events and
+/// publishes them. Views read state through <see cref="Query"/> between ticks and never hold simulation state.
+/// </summary>
+public sealed partial class SimHost : Node
+{
+    /// <summary>
+    /// The most wall-clock time one frame may spend ticking (ADR-0006). It is checked after each tick, so a frame always
+    /// makes progress. The tick length, the 8-tick cap and the backlog cap live in <see cref="FixedStepper"/>.
+    /// </summary>
+    public const double MaxFrameMilliseconds = 4.0;
+
+    private readonly FixedStepper _stepper = new();
+    private ISimulation? _sim;
+    private SimSpeed _speed = SimSpeed.X1;
+
+    /// <summary>Raised once per frame in which ticks ran, after the events were drained, with those events in emission order (possibly none).</summary>
+    public event Action<IReadOnlyList<SimEvent>>? EventsDrained;
+
+    /// <summary>Gets a value indicating whether a simulation has been started.</summary>
+    public bool IsRunning => _sim is not null;
+
+    /// <summary>Gets the tick the simulation has completed.</summary>
+    public long CurrentTick => RequireSim().CurrentTick;
+
+    /// <summary>Gets the calendar at the current tick.</summary>
+    public GameClock Clock => new(RequireSim().CurrentTick);
+
+    /// <summary>Gets the read-only queries. They are valid only between ticks, which is any time outside the host's own frame step.</summary>
+    public ISimQueries Query => RequireSim().Query;
+
+    /// <summary>
+    /// Gets the chunks the simulation changed since the view last looked. It is an empty stub until M1-01 gives the
+    /// map its chunks; the element type then becomes the sim's chunk coordinate.
+    /// </summary>
+    // TODO(M1-01): drain the map's dirty chunks after each frame's ticks.
+    public IReadOnlyList<Vector2I> DirtyChunks { get; } = [];
+
+    /// <summary>Gets how far the accumulator has run toward the next tick, from 0 to 1, so the view can interpolate between ticks.</summary>
+    public double InterpolationAlpha => _stepper.InterpolationAlpha;
+
+    /// <summary>Gets a value indicating whether <see cref="SimSpeed.X16"/> may be chosen, which is true only in debug builds.</summary>
+    public static bool DebugSpeedAllowed => OS.IsDebugBuild();
+
+    /// <summary>Gets or sets the speed. Asking for <see cref="SimSpeed.X16"/> in a release build gives <see cref="SimSpeed.X4"/>.</summary>
+    public SimSpeed Speed
+    {
+        get => _speed;
+        set
+        {
+            _speed = value == SimSpeed.X16 && !DebugSpeedAllowed ? SimSpeed.X4 : value;
+            if (_speed == SimSpeed.Paused)
+            {
+                // Resuming should not start with a burst, so whole ticks of backlog go. The fraction stays, so the view holds its pose.
+                _stepper.DropBacklog();
+            }
+        }
+    }
+
+    /// <summary>Loads the content and starts a new world, replacing any simulation already running.</summary>
+    /// <param name="seed">The world seed.</param>
+    /// <exception cref="ContentLoadException">The content has errors.</exception>
+    public void StartNewGame(ulong seed)
+    {
+        ContentDb content = ContentLoader.Load(ContentPaths.Resolve()).GetDbOrThrow();
+
+        // Held as the interface on purpose: the host exposes queries, never the concrete simulation or its state.
+        _sim = Simulation.CreateNew(content, new NewGameOptions { Seed = seed });
+        _stepper.Reset();
+    }
+
+    // TODO(M1-14): start from a save (Simulation.Restore) once the persistence task defines the header and the content check.
+
+    /// <summary>Queues a command for the next tick.</summary>
+    /// <param name="command">The command.</param>
+    public void Enqueue(Command command) => RequireSim().Enqueue(command);
+
+    /// <summary>Computes the state hash of the world as it is now.</summary>
+    /// <returns>The XxHash64 state hash (ADR-0003).</returns>
+    public ulong ComputeStateHash() => RequireSim().ComputeStateHash();
+
+    /// <summary>
+    /// Runs ticks back to back, ignoring the accumulator, the speed and the budgets. For the smoke test and for catching up;
+    /// the events of all the ticks are published together at the end.
+    /// </summary>
+    /// <param name="count">The number of ticks.</param>
+    public void RunTicksNow(int count)
+    {
+        ISimulation sim = RequireSim();
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
+        for (int i = 0; i < count; i++)
+        {
+            sim.Tick();
+        }
+
+        Publish(sim);
+    }
+
+    /// <inheritdoc />
+    public override void _Process(double delta)
+    {
+        if (_sim is not null)
+        {
+            Advance(_sim, delta);
+        }
+    }
+
+    private void Advance(ISimulation sim, double deltaSeconds)
+    {
+        if (_speed == SimSpeed.Paused)
+        {
+            return;
+        }
+
+        _stepper.Accumulate(deltaSeconds, _speed.Multiplier());
+
+        // Ticks run one at a time so the time budget can stop the frame early; the stepper keeps the ticks not run.
+        int due = _stepper.TicksDue();
+        int ticks = 0;
+        long start = Stopwatch.GetTimestamp();
+        while (ticks < due)
+        {
+            sim.Tick();
+            ticks++;
+
+            if (Stopwatch.GetElapsedTime(start).TotalMilliseconds >= MaxFrameMilliseconds)
+            {
+                break;
+            }
+        }
+
+        _stepper.Consume(ticks);
+
+        if (ticks > 0)
+        {
+            Publish(sim);
+        }
+    }
+
+    private void Publish(ISimulation sim) => EventsDrained?.Invoke(sim.DrainEvents());
+
+    private ISimulation RequireSim() =>
+        _sim ?? throw new InvalidOperationException("No simulation is running; call StartNewGame first.");
+}
