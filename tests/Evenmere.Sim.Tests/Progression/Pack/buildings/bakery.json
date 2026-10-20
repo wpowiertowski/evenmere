@@ -1,0 +1,11 @@
+{
+  "id": "bakery",
+  "category": "production",
+  "era": 1,
+  "footprint": [2, 2],
+  "cost": { "timber": 6 },
+  "buildDays": 2,
+  "workforce": { "tier": "villagers", "count": 4 },
+  "recipe": "bake_bread",
+  "tags": ["processing", "food"]
+}

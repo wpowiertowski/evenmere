@@ -50,8 +50,7 @@ internal sealed class SystemRoster
 
         var storage = new StorageSystem(world.Storage);
 
-        // M1-04 changes the next line to pass the modifiers state.
-        var modifiers = new ModifiersSystem();
+        var modifiers = new ModifiersSystem(world.Modifiers, content);
 
         // Ticked systems, in the exact order of architecture.md (System order), steps 2 to 15.
         // M1-06 changes the next line to pass the construction state.
@@ -82,8 +81,7 @@ internal sealed class SystemRoster
         // M1-11 changes the next line to pass the culture state.
         var culture = new CultureSystem();
 
-        // M1-04 changes the next line to pass the progression state.
-        var progression = new ProgressionSystem();
+        var progression = new ProgressionSystem(world.Progression, content, modifiers);
 
         var happenings = new HappeningsSystem();
 
@@ -105,9 +103,9 @@ internal sealed class SystemRoster
             Storage = new StorageService(storage.Pool),
 
             // M1-04: progression (effects, points ledger, counters).
-            ProgressionService = new UnimplementedProgressionService(),
-            PointsLedger = new UnimplementedPointsLedger(),
-            Counters = new UnimplementedCounters(),
+            ProgressionService = progression.Service,
+            PointsLedger = progression.Ledger,
+            Counters = progression.Counters,
 
             // M1-08: production buffers, as Logistics sees them.
             ProductionBuffers = new UnimplementedProductionBuffers(),

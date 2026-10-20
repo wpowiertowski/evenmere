@@ -1,0 +1,11 @@
+{
+  "id": "milling",
+  "era": 1,
+  "cost": 60,
+  "requires": ["net_weaving"],
+  "effects": [
+    { "unlockBuilding": "windmill" },
+    { "unlockBuilding": "bakery" },
+    { "unlockRecipe": "bake_bread" }
+  ]
+}

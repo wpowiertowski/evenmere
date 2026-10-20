@@ -46,8 +46,11 @@ public sealed class StateDeterminismTests
         StateTypeGraph graph = StateTypeWalker.Walk(typeof(WorldState));
 
         // The generator's two words are private fields of a Core struct; if the walker skipped Core they would go unchecked.
-        graph.Uses.Select(static u => u.Text).ShouldContain("WorldState.SystemRngs → Pcg32._state");
-        graph.Uses.Select(static u => u.Text).ShouldContain("WorldState.Storage → StorageState.Stock → Amount.Milli");
+        // The walker records each type's fields once, along the first path that reaches it, so which system's state gets
+        // there first changes as states grow. The paths are therefore matched by their ending, not spelled out in full.
+        string[] uses = [.. graph.Uses.Select(static u => u.Text)];
+        uses.ShouldContain(static text => text.EndsWith(" → Pcg32._state", StringComparison.Ordinal));
+        uses.ShouldContain(static text => text.EndsWith(" → Amount.Milli", StringComparison.Ordinal));
     }
 
     [Fact]

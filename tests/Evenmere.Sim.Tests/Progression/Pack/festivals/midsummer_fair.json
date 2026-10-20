@@ -1,0 +1,8 @@
+{
+  "id": "midsummer_fair",
+  "seasons": ["summer", "spring"],
+  "cost": { "bread": 20 },
+  "days": 5,
+  "culturePerDay": 10,
+  "start": true
+}

@@ -1,0 +1,11 @@
+{
+  "id": "grain_farm",
+  "category": "production",
+  "era": 1,
+  "footprint": [3, 3],
+  "cost": { "timber": 4 },
+  "buildDays": 2,
+  "recipe": "grow_grain",
+  "start": true,
+  "tags": ["farm", "seasonal"]
+}
