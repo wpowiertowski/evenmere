@@ -885,7 +885,7 @@
 **Steps:**
 
 1. **Carts:**
-   - For each `TransportJobView`, cache a view path from `IRoadQueries.TryFindViewPath` when the job starts.
+   - For each `TransportJobView`, cache a view path from `IRoadsQueries.TryFindViewPath` when the job starts.
    - Position the cart along it by phase progress = (now − phaseStart + interpolation alpha) / phaseTicks.
    - Render with a MultiMesh, with a simple bob animation and the good's colour on the load.
 2. **Walkers:**
