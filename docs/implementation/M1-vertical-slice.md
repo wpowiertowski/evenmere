@@ -91,12 +91,12 @@
    - `PlacementResult` (errors and warnings as `PlacementIssue` codes plus affected tiles) and `StallReason` (enum per architecture.md).
    - `TransportJobView` (id, storehouse, building, good, amount, direction, phase, phase start tick, phase ticks).
    - `HouseInfo`, `HouseNeedsInfo`, `ProductionInfo`, `ModifierContext`, `ModifierContribution`, `Explanation` (a tree of labelled lines with values and links to subjects), `StatKey` and `AdviceView`.
-2. **Query methods** on the empty interfaces from M0-05. Names may be refined, but the semantics must hold:
+2. **Query methods** on the empty interfaces from M0-05. Interface names follow the system folders (`IRoadsQueries`, `IAdvisorsQueries`, …). Method names may be refined, but the semantics must hold. The empty `IModifiersQueries`, `IConstructionQueries`, `IExplorationQueries`, `IEconomyQueries` and `IHappeningsQueries` also exist; leave them empty unless a method below needs them.
 
    | Interface | Methods |
    | --- | --- |
    | `IMapQueries` | `Width`, `Height`, `GetTile(x,y)`, `BuildingAt(x,y)`, `GetBuilding(id)`, `ActiveBuildings` (struct enumerator, ID order), `DrainDirtyChunks(Span<ChunkCoord>)` |
-   | `IRoadQueries` | `RoadAt(x,y)`, `HasRoadAccess(id)`, `IsInStorehouseReach(id)`, `TryNearestStorehouse(id, out storehouse, out cost)`, `IsCovered(house, ServiceKind)`, `TryFindViewPath(from, to, List<TileCoord>)` |
+   | `IRoadsQueries` | `RoadAt(x,y)`, `HasRoadAccess(id)`, `IsInStorehouseReach(id)`, `TryNearestStorehouse(id, out storehouse, out cost)`, `IsCovered(house, ServiceKind)`, `TryFindViewPath(from, to, List<TileCoord>)` |
    | `IStorageQueries` | `Stock(GoodId)` (exists) |
    | `IProgressionQueries` | `IsUnlocked(BuildingTypeId / RecipeId / TierId)`, `HasAccess(TerrainAccess)`, `HasFeature(Feature)`, `CurrentEra`, `BonusPercent(Stat, in ModifierContext)`, `ListModifiers(Stat, in ModifierContext, List<ModifierContribution>)`, `Counter(CounterKey)` |
    | `IWorkforceQueries` | `Supply(TierId)`, `Demand(TierId)`, `FillOf(id)` |
@@ -108,7 +108,7 @@
    | `IStatisticsQueries` | `Series(StatKey, Span<long>) → count` (daily samples, newest last) |
    | `IExplainQueries` | `ExplainGood(GoodId)`, `ExplainBuilding(id)`, `ExplainHouse(id)` |
    | `IPlacementQueries` | `Validate(type, x, y, rot)`, `ValidateRoad(ReadOnlySpan<TileCoord>, roadType)` |
-   | `IAdvisorQueries` | `Active() → ReadOnlySpan<AdviceView>` |
+   | `IAdvisorsQueries` | `Active() → ReadOnlySpan<AdviceView>` |
 
 3. **Write services** in `Services/`. These are internal to the sim and not exposed to the game:
    - `IBuildingRegistry`: add, remove, set state, change type.

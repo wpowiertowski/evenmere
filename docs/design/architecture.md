@@ -167,8 +167,8 @@ public abstract record SimEvent(long Tick);   // e.g. ConstructionCompleted, Tie
 
 | # | System | Cadence | Folder |
 | --- | --- | --- | --- |
-| 0 | Clock (advance tick, flag day/season boundaries) | tick | `Sim/Clock` |
-| 1 | Apply queued commands (dispatch to the owning system's handler) | tick | `Sim/Commands` |
+| 0 | Clock (advance tick, flag day/season boundaries) | tick | `Simulation.Tick` |
+| 1 | Apply queued commands (dispatch to the owning system's handler) | tick | `Simulation.Tick` → `Commands/CommandRouter` |
 | 2 | Construction: progress sites, consume materials | tick | `Systems/Construction` |
 | 3 | Workforce: allocate tier workforce to workplaces | day | `Systems/Workforce` |
 | 4 | Production: run recipes, fill buffers | tick | `Systems/Production` |
