@@ -58,7 +58,7 @@
 | M1-15 | Advisors v1 | sim | M1-12 | todo |
 | M1-16 | Balance bot v1 | tools | M1-13 | todo |
 | M1-17 | Camera rig and input actions | game | M0-09 | todo |
-| M1-18 | UI theme, HUD and speed controls | game | M0-09 | todo |
+| M1-18 | UI theme, HUD and speed controls | game | M0-09 | done |
 | M1-19 | Terrain and water rendering | game | M1-01, M1-17 | todo |
 | M1-20 | Buildings, roads and sites (placeholder meshes) | game | M1-19, M1-06 | todo |
 | M1-21 | Placement, road and demolish tools | game | M1-20 | todo |
