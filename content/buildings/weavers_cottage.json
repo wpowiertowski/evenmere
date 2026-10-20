@@ -1,0 +1,11 @@
+{
+  "id": "weavers_cottage",
+  "category": "production",
+  "era": 1,
+  "footprint": [2, 2],
+  "cost": { "timber": 4 },
+  "buildDays": 2,
+  "workforce": { "tier": "settlers", "count": 4 },
+  "recipe": "weave_homespun",
+  "tags": ["processing"]
+}

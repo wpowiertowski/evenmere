@@ -1,0 +1,5 @@
+{
+  "id": "shear_wool",
+  "outputs": { "wool": 1 },
+  "cycleSeconds": 30
+}

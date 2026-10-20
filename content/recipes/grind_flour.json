@@ -1,0 +1,6 @@
+{
+  "id": "grind_flour",
+  "inputs": { "grain": 1 },
+  "outputs": { "flour": 1 },
+  "cycleSeconds": 30
+}

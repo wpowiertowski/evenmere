@@ -1,0 +1,18 @@
+{
+  "id": "windmill",
+  "category": "production",
+  "era": 1,
+  "footprint": [2, 2],
+  "cost": { "timber": 6 },
+  "buildDays": 2,
+  "workforce": { "tier": "settlers", "count": 3 },
+  "recipe": "grind_flour",
+  "siteBonus": [
+    {
+      "when": { "terrain": ["hills"] },
+      "stat": "productivity",
+      "percent": 15
+    }
+  ],
+  "tags": ["processing"]
+}

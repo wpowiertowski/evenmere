@@ -1,0 +1,14 @@
+{
+  "id": "founders_hall",
+  "category": "infrastructure",
+  "era": 1,
+  "footprint": [4, 4],
+  "placement": { "roadAccess": false },
+  "buildDays": 0,
+  "storage": { "reach": 24, "carts": 3 },
+  "service": { "kind": "market", "coverage": 16 },
+  "outputs": { "knowledge": 2, "culture": 1 },
+  "unique": true,
+  "start": true,
+  "tags": ["hall"]
+}

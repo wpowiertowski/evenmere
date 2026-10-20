@@ -1,0 +1,6 @@
+{
+  "id": "bake_bread",
+  "inputs": { "flour": 1 },
+  "outputs": { "bread": 1 },
+  "cycleSeconds": 30
+}

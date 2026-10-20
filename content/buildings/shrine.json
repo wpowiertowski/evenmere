@@ -1,0 +1,11 @@
+{
+  "id": "shrine",
+  "category": "culture",
+  "era": 1,
+  "footprint": [2, 2],
+  "cost": { "timber": 6 },
+  "buildDays": 2,
+  "workforce": { "tier": "settlers", "count": 1 },
+  "service": { "kind": "shrine", "coverage": 14 },
+  "outputs": { "culture": 1 }
+}
