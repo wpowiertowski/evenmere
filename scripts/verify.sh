@@ -19,7 +19,13 @@ dotnet build -c Release --no-restore
 dotnet test -c Release --no-build
 
 # --- section: lint ---
-echo "lint: not yet wired"
+# The build section above already built Evenmere.Tools in Release, so --no-build is safe here. `lint` exits 1 on any content
+# error, which fails the script (set -e). The minimal fixture pack is always linted; the real content only once content/eras
+# exists (M1-02), so an empty content/ does not fail verify before then.
+dotnet run --project src/Evenmere.Tools -c Release --no-build -- lint --content tests/fixtures/content/minimal
+if [ -d content/eras ]; then
+    dotnet run --project src/Evenmere.Tools -c Release --no-build -- lint --content content
+fi
 
 # --- section: godot ---
 scripts/godot-smoke.sh

@@ -1,2 +1,3 @@
-// Placeholder entry point so the tool project builds. M0-07 (Tools CLI v0) replaces it.
-return 0;
+using Evenmere.Tools;
+
+return EvenmereCli.Run(args, Console.Out, Console.Error, Directory.GetCurrentDirectory(), AppContext.BaseDirectory);
