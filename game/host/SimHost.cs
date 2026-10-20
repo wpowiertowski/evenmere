@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Evenmere.Content;
+using Evenmere.Content.Locale;
 using Evenmere.Core.Time;
 using Evenmere.Sim;
 using Evenmere.Sim.Queries;
@@ -21,8 +22,15 @@ public sealed partial class SimHost : Node
     /// </summary>
     public const double MaxFrameMilliseconds = 4.0;
 
+    /// <summary>The language of <see cref="Locale"/> until the settings screen (M4-05) lets the player choose.</summary>
+    public const string DefaultLanguage = "en";
+
+    private const string NoSimulationMessage = "No simulation is running; call StartNewGame first.";
+
     private readonly FixedStepper _stepper = new();
     private ISimulation? _sim;
+    private ContentDb? _content;
+    private LocaleTable? _locale;
     private SimSpeed _speed = SimSpeed.X1;
 
     /// <summary>Raised once per frame in which ticks ran, after the events were drained, with those events in emission order (possibly none).</summary>
@@ -36,6 +44,20 @@ public sealed partial class SimHost : Node
 
     /// <summary>Gets the calendar at the current tick.</summary>
     public GameClock Clock => new(RequireSim().CurrentTick);
+
+    /// <summary>
+    /// Gets the content the running simulation was created from. The host loads it once in <see cref="StartNewGame"/>, so views
+    /// that need names or the order of tiers and goods read this and never load content themselves. It is read-only.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">No simulation has been started.</exception>
+    public ContentDb Content => _content ?? throw new InvalidOperationException(NoSimulationMessage);
+
+    /// <summary>
+    /// Gets the display text, in <see cref="DefaultLanguage"/>, loaded from the same content root as <see cref="Content"/>.
+    /// A key with no text gives back the key itself, so a missing string is visible but never fatal.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">No simulation has been started.</exception>
+    public LocaleTable Locale => _locale ?? throw new InvalidOperationException(NoSimulationMessage);
 
     /// <summary>Gets the read-only queries. They are valid only between ticks, which is any time outside the host's own frame step.</summary>
     public ISimQueries Query => RequireSim().Query;
@@ -68,15 +90,27 @@ public sealed partial class SimHost : Node
         }
     }
 
-    /// <summary>Loads the content and starts a new world, replacing any simulation already running.</summary>
+    /// <summary>
+    /// Loads the content and its display text, and starts a new world, replacing any simulation already running. Problems in
+    /// the locale files are logged as warnings and never stop the game.
+    /// </summary>
     /// <param name="seed">The world seed.</param>
     /// <exception cref="ContentLoadException">The content has errors.</exception>
     public void StartNewGame(ulong seed)
     {
-        ContentDb content = ContentLoader.Load(ContentPaths.Resolve()).GetDbOrThrow();
+        string root = ContentPaths.Resolve();
+        ContentDb content = ContentLoader.Load(root).GetDbOrThrow();
+
+        LocaleLoadResult locale = LocaleTable.Load(root, DefaultLanguage);
+        foreach (ContentDiagnostic diagnostic in locale.Diagnostics)
+        {
+            GD.PushWarning($"[Evenmere] locale: {diagnostic}");
+        }
 
         // Held as the interface on purpose: the host exposes queries, never the concrete simulation or its state.
         _sim = Simulation.CreateNew(content, new NewGameOptions { Seed = seed });
+        _content = content;
+        _locale = locale.Table;
         _stepper.Reset();
     }
 
@@ -152,5 +186,5 @@ public sealed partial class SimHost : Node
     private void Publish(ISimulation sim) => EventsDrained?.Invoke(sim.DrainEvents());
 
     private ISimulation RequireSim() =>
-        _sim ?? throw new InvalidOperationException("No simulation is running; call StartNewGame first.");
+        _sim ?? throw new InvalidOperationException(NoSimulationMessage);
 }

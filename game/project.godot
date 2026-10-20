@@ -14,6 +14,10 @@ config/name="Evenmere"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 
+[autoload]
+
+ScreenshotCapture="*res://host/Debug/ScreenshotCapture.cs"
+
 [display]
 
 window/size/viewport_width=1600
