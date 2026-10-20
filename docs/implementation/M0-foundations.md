@@ -25,7 +25,7 @@
 | ID | Title | Lane | Depends on | Status |
 | --- | --- | --- | --- | --- |
 | M0-01 | Solution scaffold and build configuration | infra | — | done |
-| M0-02 | Core primitives | core | M0-01 | todo |
+| M0-02 | Core primitives | core | M0-01 | done |
 | M0-03 | Content definitions, loader and ContentDb | content-infra | M0-02 | todo |
 | M0-04 | JSON Schemas and content linter v1 | content-infra | M0-03 | todo |
 | M0-05 | Simulation skeleton | sim | M0-03 | todo |
@@ -106,21 +106,22 @@
    - `FromBonusPercent(int sumOfPercents)` → `1000 + 10 × sum`, clamped at ≥ 0.
    - `Apply(Amount)`, delegating to `Amount.MultiplyBy`.
 3. **`EntityId`** (`readonly record struct`, `int`; 0 = none) and **`EntityIdAllocator`**: monotonic, never reuses IDs, with serialisable state.
-4. **`ContentId<TTag>`** (`readonly record struct`, `ushort`), with tag types and global using aliases in `Ids.cs`:
-   - The aliases are `GoodId`, `BuildingTypeId`, `RecipeId`, `TierId`, `TechId`, `CivicId`, `TraditionId`, `FestivalId`, `GreatWorkTypeId`, `MonumentId`, `HappeningId`, `EraId` and `TerrainId`.
-   - Mark the aliases `public` through a `GlobalUsings.props` that consuming projects import, or by repeating them per project. Pick one approach and document it in a comment.
+4. **Content IDs:** one concrete `public readonly record struct XxxId(ushort Value)` per kind, implementing `IContentId<TSelf>` (`ushort Value`, `static abstract TSelf From(ushort)`) for generic code. Global using aliases were rejected because they don't cross assembly boundaries.
+   - The types are `GoodId`, `BuildingTypeId`, `RecipeId`, `TierId`, `TechId`, `CivicId`, `TraditionId`, `FestivalId`, `GreatWorkTypeId`, `MonumentId`, `HappeningId`, `EraId` and `TerrainId`.
 5. **`Pcg32`** (`struct`, with `ulong state, inc`):
-   - `Pcg32(ulong seed, ulong stream)`, `NextUInt()`, `NextInt(int maxExclusive)` (unbiased, Lemire's method), `NextInt(min, maxExclusive)` and `Chance(Ratio)`.
+   - `Pcg32(ulong seed, ulong stream)` with the reference seeding, the static `FromState(state, inc)` for saves, `NextUInt()`, `NextInt(int maxExclusive)` (unbiased, Lemire's method), `NextInt(min, maxExclusive)`, and `Chance(Ratio)`, which always consumes one draw.
    - Known-answer test: the pcg-c reference demo with seed 42 and stream 54 yields `0xa15c02b7, 0x7b47f409, 0xba1d3330, 0x83d2f293, 0xbfa4784b, 0xcbed606e` as its first outputs.
    - `Pcg32.ForSystem(ulong worldSeed, string systemName)` derives a stream from a stable hash of the name.
 6. **`StableHasher`**: an incremental XxHash64 (from `System.IO.Hashing`) with `Add(int)`, `Add(long)`, `Add(ulong)`, `Add(ReadOnlySpan<byte>)` and `Add(string)` (UTF-8, length-prefixed), plus `ToUInt64()`.
 7. **`IdTable<T>`**: dense storage keyed by `EntityId`.
    - API: `Add(EntityId, T)`, `Remove`, `TryGet`, `ref T GetRef(EntityId)`, `Contains` and `Count`.
    - The enumerator yields `(EntityId, ref T)` in ascending ID order and skips removed slots. It must not allocate.
-   - Removal leaves a tombstone; compaction is not needed.
+   - Removal leaves a tombstone, so removing while enumerating is safe.
+   - `Add` compacts the tombstones once they outnumber `max(32, live)`, so high-churn tables such as transport jobs stay bounded. Adding while enumerating throws.
 8. **`GameTime`** constants and **`GameClock`**:
    - Constants: `TicksPerDay = 120`, `DaysPerSeason = 10`, `SeasonsPerYear = 4`.
-   - `GameClock` (readonly struct over `long tick`): `Day`, `TickOfDay`, `Season` (enum `Spring` / `Summer` / `Autumn` / `Winter`), `Year`, `IsDayStart`, `IsSeasonStart` and `BucketOf(EntityId)` (`id % 120`).
+   - `GameClock` (readonly struct over `long tick`): `Day`, `TickOfDay`, `Season` (enum `Spring` / `Summer` / `Autumn` / `Winter`), `Year`, `IsDayStart`, `IsSeasonStart`, the static `BucketOf(EntityId)` (`id % 120`), and `IsInBucket(EntityId)`.
+   - Namespaces follow the folders: `Evenmere.Core.Numerics`, `.Ids`, `.Rng`, `.Hashing`, `.Collections` and `.Time`.
 
 **Acceptance:**
 
