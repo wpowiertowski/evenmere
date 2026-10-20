@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Evenmere.Sim\Evenmere.Sim.csproj" />
     <ProjectReference Include="..\Evenmere.Content\Evenmere.Content.csproj" />
     <ProjectReference Include="..\Evenmere.Core\Evenmere.Core.csproj" />
