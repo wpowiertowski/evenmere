@@ -35,6 +35,12 @@ M1 builds ten simulation systems in parallel. Each needs to call the others with
 - **Transport requests stay listed until the goods move.** Logistics must recognise a request it is already serving and never start a second job for it.
 - **`SystemRoster.cs`** is the composition root. Each line is tagged with the task that replaces it, and a task may edit only its own tagged lines. Leftover stand-ins (`Unimplemented*` classes, the stub `ExplainQueries`) are deleted by the task that replaces them, or by M1-13.
 
+## Addenda
+
+- **2026-10-20:** `IRoadsQueries.IsFootprintInStorehouseReach(x, y, width, height)` is added, so Construction's ghost preview can ask Roads about storehouse reach for a footprint that isn't built yet, instead of duplicating the distance search (found while reviewing M1-06).
+- **2026-10-20:** a state member of type `IdTable<T>` carries `[MessagePackFormatter(typeof(IdTableFormatter<T>))]`, because MessagePack's source generator otherwise emits a broken resolver (CS0426). The bytes are identical.
+- **2026-10-20:** demolishing an active or paused building refunds half its cost, rounded down per good to the milli-unit. A site refunds 100% of the materials it has drawn.
+
 ## Consequences
 
 - Ten system tasks run in parallel against fakes, and integration problems surface in M1-13's end-to-end scenarios.

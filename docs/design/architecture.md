@@ -213,7 +213,7 @@ Each system is one folder in `Evenmere.Sim` with its own tests. The numbers here
 - Placement checks footprint, terrain, slope, terrain access, road access and unlock state. The view shows the result as a ghost through `IPlacementQueries.Validate`, the same code path the command uses.
 - Sites draw materials from the storage pool over time. Builders are abstract (no worker units). A site must be road-connected to a storehouse.
 - Buildings upgrade in place: house tiers, Founders' Hall → Town Hall, Market → Market Square, and steam variants in Era IV.
-- Demolishing refunds 50% of materials. Demolishing a district triggers an autosave first.
+- Demolishing an active building refunds half its cost, rounded down per good; a site refunds everything it has drawn. Demolishing a district triggers an autosave first.
 - Monuments and wonders are multi-stage sites. Each stage has its own material bill and a visible state.
 
 ### Logistics
