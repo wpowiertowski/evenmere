@@ -1,0 +1,20 @@
+{
+  "id": "net_weaving",
+  "era": 1,
+  "cost": 50,
+  "effects": [
+    { "unlockBuilding": "windmill" },
+    {
+      "modifier": {
+        "stat": "productivity",
+        "target": { "tag": "fishing" },
+        "percent": 25
+      }
+    }
+  ],
+  "inspiration": {
+    "when": {
+      "count": { "building": "fishing_hut", "atLeast": 5 }
+    }
+  }
+}

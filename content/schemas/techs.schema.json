@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evenmere.example/schemas/techs.schema.json",
+  "title": "Technology",
+  "description": "A node in the tech tree, researched with knowledge points. Its effects are the only source of unlocks for buildings, recipes, tiers, traditions and festivals. One file per tech in content/techs/<id>.json.",
+  "type": "object",
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "era": { "$ref": "common.schema.json#/$defs/era" },
+    "cost": {
+      "description": "Knowledge points, a whole number.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000
+    },
+    "requires": {
+      "description": "The techs that must be researched first.",
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/id" }
+    },
+    "effects": { "$ref": "common.schema.json#/$defs/effects" },
+    "inspiration": {
+      "description": "A condition that cuts the node's cost when it is met.",
+      "type": "object",
+      "properties": {
+        "when": { "$ref": "common.schema.json#/$defs/condition" }
+      },
+      "required": ["when"],
+      "additionalProperties": false
+    },
+    "gateway": {
+      "description": "Whether completing it is one half of an era transition. Exactly one tech and one civic per transition are gateways.",
+      "type": "boolean"
+    },
+    "repeatable": {
+      "description": "Makes the node repeatable at a growing cost.",
+      "type": "object",
+      "properties": {
+        "costGrowthPercent": { "type": "integer", "minimum": 1, "maximum": 1000 }
+      },
+      "required": ["costGrowthPercent"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["id", "era", "cost"],
+  "additionalProperties": false
+}

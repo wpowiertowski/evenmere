@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evenmere.example/schemas/monuments.schema.json",
+  "title": "Monument",
+  "description": "A multi-stage monument or wonder. The building it names supplies the footprint, placement and unlock; this adds the stage bills and the effects that apply when the last stage completes. One file per monument in content/monuments/<id>.json.",
+  "type": "object",
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "building": {
+      "description": "The building (category monument or wonder) that is built.",
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "stages": {
+      "description": "The bill for each stage, in build order. At least one stage, and every stage asks for something.",
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/cost", "minProperties": 1 },
+      "minItems": 1
+    },
+    "effects": {
+      "description": "Effects that start when the last stage completes. Unlock effects here count as unlock sources.",
+      "$ref": "common.schema.json#/$defs/effects"
+    }
+  },
+  "required": ["id", "building", "stages"],
+  "additionalProperties": false
+}

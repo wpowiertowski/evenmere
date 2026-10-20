@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evenmere.example/schemas/greatworks.schema.json",
+  "title": "Great-work type",
+  "description": "A type of great work: its slot type, how works are created and what a displayed work yields. The ID also names the slot type. One file per type in content/greatworks/<id>.json.",
+  "type": "object",
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "source": { "description": "Whether works come from creativity or from discovery.", "$ref": "common.schema.json#/$defs/greatWorkSource" },
+    "baseCreativity": {
+      "description": "Creativity the first work needs. Only for source creativity.",
+      "$ref": "common.schema.json#/$defs/quantity"
+    },
+    "growthPercent": {
+      "description": "How much more each later work needs than the last, in percent. Only for source creativity.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "cultureByEra": {
+      "description": "Culture per day a displayed work yields, by the era it was made in; the first entry is era 1.",
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/quantityOrZero" },
+      "minItems": 1
+    },
+    "attractiveness": { "description": "Attractiveness a displayed work adds.", "type": "integer", "minimum": -1000, "maximum": 1000 }
+  },
+  "required": ["id", "source", "cultureByEra"],
+  "if": {
+    "properties": { "source": { "const": "creativity" } },
+    "required": ["source"]
+  },
+  "then": {
+    "required": ["baseCreativity", "growthPercent"]
+  },
+  "else": {
+    "properties": { "baseCreativity": false, "growthPercent": false }
+  },
+  "additionalProperties": false
+}

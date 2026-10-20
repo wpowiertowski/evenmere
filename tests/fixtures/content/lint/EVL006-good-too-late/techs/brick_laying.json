@@ -1,0 +1,9 @@
+{
+  "id": "brick_laying",
+  "era": 2,
+  "cost": 200,
+  "requires": ["town_charter"],
+  "effects": [
+    { "unlockBuilding": "bakery" }
+  ]
+}

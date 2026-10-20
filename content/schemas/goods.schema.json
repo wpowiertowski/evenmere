@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evenmere.example/schemas/goods.schema.json",
+  "title": "Good",
+  "description": "A resource, material or product. One file per good in content/goods/<id>.json.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "description": "The good's ID, which must equal the file name. The ID coin is reserved for coin in cost objects.",
+      "type": "string",
+      "pattern": "^(?!coin$)[a-z][a-z0-9]*(_[a-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "category": { "$ref": "common.schema.json#/$defs/goodCategory" },
+    "era": { "$ref": "common.schema.json#/$defs/era" },
+    "tags": { "$ref": "common.schema.json#/$defs/tags" }
+  },
+  "required": ["id", "category", "era"],
+  "additionalProperties": false
+}

@@ -1,0 +1,13 @@
+{
+  "id": "tavern",
+  "category": "service",
+  "era": 2,
+  "footprint": [2, 2],
+  "placement": {
+    "terrain": ["plains", "forest"]
+  },
+  "cost": { "timber": 3 },
+  "buildDays": 2,
+  "workforce": { "tier": "settlers", "count": 2 },
+  "service": { "kind": "tavern", "coverage": 12 }
+}

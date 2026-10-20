@@ -1,0 +1,1 @@
+{ "id": "moot_c", "era": 1, "cost": 100, "requires": ["moot_a"] }

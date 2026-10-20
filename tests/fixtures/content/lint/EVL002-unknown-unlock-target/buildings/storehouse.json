@@ -1,0 +1,14 @@
+{
+  "id": "storehouse",
+  "category": "infrastructure",
+  "era": 1,
+  "footprint": [2, 2],
+  "placement": {
+    "terrain": ["plains", "forest"]
+  },
+  "cost": { "timber": 4 },
+  "buildDays": 2,
+  "workforce": { "tier": "settlers", "count": 2 },
+  "storage": { "reach": 20, "carts": 2 },
+  "start": true
+}

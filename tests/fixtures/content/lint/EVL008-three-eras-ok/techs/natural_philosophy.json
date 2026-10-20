@@ -1,0 +1,1 @@
+{ "id": "natural_philosophy", "era": 2, "cost": 400, "requires": ["town_charter"], "gateway": true }

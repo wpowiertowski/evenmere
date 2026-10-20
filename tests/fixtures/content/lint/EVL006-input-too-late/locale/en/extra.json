@@ -1,0 +1,16 @@
+{
+  "good.bread.name": "Bread",
+  "good.bread.desc": "A loaf for every table.",
+  "good.flour.name": "Flour",
+  "good.flour.desc": "Ground grain.",
+  "recipe.bake_bread.name": "Bake bread",
+  "recipe.bake_bread.desc": "Turn flour into loaves.",
+  "recipe.grind_flour.name": "Grind flour",
+  "recipe.grind_flour.desc": "Mill the grain.",
+  "building.bakery.name": "Bakery",
+  "building.bakery.desc": "Bakes bread.",
+  "building.mill.name": "Mill",
+  "building.mill.desc": "Grinds flour.",
+  "tech.brick_laying.name": "Brick-laying",
+  "tech.brick_laying.desc": "Opens the way to mills."
+}

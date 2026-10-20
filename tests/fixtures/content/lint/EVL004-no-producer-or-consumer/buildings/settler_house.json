@@ -1,0 +1,13 @@
+{
+  "id": "settler_house",
+  "category": "residence",
+  "era": 1,
+  "footprint": [2, 2],
+  "placement": {
+    "terrain": ["plains", "forest"]
+  },
+  "cost": { "timber": 1 },
+  "buildDays": 1,
+  "start": true,
+  "tags": ["house"]
+}

@@ -1,0 +1,6 @@
+{
+  "id": "cut_wood",
+  "outputs": { "wood": 1 },
+  "cycleSeconds": 20,
+  "start": true
+}

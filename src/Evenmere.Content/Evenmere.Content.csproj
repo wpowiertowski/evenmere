@@ -4,4 +4,16 @@
     <ProjectReference Include="..\Evenmere.Core\Evenmere.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="JsonSchema.Net" />
+  </ItemGroup>
+
+  <!--
+    The linter validates against the schemas in content/schemas, compiled in so that ContentLinter.Run needs no path and
+    works from any working directory. The files stay the editors' source of truth.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\content\schemas\*.schema.json" LogicalName="Evenmere.Content.Schemas.%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

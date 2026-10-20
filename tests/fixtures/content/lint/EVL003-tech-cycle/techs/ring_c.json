@@ -1,0 +1,1 @@
+{ "id": "ring_c", "era": 1, "cost": 100, "requires": ["ring_a"] }

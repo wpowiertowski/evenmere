@@ -1,0 +1,14 @@
+{
+  "id": "bakery",
+  "category": "production",
+  "era": 2,
+  "footprint": [2, 2],
+  "placement": {
+    "terrain": ["plains", "forest"]
+  },
+  "cost": { "timber": 3 },
+  "buildDays": 1,
+  "workforce": { "tier": "settlers", "count": 3 },
+  "recipe": "bake_bread",
+  "tags": ["processing"]
+}
