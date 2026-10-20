@@ -1031,9 +1031,9 @@
 
 1. **Smoke mode:** loads `Main.tscn` with the starter island, enqueues the commands of `tests/fixtures/scenarios/slice_first_houses.json` at their ticks, and runs 1,000 ticks with the renderers active. It fails if any error is logged.
 2. **Hash check:** the smoke prints the final hash. The script compares it with `evenmere run` replaying the same scenario.
-3. **Boundary check:** add a step to the verify `godot` section that fails if `grep -R "Evenmere.Sim.State" game --include=*.cs` matches anything.
+3. **Boundary check:** state classes live in `Evenmere.Sim.Systems.<Name>` namespaces, so a namespace grep can't catch misuse. Instead, add a reflection test (in `tests/Evenmere.Sim.Tests/Architecture/GameBoundaryTests.cs`, owned by this task). It loads the built `Evenmere.Game` assembly from its build output and fails if any type, field, method signature or IL member reference in it uses `WorldState`, or any type reachable from `WorldState`'s fields. Reuse the M0-06 reachability walker.
 
-**Acceptance:** `REQUIRE_GODOT=1 scripts/verify.sh` passes locally, and an intentional `using Evenmere.Sim.State;` in `game/` fails it.
+**Acceptance:** `REQUIRE_GODOT=1 scripts/verify.sh` passes locally, and an intentional reference to `WorldState` or to a system's state class in `game/` fails the boundary test.
 
 **Out of scope:** performance assertions (M2-16).
 

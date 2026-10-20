@@ -21,5 +21,5 @@ The v0.1 plan ran ticks on a worker thread while view controllers read sim queri
 ## Consequences
 
 - Phase 1 is simple and safe, and it's enough for the vertical slice and Era I scale.
-- View code must use the query interfaces, never concrete state types. An architecture test checks that `game/` uses no `Evenmere.Sim.State` types.
+- View code must use the query interfaces, never concrete state types. An architecture test (M1-28) checks that `game/` uses no `WorldState` type, and no type reachable from it.
 - Phase 2 is a contained change to `game/host/` and a snapshot builder in `Evenmere.Sim`.

@@ -296,7 +296,7 @@
 
 **Acceptance:** all tests pass on the M0-05 skeleton, and each negative test proves its checker fails on a bad type.
 
-**Out of scope:** the `game/` checks that `Evenmere.Sim.State` types aren't used from the view; those come in M1-28.
+**Out of scope:** the check that `game/` never uses sim state types (`WorldState` and every type reachable from it); that comes in M1-28.
 
 ---
 

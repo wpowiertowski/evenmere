@@ -24,7 +24,7 @@ Enforcement:
 1. **Project references:** a disallowed reference does not compile.
 2. **Architecture tests** in `Evenmere.Sim.Tests` that reflect over the assemblies:
    - No Core, Content or Sim assembly references `GodotSharp`, and Core references nothing beyond the BCL and `System.IO.Hashing`.
-   - No type under the `Evenmere.Sim.State` namespaces has a field of type `float`, `double`, `decimal`, `Dictionary<,>` or `HashSet<>`.
+   - No type reachable from `WorldState`'s fields (recursively) has a field of type `float`, `double`, `decimal`, `Dictionary<,>` or `HashSet<>`.
    - Every `Command` subtype has exactly one handler.
 3. **`Microsoft.CodeAnalysis.BannedApiAnalyzers`** in Core and Sim, with the list in `src/BannedSymbols.txt`.
 4. **System folders:** each gameplay system lives in `src/Evenmere.Sim/Systems/<Name>/` and exposes an `I<Name>Queries` interface. A system reads another system's state only through that interface.
