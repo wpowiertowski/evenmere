@@ -1,0 +1,7 @@
+{
+  "id": "harvest_festival",
+  "slot": "craft",
+  "effects": [
+    { "modifier": { "stat": "productivity", "target": { "tag": "farm" }, "percent": 20, "when": { "season": "autumn" } } }
+  ]
+}

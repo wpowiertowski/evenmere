@@ -1,0 +1,5 @@
+{
+  "id": "awakening",
+  "order": 3,
+  "requires": { "tech": "town_charter", "civic": "village_moot" }
+}

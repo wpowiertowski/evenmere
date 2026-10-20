@@ -1,0 +1,9 @@
+{
+  "id": "windmill",
+  "category": "production",
+  "era": 1,
+  "footprint": [2, 2],
+  "cost": { "timber": 6 },
+  "buildDays": 2,
+  "tags": ["processing"]
+}

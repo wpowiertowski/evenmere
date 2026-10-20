@@ -1,0 +1,12 @@
+{
+  "id": "townsfolk",
+  "order": 3,
+  "era": 2,
+  "capacity": 14,
+  "advanceFrom": "villagers",
+  "upgradeCost": { "timber": 3 },
+  "basicNeeds": {
+    "goods": { "fish": 2 },
+    "services": ["market"]
+  }
+}

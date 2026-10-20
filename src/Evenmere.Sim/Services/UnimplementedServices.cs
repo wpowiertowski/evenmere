@@ -1,6 +1,3 @@
-using System.Collections.Immutable;
-using Evenmere.Content.Definitions;
-using Evenmere.Content.Effects;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Sim.Queries.Types;
@@ -45,30 +42,6 @@ internal sealed class UnimplementedChunkDirtyTracker : IChunkDirtyTracker
 
     /// <inheritdoc />
     public void MarkRect(int minX, int minY, int maxX, int maxY) => throw new NotImplementedException("M1-01");
-}
-
-/// <summary>The stand-in for <see cref="IProgressionService"/> until M1-04.</summary>
-internal sealed class UnimplementedProgressionService : IProgressionService
-{
-    /// <inheritdoc />
-    public void ApplyEffects(EffectSource source, ImmutableArray<Effect> effects) => throw new NotImplementedException("M1-04");
-}
-
-/// <summary>The stand-in for <see cref="IPointsLedger"/> until M1-04.</summary>
-internal sealed class UnimplementedPointsLedger : IPointsLedger
-{
-    /// <inheritdoc />
-    public void Credit(PointKind kind, Amount amount) => throw new NotImplementedException("M1-04");
-
-    /// <inheritdoc />
-    public Amount TakeToday(PointKind kind) => throw new NotImplementedException("M1-04");
-}
-
-/// <summary>The stand-in for <see cref="ICounters"/> until M1-04.</summary>
-internal sealed class UnimplementedCounters : ICounters
-{
-    /// <inheritdoc />
-    public void Add(CounterKey key, long amount) => throw new NotImplementedException("M1-04");
 }
 
 /// <summary>The stand-in for <see cref="IProductionBuffers"/> until M1-08.</summary>

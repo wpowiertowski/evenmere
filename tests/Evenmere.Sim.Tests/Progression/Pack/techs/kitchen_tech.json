@@ -1,0 +1,29 @@
+{
+  "id": "kitchen_tech",
+  "era": 1,
+  "cost": 100,
+  "requires": ["net_weaving"],
+  "effects": [
+    { "unlockBuilding": "scribes_hall" },
+    { "unlockRecipe": "bake_bread" },
+    { "unlockTier": "townsfolk" },
+    { "unlockTradition": "harvest_festival" },
+    { "unlockFestival": "harvest_fair" },
+    { "unlockTerrainAccess": "narrow_rivers" },
+    { "unlockFeature": "coin" },
+    { "unlockFeature": "great_works:writing" },
+    { "traditionSlot": "craft" },
+    { "traditionSlot": "craft" },
+    { "modifier": { "stat": "productivity", "target": { "tag": "farm" }, "percent": 20, "when": { "season": "autumn" } } },
+    { "modifier": { "stat": "output.knowledge", "target": { "building": "scribes_hall" }, "percent": 20 } },
+    { "modifier": { "stat": "constructionSpeed", "target": { "category": "production" }, "percent": -10 } },
+    { "modifier": { "stat": "consumption", "target": { "good": "bread" }, "percent": 5 } },
+    { "modifier": { "stat": "workforce", "target": { "tier": "villagers" }, "percent": 15 } },
+    { "modifier": { "stat": "declineGrace", "percent": 50 } },
+    { "grantGoods": { "timber": 10, "stone": 5.5 } },
+    { "grantPoints": { "knowledge": 50, "coin": 2.5 } },
+    { "revealCoastline": true },
+    { "requestFestival": { "festival": "harvest_fair", "discountPercent": 25 } },
+    { "modifier": { "stat": "output.culture", "target": { "discovery": "natural_wonder" }, "percent": 50 } }
+  ]
+}
