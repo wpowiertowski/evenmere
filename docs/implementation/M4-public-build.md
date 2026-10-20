@@ -147,7 +147,7 @@
 
 | Lane | Depends on | Owns |
 | --- | --- | --- |
-| game | M4-05 | `game/input/**`, `game/ui/**` (focus and glyph fixes only) |
+| game | M4-05 | `game/controls/**`, `game/ui/**` (focus and glyph fixes only) |
 
 **Goal:** the whole game is playable comfortably on a Deck.
 

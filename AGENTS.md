@@ -78,7 +78,7 @@ A task is done when all of these hold:
 ## Godot conventions
 
 - **C# scripts only.** Scenes (`.tscn`) and resources (`.tres`) are text; keep them small and composable.
-- **Folders:** `game/host/` (SimHost, content paths, command log), `game/rendering/`, `game/ui/`, `game/input/`, `game/audio/`, `game/scenes/`, and `game/data/visuals/` (content ID → scene, colour and icon mapping).
+- **Folders:** `game/host/` (SimHost, content paths, command log), `game/rendering/`, `game/ui/`, `game/controls/`, `game/audio/`, `game/scenes/`, and `game/data/visuals/` (content ID → scene, colour and icon mapping).
 - **The view holds no authoritative state.** It reacts to drained events and dirty chunks and reads through queries between ticks.
 - **One shared UI theme.** Every control must be reachable by gamepad. Check layouts at 1280 × 800 (Steam Deck) and 2560 × 1600.
 - **Input** goes through named actions in `project.godot` (`camera_pan_left`, `ui_build_menu`, …), never raw key codes.

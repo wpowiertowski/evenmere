@@ -729,7 +729,7 @@
 
 | Lane | Depends on | Owns |
 | --- | --- | --- |
-| game | M0-09 | `game/rendering/camera/**`, `game/input/**`, `game/project.godot` (the `[input]` section only) |
+| game | M0-09 | `game/rendering/camera/**`, `game/controls/**`, `game/project.godot` (the `[input]` section only) |
 
 **Reads:** architecture.md (§Rendering: camera, §UI: input); ADR-0008.
 
@@ -797,6 +797,8 @@
 **Reads:** architecture.md (§Rendering); docs/design/map-format.md.
 
 **Goal:** the island drawn from `IMapQueries`, in 32 × 32 chunks, rebuilt only when dirty.
+
+**Note:** M1-17 added a temporary checkerboard `TestGround` node inside `game/rendering/camera/CameraRig.tscn`, so the camera had something to show. Once real terrain renders, remove that node and its files (`TestGround.cs`, `test_ground.gdshader` and their `.uid` files); this task may edit those paths for that purpose only. Also wire `CameraRig.HeightAt` and `SetMapBounds` to the map.
 
 **Steps:**
 
