@@ -24,7 +24,7 @@ Evenmere is a calm, single-player island city builder: Anno-style production cha
 | `scripts/verify.sh` | **The definition-of-done gate.** Restore, build (warnings as errors), all tests, content lint, and the Godot smoke test when Godot is installed. |
 | `dotnet build Evenmere.sln -c Release` | Build everything, including the Godot game assembly |
 | `dotnet test -c Release` | All unit, scenario and architecture tests |
-| `dotnet test --filter "FullyQualifiedName~Evenmere.Sim.Tests.Production"` | One system's tests |
+| `dotnet test --filter "FullyQualifiedName~Evenmere.Sim.Tests.Production" --ignore-exit-code 8` | One system's tests. Exit code 8 means "no tests matched in some test project" under Microsoft.Testing.Platform, so it's ignored. |
 | `dotnet run --project src/Evenmere.Tools -- lint` | Content lint (EVL rules) |
 | `dotnet run --project src/Evenmere.Tools -- run --ticks 10000 --seed 42` | Headless run; prints the state hash and per-system timings |
 | `scripts/godot-smoke.sh` | Godot headless smoke test (skips if Godot is not installed, unless `REQUIRE_GODOT=1`) |

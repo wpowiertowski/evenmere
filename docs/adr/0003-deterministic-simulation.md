@@ -20,7 +20,7 @@ Replayable bug reports, reproducible balance runs, golden-hash scenario tests an
   - Commands apply in enqueue order.
   - Events are emitted in system order, then in entity order.
 - **No hidden inputs:**
-  - Banned in `Evenmere.Sim` by analyser: `System.Random`, `DateTime.Now`, `DateTime.UtcNow`, `Environment.TickCount`, `Stopwatch` (except in the profiling hooks under `Sim/Diagnostics`), `Guid.NewGuid`, `Parallel`, `Task.Run`, and `ThreadPool`.
+  - Banned in `Evenmere.Core` and `Evenmere.Sim` by analyser (`src/BannedSymbols.txt`): `System.Random`; every wall-clock read (`DateTime.Now`, `UtcNow` and `Today`, `DateTimeOffset.Now` and `UtcNow`, `Environment.TickCount` and `TickCount64`); `Stopwatch` (except in the profiling hooks under `Sim/Diagnostics`); `Guid.NewGuid`; `Parallel`; every `Task.Run` overload; and `ThreadPool`.
 - **Map generation is integer-only.** It uses integer value or simplex noise and no transcendental `Math` functions, whose results can differ between CPUs and runtimes.
 - **Hash:** `ComputeStateHash()` is XxHash64 over the canonical binary serialisation of `WorldState`, the same writer the save format uses.
 - **Bucketed daily work:** daily systems process the entities with `id % 120 == tick % 120` on each tick, which spreads the cost across the day without changing results between runs.

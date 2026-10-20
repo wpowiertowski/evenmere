@@ -24,7 +24,7 @@
 
 | ID | Title | Lane | Depends on | Status |
 | --- | --- | --- | --- | --- |
-| M0-01 | Solution scaffold and build configuration | infra | — | todo |
+| M0-01 | Solution scaffold and build configuration | infra | — | done |
 | M0-02 | Core primitives | core | M0-01 | todo |
 | M0-03 | Content definitions, loader and ContentDb | content-infra | M0-02 | todo |
 | M0-04 | JSON Schemas and content linter v1 | content-infra | M0-03 | todo |
