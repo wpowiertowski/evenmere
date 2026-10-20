@@ -118,6 +118,8 @@ A few files are touched by many tasks. Each card names the section it may edit.
 | `src/Evenmere.Sim/Queries/*.cs` | M0-05 creates the interfaces and M1-00 declares the cross-system methods. Afterwards, only an ADR or a card that explicitly names a method adds one. |
 | `content/locale/en/*.json` | Each content task creates its own file. Never edit another task's locale file. |
 | `game/data/visuals/*.json` | One file per content area (`era1-production.json`, …), owned by the task that adds those visuals. |
+| `game/scenes/Main.tscn` | Each game task adds or replaces only its own node, ideally as an instance of a sub-scene it owns. The orchestrator resolves text conflicts (`load_steps`, `ext_resource` IDs) at merge. |
+| `game/project.godot` | Each task edits only the section its card names (`[input]`, `[autoload]`, …). |
 
 ## Milestone overview and critical path
 
