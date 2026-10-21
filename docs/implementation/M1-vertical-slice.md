@@ -56,7 +56,7 @@
 | M1-13 | Integration: new game and end-to-end scenarios | sim | M1-01, M1-03 to M1-12 | done |
 | M1-14 | Save/load v1 and command log | sim | M1-13 | done |
 | M1-15 | Advisors v1 | sim | M1-12 | done |
-| M1-16 | Balance bot v1 | tools | M1-13 | todo |
+| M1-16 | Balance bot v1 | tools | M1-13 | done |
 | M1-17 | Camera rig and input actions | game | M0-09 | done |
 | M1-18 | UI theme, HUD and speed controls | game | M0-09 | done |
 | M1-19 | Terrain and water rendering | game | M1-01, M1-17 | done |
@@ -1101,6 +1101,11 @@
 1. The developer plays from a new game to 100 Villagers using only the UI, noting the time taken, every moment of confusion, and any number that didn't explain itself.
 2. The orchestrator attaches the balance bot reports (seeds 1–3), the scenario hashes and the fps measurements.
 3. Triage the findings into new M2 cards or fixes, and record the decisions in the gate record.
+
+**Findings to triage, collected during implementation:**
+
+- **Homespun is optional for the slice target (from M1-16).** On seed 1 the balance bot reaches 100 Villagers at 26.9 game minutes, against a target of 45, without ever producing homespun. Villager houses sit at 8 of 10 residents on fish, bread and the shrine alone. Decide whether homespun should matter more for Villagers, for example through its share of the needs or the occupancy rule, or whether the faster pace is fine.
+- **Placeholder look of river banks (from M1-19).** The river water strip shows a thin lip above the bank where it meets the slope. Judge in play whether it needs work before real art.
 
 **Acceptance:** every gate checkbox is ticked or explicitly waived with a reason.
 
