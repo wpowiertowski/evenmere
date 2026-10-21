@@ -1,5 +1,6 @@
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
+using Evenmere.Sim.Persistence;
 using MessagePack;
 
 namespace Evenmere.Sim.Systems.Research;
@@ -15,14 +16,17 @@ public sealed class ResearchState
 {
     /// <summary>Gets or sets the knowledge each tech has received, in milli-units, indexed by <see cref="TechId.Value"/>.</summary>
     [Key(0)]
+    [ContentIndexed(ContentKind.Tech)]
     public Amount[] Progress { get; set; } = [];
 
     /// <summary>Gets or sets the researched techs, as a bitset over <see cref="TechId.Value"/>.</summary>
     [Key(1)]
+    [ContentIndexed(ContentKind.Tech)]
     public ulong[] Done { get; set; } = [];
 
     /// <summary>Gets or sets the techs whose inspiration has triggered, as a bitset over <see cref="TechId.Value"/>.</summary>
     [Key(2)]
+    [ContentIndexed(ContentKind.Tech)]
     public ulong[] Inspired { get; set; } = [];
 
     /// <summary>Gets or sets the tech that receives the day's knowledge, or <see langword="null"/> when nothing is being researched.</summary>
@@ -31,6 +35,7 @@ public sealed class ResearchState
 
     /// <summary>Gets or sets the techs that follow the target, in the order they will be researched. The target itself is never in here.</summary>
     [Key(4)]
+    [ContentValued(ContentKind.Tech)]
     public TechId[] Queue { get; set; } = [];
 
     /// <summary>

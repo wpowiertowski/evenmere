@@ -1,0 +1,768 @@
+{
+  "Types": {
+    "Evenmere.Sim.Queries.Types.EffectSource": {
+      "0": {
+        "Member": "property Kind",
+        "Type": "Evenmere.Sim.Queries.Types.EffectSourceKind"
+      },
+      "1": {
+        "Member": "property Value",
+        "Type": "System.Int32"
+      }
+    },
+    "Evenmere.Sim.Queries.Types.SubjectLink": {
+      "0": {
+        "Member": "property Kind",
+        "Type": "Evenmere.Sim.Queries.Types.SubjectKind"
+      },
+      "1": {
+        "Member": "property Value",
+        "Type": "System.Int32"
+      }
+    },
+    "Evenmere.Sim.Queries.Types.TileCoord": {
+      "0": {
+        "Member": "property X",
+        "Type": "System.Int32"
+      },
+      "1": {
+        "Member": "property Y",
+        "Type": "System.Int32"
+      }
+    },
+    "Evenmere.Sim.State.WorldState": {
+      "0": {
+        "Member": "property Seed",
+        "Type": "System.UInt64"
+      },
+      "1": {
+        "Member": "property Clock",
+        "Type": "Evenmere.Core.Time.GameClock"
+      },
+      "10": {
+        "Member": "property Production",
+        "Type": "Evenmere.Sim.Systems.Production.ProductionState"
+      },
+      "11": {
+        "Member": "property Logistics",
+        "Type": "Evenmere.Sim.Systems.Logistics.LogisticsState"
+      },
+      "12": {
+        "Member": "property Exploration",
+        "Type": "Evenmere.Sim.Systems.Exploration.ExplorationState"
+      },
+      "13": {
+        "Member": "property Needs",
+        "Type": "Evenmere.Sim.Systems.Needs.NeedsState"
+      },
+      "14": {
+        "Member": "property Population",
+        "Type": "Evenmere.Sim.Systems.Population.PopulationState"
+      },
+      "15": {
+        "Member": "property Economy",
+        "Type": "Evenmere.Sim.Systems.Economy.EconomyState"
+      },
+      "16": {
+        "Member": "property Research",
+        "Type": "Evenmere.Sim.Systems.Research.ResearchState"
+      },
+      "17": {
+        "Member": "property Culture",
+        "Type": "Evenmere.Sim.Systems.Culture.CultureState"
+      },
+      "18": {
+        "Member": "property Progression",
+        "Type": "Evenmere.Sim.Systems.Progression.ProgressionState"
+      },
+      "19": {
+        "Member": "property Happenings",
+        "Type": "Evenmere.Sim.Systems.Happenings.HappeningsState"
+      },
+      "2": {
+        "Member": "property EntityIds",
+        "Type": "Evenmere.Core.Ids.EntityIdAllocator"
+      },
+      "20": {
+        "Member": "property Advisors",
+        "Type": "Evenmere.Sim.Systems.Advisors.AdvisorsState"
+      },
+      "21": {
+        "Member": "property Statistics",
+        "Type": "Evenmere.Sim.Systems.Statistics.StatisticsState"
+      },
+      "3": {
+        "Member": "property SystemRngs",
+        "Type": "Evenmere.Core.Rng.Pcg32[]"
+      },
+      "4": {
+        "Member": "property Map",
+        "Type": "Evenmere.Sim.Systems.Map.MapState"
+      },
+      "5": {
+        "Member": "property Roads",
+        "Type": "Evenmere.Sim.Systems.Roads.RoadsState"
+      },
+      "6": {
+        "Member": "property Storage",
+        "Type": "Evenmere.Sim.Systems.Storage.StorageState"
+      },
+      "7": {
+        "Member": "property Modifiers",
+        "Type": "Evenmere.Sim.Systems.Modifiers.ModifiersState"
+      },
+      "8": {
+        "Member": "property Construction",
+        "Type": "Evenmere.Sim.Systems.Construction.ConstructionState"
+      },
+      "9": {
+        "Member": "property Workforce",
+        "Type": "Evenmere.Sim.Systems.Workforce.WorkforceState"
+      }
+    },
+    "Evenmere.Sim.Systems.Advisors.AdviceRecord": {
+      "0": {
+        "Member": "property Id",
+        "Type": "System.Int32"
+      },
+      "1": {
+        "Member": "property Kind",
+        "Type": "Evenmere.Sim.Queries.Types.AdviceKind"
+      },
+      "2": {
+        "Member": "property Subject",
+        "Type": "Evenmere.Sim.Queries.Types.SubjectLink"
+      },
+      "3": {
+        "Member": "property FirstSeenTick",
+        "Type": "System.Int64"
+      },
+      "4": {
+        "Member": "property LastSeenTick",
+        "Type": "System.Int64"
+      },
+      "5": {
+        "Member": "property Showing",
+        "Type": "System.Boolean"
+      }
+    },
+    "Evenmere.Sim.Systems.Advisors.AdvisorsState": {
+      "0": {
+        "Member": "property Records",
+        "Type": "Evenmere.Sim.Systems.Advisors.AdviceRecord[]"
+      },
+      "1": {
+        "Member": "property NextId",
+        "Type": "System.Int32"
+      },
+      "2": {
+        "Member": "property GoodStreak",
+        "Type": "System.Int32[]"
+      },
+      "3": {
+        "Member": "property TierStreak",
+        "Type": "System.Int32[]"
+      },
+      "4": {
+        "Member": "property Suppressions",
+        "Type": "Evenmere.Sim.Systems.Advisors.Suppression[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Advisors.Suppression": {
+      "0": {
+        "Member": "property Kind",
+        "Type": "Evenmere.Sim.Queries.Types.AdviceKind"
+      },
+      "1": {
+        "Member": "property Subject",
+        "Type": "Evenmere.Sim.Queries.Types.SubjectLink"
+      },
+      "2": {
+        "Member": "property ExpiresTick",
+        "Type": "System.Int64"
+      }
+    },
+    "Evenmere.Sim.Systems.Construction.ConstructionState": {
+      "0": {
+        "Member": "property Sites",
+        "Type": "Evenmere.Core.Collections.IdTable\u00601\u003CEvenmere.Sim.Systems.Construction.SiteRecord\u003E"
+      }
+    },
+    "Evenmere.Sim.Systems.Construction.SiteRecord": {
+      "0": {
+        "Member": "property Kind",
+        "Type": "Evenmere.Sim.Systems.Construction.SiteKind"
+      },
+      "1": {
+        "Member": "property Target",
+        "Type": "Evenmere.Core.Ids.BuildingTypeId"
+      },
+      "2": {
+        "Member": "property PlacedTick",
+        "Type": "System.Int64"
+      },
+      "3": {
+        "Member": "property Work",
+        "Type": "System.Int64"
+      },
+      "4": {
+        "Member": "property StepsDrawn",
+        "Type": "System.Int32"
+      },
+      "5": {
+        "Member": "property StepsDone",
+        "Type": "System.Int32"
+      },
+      "6": {
+        "Member": "property Stall",
+        "Type": "Evenmere.Sim.Queries.Types.StallReason"
+      },
+      "7": {
+        "Member": "property WaitingFor",
+        "Type": "Evenmere.Core.Ids.GoodId"
+      }
+    },
+    "Evenmere.Sim.Systems.Culture.CultureState": {
+      "0": {
+        "Member": "property Progress",
+        "Type": "Evenmere.Core.Numerics.Amount[]"
+      },
+      "1": {
+        "Member": "property Done",
+        "Type": "System.UInt64[]"
+      },
+      "2": {
+        "Member": "property Inspired",
+        "Type": "System.UInt64[]"
+      },
+      "3": {
+        "Member": "property Target",
+        "Type": "System.Nullable\u00601\u003CEvenmere.Core.Ids.CivicId\u003E"
+      },
+      "4": {
+        "Member": "property Queue",
+        "Type": "Evenmere.Core.Ids.CivicId[]"
+      },
+      "5": {
+        "Member": "property Banked",
+        "Type": "Evenmere.Core.Numerics.Amount"
+      },
+      "6": {
+        "Member": "property PointsPerDay",
+        "Type": "Evenmere.Core.Numerics.Amount"
+      }
+    },
+    "Evenmere.Sim.Systems.Logistics.LogisticsState": {
+      "0": {
+        "Member": "property Jobs",
+        "Type": "Evenmere.Core.Collections.IdTable\u00601\u003CEvenmere.Sim.Systems.Logistics.TransportJobRecord\u003E"
+      },
+      "1": {
+        "Member": "property BusyCarts",
+        "Type": "Evenmere.Core.Collections.IdTable\u00601\u003CSystem.Int32\u003E"
+      },
+      "2": {
+        "Member": "property RetryKeys",
+        "Type": "System.Int64[]"
+      },
+      "3": {
+        "Member": "property RetryDays",
+        "Type": "System.Int64[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Logistics.TransportJobRecord": {
+      "0": {
+        "Member": "property Storehouse",
+        "Type": "Evenmere.Core.Ids.EntityId"
+      },
+      "1": {
+        "Member": "property Building",
+        "Type": "Evenmere.Core.Ids.EntityId"
+      },
+      "10": {
+        "Member": "property Interrupted",
+        "Type": "System.Boolean"
+      },
+      "2": {
+        "Member": "property Good",
+        "Type": "Evenmere.Core.Ids.GoodId"
+      },
+      "3": {
+        "Member": "property Amount",
+        "Type": "Evenmere.Core.Numerics.Amount"
+      },
+      "4": {
+        "Member": "property Direction",
+        "Type": "Evenmere.Sim.Queries.Types.TransportDirection"
+      },
+      "5": {
+        "Member": "property Phase",
+        "Type": "Evenmere.Sim.Queries.Types.TransportPhase"
+      },
+      "6": {
+        "Member": "property PhaseStartTick",
+        "Type": "System.Int64"
+      },
+      "7": {
+        "Member": "property PhaseTicks",
+        "Type": "System.Int32"
+      },
+      "8": {
+        "Member": "property LegTicks",
+        "Type": "System.Int32"
+      },
+      "9": {
+        "Member": "property Carried",
+        "Type": "Evenmere.Core.Numerics.Amount"
+      }
+    },
+    "Evenmere.Sim.Systems.Map.BuildingRecord": {
+      "0": {
+        "Member": "property Type",
+        "Type": "Evenmere.Core.Ids.BuildingTypeId"
+      },
+      "1": {
+        "Member": "property Origin",
+        "Type": "Evenmere.Sim.Queries.Types.TileCoord"
+      },
+      "2": {
+        "Member": "property Rotation",
+        "Type": "Evenmere.Sim.Queries.Types.Rotation"
+      },
+      "3": {
+        "Member": "property Width",
+        "Type": "System.Int32"
+      },
+      "4": {
+        "Member": "property Height",
+        "Type": "System.Int32"
+      },
+      "5": {
+        "Member": "property State",
+        "Type": "Evenmere.Sim.Queries.Types.BuildingState"
+      },
+      "6": {
+        "Member": "property Stage",
+        "Type": "System.Int32"
+      }
+    },
+    "Evenmere.Sim.Systems.Map.MapState": {
+      "0": {
+        "Member": "property Width",
+        "Type": "System.Int32"
+      },
+      "1": {
+        "Member": "property Height",
+        "Type": "System.Int32"
+      },
+      "10": {
+        "Member": "property Buildings",
+        "Type": "Evenmere.Core.Collections.IdTable\u00601\u003CEvenmere.Sim.Systems.Map.BuildingRecord\u003E"
+      },
+      "11": {
+        "Member": "property Occupancy",
+        "Type": "System.Int32[]"
+      },
+      "2": {
+        "Member": "property Terrain",
+        "Type": "System.Byte[]"
+      },
+      "3": {
+        "Member": "property Elevation",
+        "Type": "System.Byte[]"
+      },
+      "4": {
+        "Member": "property Features",
+        "Type": "System.Byte[]"
+      },
+      "5": {
+        "Member": "property RiverWidth",
+        "Type": "System.Byte[]"
+      },
+      "6": {
+        "Member": "property Region",
+        "Type": "System.UInt16[]"
+      },
+      "7": {
+        "Member": "property Deposit",
+        "Type": "System.Byte[]"
+      },
+      "8": {
+        "Member": "property Fertility",
+        "Type": "System.UInt32[]"
+      },
+      "9": {
+        "Member": "property Slope",
+        "Type": "System.Byte[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Modifiers.ActiveModifier": {
+      "0": {
+        "Member": "property Source",
+        "Type": "Evenmere.Sim.Queries.Types.EffectSource"
+      },
+      "1": {
+        "Member": "property Stat",
+        "Type": "Evenmere.Content.Definitions.Stat"
+      },
+      "2": {
+        "Member": "property TargetKind",
+        "Type": "Evenmere.Sim.Systems.Modifiers.ModifierTargetKind"
+      },
+      "3": {
+        "Member": "property TargetValue",
+        "Type": "System.Int32"
+      },
+      "4": {
+        "Member": "property TargetTag",
+        "Type": "System.String"
+      },
+      "5": {
+        "Member": "property Percent",
+        "Type": "System.Int32"
+      },
+      "6": {
+        "Member": "property When",
+        "Type": "System.Int64[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Modifiers.ModifiersState": {
+      "0": {
+        "Member": "property Active",
+        "Type": "Evenmere.Sim.Systems.Modifiers.ActiveModifier[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Needs.FairShares": {
+      "0": {
+        "Member": "property Demand",
+        "Type": "Evenmere.Core.Numerics.Amount[]"
+      },
+      "1": {
+        "Member": "property Fulfilment",
+        "Type": "Evenmere.Core.Numerics.Ratio[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Needs.NeedsState": {
+      "0": {
+        "Member": "property Shares",
+        "Type": "Evenmere.Sim.Systems.Needs.FairShares"
+      }
+    },
+    "Evenmere.Sim.Systems.Population.HouseRecord": {
+      "0": {
+        "Member": "property Tier",
+        "Type": "Evenmere.Core.Ids.TierId"
+      },
+      "1": {
+        "Member": "property Type",
+        "Type": "Evenmere.Core.Ids.BuildingTypeId"
+      },
+      "10": {
+        "Member": "property Capacity",
+        "Type": "System.Int32"
+      },
+      "11": {
+        "Member": "property TargetResidents",
+        "Type": "System.Int32"
+      },
+      "12": {
+        "Member": "property AdvanceBlocker",
+        "Type": "Evenmere.Sim.Queries.Types.AdvanceBlocker"
+      },
+      "2": {
+        "Member": "property Residents",
+        "Type": "System.Int32"
+      },
+      "3": {
+        "Member": "property NeedsMetMask",
+        "Type": "System.UInt32"
+      },
+      "4": {
+        "Member": "property EverMetMask",
+        "Type": "System.UInt32"
+      },
+      "5": {
+        "Member": "property ComfortMetMask",
+        "Type": "System.UInt32"
+      },
+      "6": {
+        "Member": "property MarketCovered",
+        "Type": "System.Boolean"
+      },
+      "7": {
+        "Member": "property AdvanceStreakDays",
+        "Type": "System.Int32"
+      },
+      "8": {
+        "Member": "property DeclineTimerDays",
+        "Type": "System.Int32"
+      },
+      "9": {
+        "Member": "property UpgradeLocked",
+        "Type": "System.Boolean"
+      }
+    },
+    "Evenmere.Sim.Systems.Population.PopulationState": {
+      "0": {
+        "Member": "property Houses",
+        "Type": "Evenmere.Core.Collections.IdTable\u00601\u003CEvenmere.Sim.Systems.Population.HouseRecord\u003E"
+      },
+      "1": {
+        "Member": "property FestivalActive",
+        "Type": "System.Boolean"
+      },
+      "2": {
+        "Member": "property SuppliedWorkers",
+        "Type": "System.Int32[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Production.ProducedTotals": {
+      "0": {
+        "Member": "property Day",
+        "Type": "System.Int64"
+      },
+      "1": {
+        "Member": "property Today",
+        "Type": "Evenmere.Core.Numerics.Amount[]"
+      },
+      "2": {
+        "Member": "property Yesterday",
+        "Type": "Evenmere.Core.Numerics.Amount[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Production.ProducerRecord": {
+      "0": {
+        "Member": "property Recipe",
+        "Type": "Evenmere.Core.Ids.RecipeId"
+      },
+      "1": {
+        "Member": "property Progress",
+        "Type": "System.Int64"
+      },
+      "10": {
+        "Member": "property WorkforceFill",
+        "Type": "Evenmere.Core.Numerics.Ratio"
+      },
+      "11": {
+        "Member": "property InputsReady",
+        "Type": "System.Boolean"
+      },
+      "12": {
+        "Member": "property BonusPercent",
+        "Type": "System.Int32"
+      },
+      "2": {
+        "Member": "property Inputs",
+        "Type": "Evenmere.Core.Numerics.Amount[]"
+      },
+      "3": {
+        "Member": "property Outputs",
+        "Type": "Evenmere.Core.Numerics.Amount[]"
+      },
+      "4": {
+        "Member": "property InputRequestTicks",
+        "Type": "System.Int64[]"
+      },
+      "5": {
+        "Member": "property OutputRequestTicks",
+        "Type": "System.Int64[]"
+      },
+      "6": {
+        "Member": "property Stall",
+        "Type": "Evenmere.Sim.Queries.Types.StallReason"
+      },
+      "7": {
+        "Member": "property AreaYield",
+        "Type": "Evenmere.Core.Numerics.Ratio"
+      },
+      "8": {
+        "Member": "property SiteBonusPercent",
+        "Type": "System.Int32"
+      },
+      "9": {
+        "Member": "property Productivity",
+        "Type": "Evenmere.Core.Numerics.Ratio"
+      }
+    },
+    "Evenmere.Sim.Systems.Production.ProductionState": {
+      "0": {
+        "Member": "property Producers",
+        "Type": "Evenmere.Core.Collections.IdTable\u00601\u003CEvenmere.Sim.Systems.Production.ProducerRecord\u003E"
+      },
+      "1": {
+        "Member": "property Totals",
+        "Type": "Evenmere.Sim.Systems.Production.ProducedTotals"
+      }
+    },
+    "Evenmere.Sim.Systems.Progression.ProgressionState": {
+      "0": {
+        "Member": "property Buildings",
+        "Type": "System.UInt64[]"
+      },
+      "1": {
+        "Member": "property Recipes",
+        "Type": "System.UInt64[]"
+      },
+      "10": {
+        "Member": "property CoastlineRevealed",
+        "Type": "System.Boolean"
+      },
+      "11": {
+        "Member": "property AppliedSources",
+        "Type": "Evenmere.Sim.Queries.Types.EffectSource[]"
+      },
+      "12": {
+        "Member": "property Points",
+        "Type": "Evenmere.Core.Numerics.Amount[]"
+      },
+      "13": {
+        "Member": "property Produced",
+        "Type": "System.Int64[]"
+      },
+      "14": {
+        "Member": "property Consumed",
+        "Type": "System.Int64[]"
+      },
+      "15": {
+        "Member": "property Built",
+        "Type": "System.Int64[]"
+      },
+      "16": {
+        "Member": "property RoadTilesLaid",
+        "Type": "System.Int64"
+      },
+      "2": {
+        "Member": "property Tiers",
+        "Type": "System.UInt64[]"
+      },
+      "3": {
+        "Member": "property Traditions",
+        "Type": "System.UInt64[]"
+      },
+      "4": {
+        "Member": "property Festivals",
+        "Type": "System.UInt64[]"
+      },
+      "5": {
+        "Member": "property GreatWorks",
+        "Type": "System.UInt64[]"
+      },
+      "6": {
+        "Member": "property TerrainAccessFlags",
+        "Type": "System.UInt64"
+      },
+      "7": {
+        "Member": "property FeatureFlags",
+        "Type": "System.UInt64"
+      },
+      "8": {
+        "Member": "property Era",
+        "Type": "System.Int32"
+      },
+      "9": {
+        "Member": "property TraditionSlots",
+        "Type": "System.Int32[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Research.ResearchState": {
+      "0": {
+        "Member": "property Progress",
+        "Type": "Evenmere.Core.Numerics.Amount[]"
+      },
+      "1": {
+        "Member": "property Done",
+        "Type": "System.UInt64[]"
+      },
+      "2": {
+        "Member": "property Inspired",
+        "Type": "System.UInt64[]"
+      },
+      "3": {
+        "Member": "property Target",
+        "Type": "System.Nullable\u00601\u003CEvenmere.Core.Ids.TechId\u003E"
+      },
+      "4": {
+        "Member": "property Queue",
+        "Type": "Evenmere.Core.Ids.TechId[]"
+      },
+      "5": {
+        "Member": "property Banked",
+        "Type": "Evenmere.Core.Numerics.Amount"
+      },
+      "6": {
+        "Member": "property PointsPerDay",
+        "Type": "Evenmere.Core.Numerics.Amount"
+      }
+    },
+    "Evenmere.Sim.Systems.Roads.RoadsState": {
+      "0": {
+        "Member": "property Width",
+        "Type": "System.Int32"
+      },
+      "1": {
+        "Member": "property Height",
+        "Type": "System.Int32"
+      },
+      "2": {
+        "Member": "property Layer",
+        "Type": "System.UInt16[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Statistics.StatisticsState": {
+      "0": {
+        "Member": "property GoodCount",
+        "Type": "System.Int32"
+      },
+      "1": {
+        "Member": "property TierCount",
+        "Type": "System.Int32"
+      },
+      "2": {
+        "Member": "property DaysSampled",
+        "Type": "System.Int64"
+      },
+      "3": {
+        "Member": "property Daily",
+        "Type": "System.Int64[]"
+      },
+      "4": {
+        "Member": "property Seasonal",
+        "Type": "System.Int64[]"
+      },
+      "5": {
+        "Member": "property SeasonsSampled",
+        "Type": "System.Int64"
+      },
+      "6": {
+        "Member": "property LastConsumed",
+        "Type": "System.Int64[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Storage.StorageState": {
+      "0": {
+        "Member": "property Stock",
+        "Type": "Evenmere.Core.Numerics.Amount[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Workforce.WorkforceState": {
+      "0": {
+        "Member": "property RawSupply",
+        "Type": "System.Int32[]"
+      },
+      "1": {
+        "Member": "property Workplaces",
+        "Type": "Evenmere.Core.Collections.IdTable\u00601\u003CEvenmere.Sim.Systems.Workforce.WorkplaceRecord\u003E"
+      }
+    },
+    "Evenmere.Sim.Systems.Workforce.WorkplaceRecord": {
+      "0": {
+        "Member": "property Allocated",
+        "Type": "System.Int32"
+      },
+      "1": {
+        "Member": "property HighPriority",
+        "Type": "System.Boolean"
+      }
+    }
+  }
+}

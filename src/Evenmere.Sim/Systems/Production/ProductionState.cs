@@ -2,6 +2,7 @@ using Evenmere.Content.Definitions;
 using Evenmere.Core.Collections;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
+using Evenmere.Sim.Persistence;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Serialization.Formatters;
 using MessagePack;
@@ -49,10 +50,12 @@ public sealed class ProducedTotals
 
     /// <summary>Gets or sets what the island has produced so far on <see cref="Day"/>, indexed by <c>GoodId.Value</c>, in milli-units.</summary>
     [Key(1)]
+    [ContentIndexed(ContentKind.Good)]
     public Amount[] Today { get; set; } = [];
 
     /// <summary>Gets or sets what the island produced during the whole day before <see cref="Day"/>, indexed by <c>GoodId.Value</c>, in milli-units.</summary>
     [Key(2)]
+    [ContentIndexed(ContentKind.Good)]
     public Amount[] Yesterday { get; set; } = [];
 
     /// <summary>Sizes the arrays to the loaded content, keeping any values a loaded state already holds.</summary>
@@ -103,18 +106,22 @@ public sealed class ProducerRecord
 
     /// <summary>Gets or sets the input buffer, one amount per recipe input.</summary>
     [Key(2)]
+    [ContentIndexed(ContentKind.Good)]
     public Amount[] Inputs { get; set; } = [];
 
     /// <summary>Gets or sets the output buffer, one amount per recipe output.</summary>
     [Key(3)]
+    [ContentIndexed(ContentKind.Good)]
     public Amount[] Outputs { get; set; } = [];
 
     /// <summary>Gets or sets the tick each open delivery request first arose, one per recipe input; <see cref="NoRequest"/> (-1) when none is open.</summary>
     [Key(4)]
+    [NotContentIndexed("parallel to Inputs; the remap permutes them together")]
     public long[] InputRequestTicks { get; set; } = [];
 
     /// <summary>Gets or sets the tick each open pickup request first arose, one per recipe output; <see cref="NoRequest"/> (-1) when none is open.</summary>
     [Key(5)]
+    [NotContentIndexed("parallel to Outputs; the remap permutes them together")]
     public long[] OutputRequestTicks { get; set; } = [];
 
     /// <summary>Gets or sets the stall reason of the last tick; <see cref="StallReason.None"/> while the building is working.</summary>

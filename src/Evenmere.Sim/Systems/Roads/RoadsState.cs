@@ -1,3 +1,4 @@
+using Evenmere.Sim.Persistence;
 using MessagePack;
 
 namespace Evenmere.Sim.Systems.Roads;
@@ -35,5 +36,6 @@ public sealed class RoadsState
     /// <c>BuildingTypeId.Value</c> plus one. Empty until the layer has been sized, otherwise exactly <c>Width × Height</c> long.
     /// </summary>
     [Key(2)]
+    [ContentValued(ContentKind.Building)]
     public ushort[] Layer { get; set; } = [];
 }

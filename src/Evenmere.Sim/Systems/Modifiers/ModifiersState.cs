@@ -1,4 +1,5 @@
 using Evenmere.Content.Definitions;
+using Evenmere.Sim.Persistence;
 using Evenmere.Sim.Queries.Types;
 using MessagePack;
 
@@ -15,6 +16,7 @@ public sealed class ModifiersState
 {
     /// <summary>Gets or sets the registered modifiers, in the order they were applied.</summary>
     [Key(0)]
+    [ContentValued(ContentKind.Tech, ContentKind.Civic, ContentKind.Tradition, ContentKind.Festival, ContentKind.Monument, ContentKind.Happening, ContentKind.Good, ContentKind.Tier, ContentKind.Building)]
     public ActiveModifier[] Active { get; set; } = [];
 }
 
@@ -65,6 +67,7 @@ public sealed class ActiveModifier
 
     /// <summary>Gets or sets the target's raw ID or enum value, which <see cref="TargetKind"/> decides how to read; 0 when there is none.</summary>
     [Key(3)]
+    [ContentValued(ContentKind.Good, ContentKind.Tier, ContentKind.Building)]
     public int TargetValue { get; set; }
 
     /// <summary>Gets or sets the building tag for <see cref="ModifierTargetKind.Tag"/>; otherwise <see langword="null"/>.</summary>
@@ -77,5 +80,6 @@ public sealed class ActiveModifier
 
     /// <summary>Gets or sets the encoded <c>when</c> condition, or <see langword="null"/> when the modifier always applies.</summary>
     [Key(6)]
+    [ContentValued(ContentKind.Good, ContentKind.Tier, ContentKind.Building, ContentKind.Tech, ContentKind.Civic, ContentKind.Era, ContentKind.GreatWork, ContentKind.Terrain)]
     public long[]? When { get; set; }
 }

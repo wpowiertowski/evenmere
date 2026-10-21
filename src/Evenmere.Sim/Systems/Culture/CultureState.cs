@@ -1,5 +1,6 @@
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
+using Evenmere.Sim.Persistence;
 using MessagePack;
 
 namespace Evenmere.Sim.Systems.Culture;
@@ -15,14 +16,17 @@ public sealed class CultureState
 {
     /// <summary>Gets or sets the culture each civic has received, in milli-units, indexed by <see cref="CivicId.Value"/>.</summary>
     [Key(0)]
+    [ContentIndexed(ContentKind.Civic)]
     public Amount[] Progress { get; set; } = [];
 
     /// <summary>Gets or sets the adopted civics, as a bitset over <see cref="CivicId.Value"/>.</summary>
     [Key(1)]
+    [ContentIndexed(ContentKind.Civic)]
     public ulong[] Done { get; set; } = [];
 
     /// <summary>Gets or sets the civics whose inspiration has triggered, as a bitset over <see cref="CivicId.Value"/>.</summary>
     [Key(2)]
+    [ContentIndexed(ContentKind.Civic)]
     public ulong[] Inspired { get; set; } = [];
 
     /// <summary>Gets or sets the civic that receives the day's culture, or <see langword="null"/> when none is being adopted.</summary>
@@ -31,6 +35,7 @@ public sealed class CultureState
 
     /// <summary>Gets or sets the civics that follow the target, in the order they will be adopted. The target itself is never in here.</summary>
     [Key(4)]
+    [ContentValued(ContentKind.Civic)]
     public CivicId[] Queue { get; set; } = [];
 
     /// <summary>

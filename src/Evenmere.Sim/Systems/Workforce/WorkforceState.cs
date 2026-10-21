@@ -1,4 +1,5 @@
 using Evenmere.Core.Collections;
+using Evenmere.Sim.Persistence;
 using Evenmere.Sim.Serialization.Formatters;
 using MessagePack;
 
@@ -14,6 +15,7 @@ public sealed class WorkforceState
 {
     /// <summary>Gets or sets the raw supply Population set, indexed by <c>TierId.Value</c>. Queries scale it by the <c>workforce</c> modifiers.</summary>
     [Key(0)]
+    [ContentIndexed(ContentKind.Tier)]
     public int[] RawSupply { get; set; } = [];
 
     /// <summary>Gets or sets one record per workplace the allocation or the priority command has touched, keyed by the building's entity ID.</summary>
