@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" uid="uid://bub5wqwnne33" path="res://host/Main.cs" id="1_main"]
 [ext_resource type="Script" uid="uid://dcmhwhll1gsvl" path="res://host/SimHost.cs" id="2_host"]
