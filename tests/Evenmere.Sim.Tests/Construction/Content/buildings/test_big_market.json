@@ -1,0 +1,10 @@
+{
+  "id": "test_big_market",
+  "category": "service",
+  "era": 1,
+  "footprint": [4, 4],
+  "cost": { "timber": 4 },
+  "buildDays": 1,
+  "upgradeOf": "market",
+  "start": true
+}

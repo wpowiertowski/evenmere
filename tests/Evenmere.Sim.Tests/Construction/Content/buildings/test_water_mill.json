@@ -1,0 +1,10 @@
+{
+  "id": "test_water_mill",
+  "category": "infrastructure",
+  "era": 1,
+  "footprint": [2, 2],
+  "placement": { "riverside": true },
+  "cost": { "timber": 2 },
+  "buildDays": 1,
+  "start": true
+}

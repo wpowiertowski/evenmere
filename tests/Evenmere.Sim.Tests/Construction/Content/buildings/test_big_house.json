@@ -1,0 +1,11 @@
+{
+  "id": "test_big_house",
+  "category": "residence",
+  "era": 1,
+  "footprint": [2, 2],
+  "cost": { "timber": 2 },
+  "buildDays": 1,
+  "upgradeOf": "settler_house",
+  "start": true,
+  "tags": ["house"]
+}

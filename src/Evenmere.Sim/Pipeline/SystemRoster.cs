@@ -54,7 +54,7 @@ internal sealed class SystemRoster
 
         // Ticked systems, in the exact order of architecture.md (System order), steps 2 to 15.
         // M1-06 changes the next line to pass the construction state.
-        var construction = new ConstructionSystem();
+        var construction = new ConstructionSystem(world.Construction, content);
 
         // M1-07 changes the next line to pass the workforce state.
         var workforce = new WorkforceSystem();
@@ -118,7 +118,8 @@ internal sealed class SystemRoster
 
         // The two halves of IPlacementQueries. PlacementQueries forwards to them.
         // M1-06: Construction's building placement check.
-        IBuildingPlacement buildingPlacement = new UnimplementedBuildingPlacement();
+        IBuildingPlacement buildingPlacement = new BuildingPlacement(
+            content, world.Construction, map.Queries, roads.Queries, progression.Queries);
 
         // M1-05: Roads' road placement check.
         IRoadPlacement roadPlacement = roads.Placement;

@@ -14,7 +14,7 @@
     { "tick": 240, "type": "RecordTick", "args": { "label": "last tick" } }
   ],
   "expect": {
-    "hash": "7760cfd4171a16e1",
+    "hash": "881768eff73129a7",
     "events": [
       { "type": "TickRecorded", "exactly": 3 },
       { "type": "GoodsGranted", "exactly": 2 },

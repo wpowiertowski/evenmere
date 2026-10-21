@@ -1,0 +1,10 @@
+{
+  "id": "test_market_square",
+  "category": "service",
+  "era": 1,
+  "footprint": [3, 3],
+  "cost": { "timber": 4 },
+  "buildDays": 1,
+  "upgradeOf": "market",
+  "start": true
+}
