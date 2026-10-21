@@ -1,14 +1,20 @@
+using Evenmere.Game.Host.Debug;
+using Evenmere.Game.Rendering.Camera;
+using Evenmere.Game.Rendering.Terrain;
 using Godot;
 
 namespace Evenmere.Game.Host;
 
 /// <summary>
 /// The root of <c>Main.tscn</c>. It reads the command line and starts the world on the <see cref="SimHost"/> child, or,
-/// in smoke mode, runs the headless check and quits.
+/// in smoke mode, runs the headless check and quits. Debug builds additionally run the debug driver
+/// (<see cref="DebugDriver"/>) for screenshots, the bench and the picking check; release builds ignore those flags.
 /// </summary>
 public sealed partial class Main : Node3D
 {
     private static readonly Vector2I _minimumWindowSize = new(1280, 800);
+
+    private DebugDriver? _debug;
 
     /// <inheritdoc />
     public override void _Ready()
@@ -27,6 +33,22 @@ public sealed partial class Main : Node3D
 
         var options = LaunchOptions.Parse(args);
         host.StartNewGame(options.Seed, options.Map);
+
+        if (OS.IsDebugBuild())
+        {
+            var driver = new DebugDriver(DebugLaunchOptions.Parse(args));
+            _debug = driver;
+            driver.Ready(
+                host,
+                GetNodeOrNull<CameraRig>("CameraRig"),
+                GetNodeOrNull<TerrainRenderer>("Terrain"));
+        }
+    }
+
+    /// <inheritdoc />
+    public override void _Process(double delta)
+    {
+        _debug?.Process(this, delta);
     }
 
     /// <summary>

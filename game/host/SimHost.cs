@@ -5,6 +5,7 @@ using Evenmere.Content.Maps;
 using Evenmere.Core.Time;
 using Evenmere.Sim;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Queries.Types;
 using Godot;
 
 namespace Evenmere.Game.Host;
@@ -29,6 +30,9 @@ public sealed partial class SimHost : Node
     private const string NoSimulationMessage = "No simulation is running; call StartNewGame first.";
 
     private readonly FixedStepper _stepper = new();
+    private readonly ChunkCoord[] _drainScratch = new ChunkCoord[64];
+    private readonly List<ChunkCoord> _pendingDirty = new();
+    private int _pendingStart;
     private ISimulation? _sim;
     private ContentDb? _content;
     private LocaleTable? _locale;
@@ -64,11 +68,35 @@ public sealed partial class SimHost : Node
     public ISimQueries Query => RequireSim().Query;
 
     /// <summary>
-    /// Gets the chunks the simulation changed since the view last looked. It is an empty stub until M1-01 gives the
-    /// map its chunks; the element type then becomes the sim's chunk coordinate.
+    /// Gets how many drained dirty chunks are waiting for the view. The terrain renderer takes them with
+    /// <see cref="DequeueDirtyChunks"/> and rebuilds at most four per frame, so bursts spread over frames.
     /// </summary>
-    // TODO(M1-01): drain the map's dirty chunks after each frame's ticks.
-    public IReadOnlyList<Vector2I> DirtyChunks { get; } = [];
+    public int PendingDirtyCount => _pendingDirty.Count - _pendingStart;
+
+    /// <summary>
+    /// Hands the view up to <c>destination.Length</c> dirty chunks drained from the simulation after the last ticks,
+    /// in ascending (Y, X) order. It never allocates: chunks stay in a reused buffer until taken here.
+    /// </summary>
+    /// <param name="destination">Receives the chunks.</param>
+    /// <returns>The number of chunks written; 0 when none are waiting.</returns>
+    public int DequeueDirtyChunks(Span<ChunkCoord> destination)
+    {
+        int waiting = _pendingDirty.Count - _pendingStart;
+        int count = Math.Min(waiting, destination.Length);
+        for (int i = 0; i < count; i++)
+        {
+            destination[i] = _pendingDirty[_pendingStart + i];
+        }
+
+        _pendingStart += count;
+        if (_pendingStart >= _pendingDirty.Count)
+        {
+            _pendingDirty.Clear();
+            _pendingStart = 0;
+        }
+
+        return count;
+    }
 
     /// <summary>Gets how far the accumulator has run toward the next tick, from 0 to 1, so the view can interpolate between ticks.</summary>
     public double InterpolationAlpha => _stepper.InterpolationAlpha;
@@ -116,6 +144,10 @@ public sealed partial class SimHost : Node
         _content = content;
         _locale = locale.Table;
         _stepper.Reset();
+
+        // A fresh map marks every chunk dirty; the terrain renderer builds them all on load, so the marks wait in the
+        // view's buffer until it takes them (and drops them as already drawn) instead of arriving mid-frame later.
+        DrainDirtyChunks(_sim);
     }
 
     // TODO(M1-14): start from a save (Simulation.Restore) once the persistence task defines the header and the content check.
@@ -144,6 +176,7 @@ public sealed partial class SimHost : Node
         }
 
         Publish(sim);
+        DrainDirtyChunks(sim);
     }
 
     /// <inheritdoc />
@@ -184,10 +217,30 @@ public sealed partial class SimHost : Node
         if (ticks > 0)
         {
             Publish(sim);
+            DrainDirtyChunks(sim);
         }
     }
 
     private void Publish(ISimulation sim) => EventsDrained?.Invoke(sim.DrainEvents());
+
+    // Moves the map's dirty marks into the view's reused buffer. The marks are bookkeeping outside world state,
+    // so draining them never changes the state hash.
+    private void DrainDirtyChunks(ISimulation sim)
+    {
+        while (true)
+        {
+            int drained = sim.Query.Map.DrainDirtyChunks(_drainScratch.AsSpan());
+            if (drained == 0)
+            {
+                break;
+            }
+
+            for (int i = 0; i < drained; i++)
+            {
+                _pendingDirty.Add(_drainScratch[i]);
+            }
+        }
+    }
 
     private ISimulation RequireSim() =>
         _sim ?? throw new InvalidOperationException(NoSimulationMessage);

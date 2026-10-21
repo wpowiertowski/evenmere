@@ -79,4 +79,7 @@ public static class InputActions
 
     /// <summary>Confirm at the pointer: place, select or click (left click, A).</summary>
     public static readonly StringName CursorConfirm = "cursor_confirm";
+
+    /// <summary>Show or hide the terrain tile-grid overlay (keyboard G only; gamepad access will come from a view or settings menu).</summary>
+    public static readonly StringName ViewGridToggle = "view_grid_toggle";
 }
