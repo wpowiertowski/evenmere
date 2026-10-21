@@ -55,7 +55,7 @@
 | M1-12 | Statistics and explain queries | sim | M1-00 | done |
 | M1-13 | Integration: new game and end-to-end scenarios | sim | M1-01, M1-03 to M1-12 | todo |
 | M1-14 | Save/load v1 and command log | sim | M1-13 | todo |
-| M1-15 | Advisors v1 | sim | M1-12 | todo |
+| M1-15 | Advisors v1 | sim | M1-12 | done |
 | M1-16 | Balance bot v1 | tools | M1-13 | todo |
 | M1-17 | Camera rig and input actions | game | M0-09 | done |
 | M1-18 | UI theme, HUD and speed controls | game | M0-09 | done |
