@@ -43,6 +43,7 @@ internal sealed class DebugDriver
     private TileCoord _demoSawpitOrigin = new(0, 0);
     private int _demoFrames;
     private bool _lateDemoDone;
+    private int _pendingHudTipFrames;
 
     /// <summary>Initializes a new instance of the <see cref="DebugDriver"/> class.</summary>
     /// <param name="options">The parsed debug options.</param>
@@ -88,6 +89,11 @@ internal sealed class DebugDriver
         if (_options.DemoBuildings)
         {
             RunDemoBuildings(host);
+        }
+
+        if (!string.IsNullOrEmpty(_options.DemoExplain))
+        {
+            RunDemoExplain(host, rig, _options.DemoExplain);
         }
 
         if (rig is null)
@@ -182,7 +188,22 @@ internal sealed class DebugDriver
     {
         RunCheckPick(main);
         RunLateDemo();
+        RunPendingHudTip();
         RunBench(main, delta);
+    }
+
+    // The HUD builds its chips a frame after the world starts, so the one-shot show in
+    // RunDemoExplain happens too early; re-show the bread tip every frame until the screenshot.
+    private void RunPendingHudTip()
+    {
+        if (_pendingHudTipFrames <= 0 || _host is null)
+        {
+            return;
+        }
+
+        _pendingHudTipFrames--;
+        Node? hud = _host.GetTree().CurrentScene?.GetNodeOrNull<Node>("Hud/HudRoot");
+        hud?.GetType().GetMethod("DebugShowGoodTip")?.Invoke(hud, ["bread"]);
     }
 
     // Picks once at a screen point and prints the tile and its rendered surface height, proving the camera's picking
@@ -767,6 +788,163 @@ internal sealed class DebugDriver
         {
             // The late demo rebuilds the sawpit on the spot as the partway site, after the camera is set.
             _demoSite = new Vector2I(_demoSawpitOrigin.X, _demoSawpitOrigin.Y);
+        }
+    }
+
+    // The M1-24 explain demo: a stalled bakery (no flour because the windmill has no grain) and a
+    // house blocked by the bread shortage, for the inspector and HUD screenshots. It builds through
+    // SimHost.Enqueue only, pauses the world, then opens the inspector on the bakery, the house,
+    // or shows the HUD bread tooltip, per the --demo-explain value.
+    private void RunDemoExplain(SimHost host, CameraRig? rig, string mode)
+    {
+        try
+        {
+            if (!TryFindHall(host, out TileCoord hallOrigin, out int hallWidth, out int hallHeight))
+            {
+                GD.Print("[Evenmere] Demo: no founders hall; skipping --demo-explain.");
+                return;
+            }
+
+            var centre = new TileCoord(hallOrigin.X + (hallWidth / 2), hallOrigin.Y + (hallHeight / 2));
+            UnlockSlice(host);
+
+            BuildingTypeId roadType = host.Content.Buildings.IdOf("dirt_road");
+            var network = new HashSet<TileCoord>();
+            for (int y = hallOrigin.Y; y < hallOrigin.Y + hallHeight; y++)
+            {
+                for (int x = hallOrigin.X; x < hallOrigin.X + hallWidth; x++)
+                {
+                    network.Add(new TileCoord(x, y));
+                }
+            }
+
+            LayDemoPattern(host, roadType, hallOrigin, hallWidth, hallHeight, network);
+
+            string[] first = ["woodcutters_hut", "sawpit", "fishing_hut", "storehouse"];
+            var placed = new List<(string Type, EntityId Id, TileCoord Origin)>();
+            foreach (string typeName in first)
+            {
+                if (TryPlaceNear(host, typeName, centre, network, out EntityId id, out TileCoord origin))
+                {
+                    placed.Add((typeName, id, origin));
+                    ConnectBuilding(host, id, origin, roadType, network);
+                }
+            }
+
+            host.RunTicksNow(10 * 120);
+
+            string[] second = ["market", "settler_house", "settler_house", "bakery", "windmill"];
+            foreach (string typeName in second)
+            {
+                if (TryPlaceNear(host, typeName, centre, network, out EntityId id, out TileCoord origin))
+                {
+                    placed.Add((typeName, id, origin));
+                    ConnectBuilding(host, id, origin, roadType, network);
+                }
+            }
+
+            host.RunTicksNow(10 * 120);
+
+            string[] third = ["shrine", "sheep_farm", "weavers_cottage"];
+            foreach (string typeName in third)
+            {
+                if (TryPlaceNear(host, typeName, centre, network, out EntityId id, out TileCoord origin))
+                {
+                    placed.Add((typeName, id, origin));
+                    ConnectBuilding(host, id, origin, roadType, network);
+                }
+            }
+
+            // No grain farm on purpose: the windmill starves on grain, the bakery starves on flour,
+            // and the houses stall on bread. Twenty more days let the sites finish and the chain stall.
+            host.RunTicksNow(20 * 120);
+
+            EntityId bakeryId = EntityId.None;
+            EntityId houseId = EntityId.None;
+            foreach ((string type, EntityId id, TileCoord _) in placed)
+            {
+                if (type == "bakery" && bakeryId.IsNone)
+                {
+                    bakeryId = id;
+                }
+
+                if (type == "settler_house" && houseId.IsNone)
+                {
+                    houseId = id;
+                }
+            }
+
+            GoodId bread = host.Content.Goods.IdOf("bread");
+            GoodId flour = host.Content.Goods.IdOf("flour");
+            Explanation breadExplain = host.Query.Explain.ExplainGood(bread);
+            GD.Print($"[Evenmere] Demo: bread {breadExplain.Root.Key} children={breadExplain.Root.Children.Length}.");
+            foreach (ExplanationLine child in breadExplain.Root.Children)
+            {
+                GD.Print($"[Evenmere] Demo: bread child {child.Key} args={child.Args.Length} subjects={child.Subjects.Length}.");
+            }
+
+            if (host.Query.Production.TryGet(bakeryId, out ProductionInfo production))
+            {
+                GD.Print($"[Evenmere] Demo: bakery {bakeryId.Value} stall={production.Stall} productivity={production.Productivity.PerMille}.");
+            }
+
+            if (host.Query.Population.TryGetHouse(houseId, out HouseInfo house))
+            {
+                GD.Print($"[Evenmere] Demo: house {houseId.Value} tier={host.Content.NameOf(house.Tier)} residents={house.Residents} blocker={house.AdvanceBlocker} decline={house.DeclineTimerDays}.");
+            }
+
+            host.Speed = SimSpeed.Paused;
+            _hasDemo = true;
+
+            Node? scene = host.GetTree().CurrentScene;
+            Node? inspector = scene?.GetNodeOrNull<Node>("InspectorPanel");
+            System.Reflection.MethodInfo? inspectorOpen = inspector?.GetType().GetMethod("Open");
+            if (mode == "house" && !houseId.IsNone)
+            {
+                if (host.Query.Map.TryGetBuilding(houseId, out BuildingInfo home) && rig is not null)
+                {
+                    rig.FocusOnTile(new Vector2I(home.Origin.X, home.Origin.Y));
+                    rig.SetZoom(16f, true);
+                }
+
+                inspectorOpen?.Invoke(inspector, [houseId]);
+                GD.Print($"[Evenmere] Demo: subject link building {houseId.Value} followed; camera focused, inspector opened.");
+            }
+            else if (mode == "hud")
+            {
+                if (host.Query.Map.TryGetBuilding(bakeryId, out BuildingInfo bakery) && rig is not null)
+                {
+                    rig.FocusOnTile(new Vector2I(bakery.Origin.X, bakery.Origin.Y));
+                    rig.SetZoom(40f, true);
+                }
+
+                Node? hud = scene?.GetNodeOrNull<Node>("Hud/HudRoot");
+                hud?.GetType().GetMethod("DebugShowGoodTip")?.Invoke(hud, ["bread"]);
+                // The HUD builds its chips a frame after the world starts, so keep showing the tip
+                // until the screenshot frame; each call re-reads the live explanation.
+                _pendingHudTipFrames = 300;
+                // Follow one good subject link in the log: flour explains the bakery stall.
+                Explanation flourExplain = host.Query.Explain.ExplainGood(flour);
+                GD.Print($"[Evenmere] Demo: subject link good flour followed; ExplainGood(flour) root={flourExplain.Root.Key} children={flourExplain.Root.Children.Length}.");
+            }
+            else
+            {
+                if (host.Query.Map.TryGetBuilding(bakeryId, out BuildingInfo bakery) && rig is not null)
+                {
+                    rig.FocusOnTile(new Vector2I(bakery.Origin.X, bakery.Origin.Y));
+                    rig.SetZoom(16f, true);
+                }
+
+                inspectorOpen?.Invoke(inspector, [bakeryId]);
+                Explanation flourExplain2 = host.Query.Explain.ExplainGood(flour);
+                GD.Print($"[Evenmere] Demo: subject link good flour followed; ExplainGood(flour) root={flourExplain2.Root.Key} children={flourExplain2.Root.Children.Length}.");
+            }
+
+            GD.Print($"[Evenmere] Demo: --demo-explain={mode} ready; hash={host.ComputeStateHash():x16}.");
+        }
+        catch (Exception ex)
+        {
+            GD.Print($"[Evenmere] Demo: --demo-explain failed: {ex.Message.ReplaceLineEndings(" ")}");
         }
     }
 

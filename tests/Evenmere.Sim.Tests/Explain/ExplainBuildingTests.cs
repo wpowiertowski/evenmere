@@ -78,11 +78,13 @@ public sealed class ExplainBuildingTests
         ExplanationLine productivity = explanation.Root.Children.Single(c => c.Key == "explain.building.productivity");
         productivity.Children.ShouldContain(c => c.Key == "explain.building.workforce");
         productivity.Children.ShouldContain(c => c.Key == "explain.building.inputs.missing");
-        productivity.Children.ShouldContain(c => c.Key == "explain.building.area_yield");
         productivity.Children.ShouldContain(c =>
             c.Key == "explain.building.modifier" && c.Args[1].Equals(ExplainArg.Of(25)));
-        productivity.Children.ShouldContain(c => c.Key == "explain.building.site_bonus");
-        productivity.Children.ShouldContain(c => c.Key == "explain.building.season");
+        // A bakery has no area-yield spec, its site bonus nets to zero, and nothing in M1
+        // carries a season curve, so none of these lines appear.
+        productivity.Children.ShouldNotContain(c => c.Key == "explain.building.area_yield");
+        productivity.Children.ShouldNotContain(c => c.Key == "explain.building.site_bonus");
+        productivity.Children.ShouldNotContain(c => c.Key == "explain.building.season");
 
         ExplanationLine stall = explanation.Root.Children.Single(c => c.Key == "explain.building.stall");
         stall.Children.Single().Key.ShouldBe("explain.fix.missing_input");
@@ -93,6 +95,32 @@ public sealed class ExplainBuildingTests
         ExplanationLine reach = explanation.Root.Children.Single(c => c.Key == "explain.building.reach");
         reach.Args[0].ShouldBe(ExplainArg.Of(storehouse));
         reach.Args[1].ShouldBe(ExplainArg.Of(3000));
+    }
+
+    [Fact]
+    public void ExplainBuilding_Gatherer_ShowsAreaYieldAndSiteBonus()
+    {
+        FakeSim sim = CreateSim();
+        ExplainService explain = Explain(sim);
+        ContentDb content = sim.Content;
+
+        // The woodcutter's hut measures forest in a radius, so its yield line stays; with no
+        // active modifiers the whole bonus is site bonus, so that line stays too. Nothing in M1
+        // carries a season curve, so the season line is still omitted.
+        BuildingTypeId hutType = content.IdOf<BuildingTypeId>("woodcutters_hut");
+        EntityId hut = sim.Services.BuildingRegistry.Add(hutType, 0, 0, Rotation.Deg0, BuildingState.Active);
+
+        sim.Queries.Production.SetProducer(Producer(hut, content, "cut_wood", StallReason.None, areaYield: 500, bonus: 30));
+        sim.Queries.Roads.GrantRoadAccess(hut);
+
+        Explanation explanation = explain.ExplainBuilding(hut);
+
+        ExplanationLine productivity = explanation.Root.Children.Single(c => c.Key == "explain.building.productivity");
+        productivity.Children.ShouldContain(c =>
+            c.Key == "explain.building.area_yield" && c.Args[0].Equals(ExplainArg.Of(Ratio.FromPerMille(500))));
+        productivity.Children.ShouldContain(c =>
+            c.Key == "explain.building.site_bonus" && c.Args[0].Equals(ExplainArg.Of(30)));
+        productivity.Children.ShouldNotContain(c => c.Key == "explain.building.season");
     }
 
     [Fact]
