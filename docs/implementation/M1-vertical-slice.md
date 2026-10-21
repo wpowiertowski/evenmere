@@ -46,7 +46,7 @@
 | M1-03 | Starter island map | content | M1-01, M1-02 | todo |
 | M1-04 | Progression core: unlocks, effects, modifiers, ledger, counters | sim | M1-00 | done |
 | M1-05 | Roads, connectivity, reach and coverage fields | sim | M1-00 | done |
-| M1-06 | Construction and placement validation | sim | M1-00 | todo |
+| M1-06 | Construction and placement validation | sim | M1-00 | done |
 | M1-07 | Workforce | sim | M1-00 | todo |
 | M1-08 | Production | sim | M1-00 | todo |
 | M1-09 | Logistics: carts and transport jobs | sim | M1-00 | todo |
@@ -618,6 +618,11 @@
    - `slice_villagers`: a scripted build order through Shrine, homespun and bread. At least 100 Villagers by tick 10,800 (45 min at 4 ticks per second).
    - `slice_decline`: break the bread chain after Villagers exist. Exactly one decline step occurs after 10 days.
 4. **Bug fixing:** fix integration bugs at their root, in the owning folder, with a regression test.
+5. **Leftovers from the parallel tasks:**
+   - Switch Construction's `OutsideStorehouseReach` warning from its private `StorehouseReach` search to `IRoadsQueries.IsFootprintInStorehouseReach`, and delete `StorehouseReach.cs`.
+   - Delete the remaining `Unimplemented*` stand-ins (`UnimplementedBuildingPlacement`, `UnimplementedRoadPlacement`, and any others no longer used) and their rows in `ServiceContractTests`.
+   - Subscribe every lifecycle listener (Roads, Production, Population, …) in pipeline order.
+   - Let `ScenarioRunner` load `map:` through `MapLoader` and `MapSystem.LoadMap`.
 
 **Acceptance:**
 
