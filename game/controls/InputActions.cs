@@ -5,6 +5,16 @@ namespace Evenmere.Game.Controls;
 /// <summary>
 /// The names of the input actions declared in <c>project.godot</c>. Game code uses these constants instead of string
 /// literals, so a typo is a compile error and the action list has one home. Never test raw key codes (AGENTS.md).
+/// <para>
+/// Gamepad map (M1-23, global activation in the M1-23 follow-up): the d-pad moves focus (and the left stick the
+/// camera) only, never game actions. Y opens the build menu, LB and RB switch its tabs (and rotate the camera
+/// everywhere else), A confirms the focused button through the built-in <c>ui_accept</c> (game/project.godot
+/// extends it with Joypad Button 0; with no GUI focus the tools still take A as <c>cursor_confirm</c>), B cancels
+/// and closes the topmost panel through <c>ui_cancel</c> (Joypad Button 1) and <c>tool_cancel</c>, Start pauses, and
+/// Back (Select) moves focus into and out of the HUD, whose speed buttons are then driven with the d-pad and A.
+/// There are no direct gamepad speed bindings: keyboard 1-3 keep their speed hotkeys, and the build menu
+/// suspends them while it is open so they can pick entries instead.
+/// </para>
 /// </summary>
 public static class InputActions
 {
@@ -38,7 +48,7 @@ public static class InputActions
     /// <summary>Open or close the build menu (B, Y).</summary>
     public static readonly StringName UiBuildMenu = "ui_build_menu";
 
-    /// <summary>Move gamepad focus into or out of the HUD (Back/Select). Gamepad only; the HUD handles it (M1-18).</summary>
+    /// <summary>Move gamepad focus into or out of the HUD (Back/Select). Gamepad only; the HUD handles it (M1-18). The d-pad then moves between the speed buttons and A presses one.</summary>
     public static readonly StringName UiFocusHud = "ui_focus_hud";
 
     /// <summary>Open or close the research panel (T, left stick press).</summary>
@@ -62,13 +72,13 @@ public static class InputActions
     /// <summary>Pause or resume the simulation (Space, Start).</summary>
     public static readonly StringName SpeedPause = "speed_pause";
 
-    /// <summary>Run the simulation at normal speed (1, d-pad left).</summary>
+    /// <summary>Run the simulation at normal speed (keyboard 1; gamepad players use the HUD speed buttons).</summary>
     public static readonly StringName Speed1 = "speed_1";
 
-    /// <summary>Run the simulation at double speed (2, d-pad down).</summary>
+    /// <summary>Run the simulation at double speed (keyboard 2; gamepad players use the HUD speed buttons).</summary>
     public static readonly StringName Speed2 = "speed_2";
 
-    /// <summary>Run the simulation at quadruple speed (3, d-pad right).</summary>
+    /// <summary>Run the simulation at quadruple speed (keyboard 3; gamepad players use the HUD speed buttons).</summary>
     public static readonly StringName Speed3 = "speed_3";
 
     /// <summary>Move the gamepad tile cursor left (right stick).</summary>
