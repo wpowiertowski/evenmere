@@ -56,8 +56,8 @@ internal sealed class SystemRoster
         // M1-06 changes the next line to pass the construction state.
         var construction = new ConstructionSystem(world.Construction, content);
 
-        // M1-07 changes the next line to pass the workforce state.
-        var workforce = new WorkforceSystem();
+        // M1-07: the workforce system runs over the workforce state, with the content and the late-bound queries.
+        var workforce = new WorkforceSystem(world.Workforce, content, () => Queries ?? throw new InvalidOperationException("The workforce system was used before the roster finished building."));
 
         // M1-08 changes the next line to pass the production state.
         var production = new ProductionSystem(world.Production, content);
@@ -111,7 +111,7 @@ internal sealed class SystemRoster
             ProductionBuffers = production.Buffers,
 
             // M1-07: the workforce supply that Population sets.
-            WorkforceSupply = new UnimplementedWorkforceSupply(),
+            WorkforceSupply = workforce.Supply,
         };
 
         // Lifecycle subscriptions: M1-13 subscribes the listeners here, in pipeline order, once M1-01 has landed.
