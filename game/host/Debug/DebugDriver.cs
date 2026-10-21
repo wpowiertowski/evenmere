@@ -3,13 +3,17 @@ using Evenmere.Core.Ids;
 using Evenmere.Game.Host;
 using Evenmere.Game.Rendering.Camera;
 using Evenmere.Game.Rendering.Terrain;
+using Evenmere.Game.Ui.Tools;
 using Evenmere.Sim;
 using Evenmere.Sim.Queries.Types;
+using Evenmere.Sim.Systems.Advisors;
 using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
 using Evenmere.Sim.Systems.Logistics;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
+using Evenmere.Sim.Persistence;
+using Evenmere.Sim.Systems.Advisors.Commands;
 using Evenmere.Sim.Systems.Research.Commands;
 using Evenmere.Sim.Systems.Roads.Commands;
 using Godot;
@@ -50,6 +54,7 @@ internal sealed class DebugDriver
     private TileCoord _demoSawpitOrigin = new(0, 0);
     private int _demoFrames;
     private bool _lateDemoDone;
+    private int _pendingHudTipFrames;
 
     /// <summary>Initializes a new instance of the <see cref="DebugDriver"/> class.</summary>
     /// <param name="options">The parsed debug options.</param>
@@ -100,9 +105,24 @@ internal sealed class DebugDriver
             GD.Print("[Evenmere] cart-overlay: armed; logging predicted arrivals and visual-vs-event matches.");
         }
 
+        if (!string.IsNullOrEmpty(_options.LoadSave))
+        {
+            LoadDebugSave(host, _options.LoadSave);
+        }
+
+        if (_options.DemoNotifications)
+        {
+            RunDemoNotifications(host);
+        }
+
         if (_options.DemoBuildings)
         {
             RunDemoBuildings(host);
+        }
+
+        if (!string.IsNullOrEmpty(_options.DemoExplain))
+        {
+            RunDemoExplain(host, rig, _options.DemoExplain);
         }
 
         if (_options.CartOverlay)
@@ -179,6 +199,10 @@ internal sealed class DebugDriver
                 rig.FocusOnTile(new Vector2I(16, 74));
                 rig.SetZoom(42f, true);
                 break;
+            case "hall":
+                rig.FocusOnTile(new Vector2I(34, 97));
+                rig.SetZoom(18f, true);
+                break;
             default:
                 GD.PushWarning($"[Evenmere] unknown --camera-view '{_options.CameraView}'; want 'overview', 'landing', 'slopes' or 'mouth'.");
                 break;
@@ -188,6 +212,9 @@ internal sealed class DebugDriver
         {
             LayDemoRoad(host);
         }
+
+        ApplyToolOptions(host);
+        ApplyFeedOptions(host);
     }
 
     /// <summary>Runs the per-frame debug paths: the picking check, then the frame bench.</summary>
@@ -197,7 +224,22 @@ internal sealed class DebugDriver
     {
         RunCheckPick(main);
         RunLateDemo();
+        RunPendingHudTip();
         RunBench(main, delta);
+    }
+
+    // The HUD builds its chips a frame after the world starts, so the one-shot show in
+    // RunDemoExplain happens too early; re-show the bread tip every frame until the screenshot.
+    private void RunPendingHudTip()
+    {
+        if (_pendingHudTipFrames <= 0 || _host is null)
+        {
+            return;
+        }
+
+        _pendingHudTipFrames--;
+        Node? hud = _host.GetTree().CurrentScene?.GetNodeOrNull<Node>("Hud/HudRoot");
+        hud?.GetType().GetMethod("DebugShowGoodTip")?.Invoke(hud, ["bread"]);
     }
 
     // Picks once at a screen point and prints the tile and its rendered surface height, proving the camera's picking
@@ -936,6 +978,163 @@ internal sealed class DebugDriver
         }
     }
 
+    // The M1-24 explain demo: a stalled bakery (no flour because the windmill has no grain) and a
+    // house blocked by the bread shortage, for the inspector and HUD screenshots. It builds through
+    // SimHost.Enqueue only, pauses the world, then opens the inspector on the bakery, the house,
+    // or shows the HUD bread tooltip, per the --demo-explain value.
+    private void RunDemoExplain(SimHost host, CameraRig? rig, string mode)
+    {
+        try
+        {
+            if (!TryFindHall(host, out TileCoord hallOrigin, out int hallWidth, out int hallHeight))
+            {
+                GD.Print("[Evenmere] Demo: no founders hall; skipping --demo-explain.");
+                return;
+            }
+
+            var centre = new TileCoord(hallOrigin.X + (hallWidth / 2), hallOrigin.Y + (hallHeight / 2));
+            UnlockSlice(host);
+
+            BuildingTypeId roadType = host.Content.Buildings.IdOf("dirt_road");
+            var network = new HashSet<TileCoord>();
+            for (int y = hallOrigin.Y; y < hallOrigin.Y + hallHeight; y++)
+            {
+                for (int x = hallOrigin.X; x < hallOrigin.X + hallWidth; x++)
+                {
+                    network.Add(new TileCoord(x, y));
+                }
+            }
+
+            LayDemoPattern(host, roadType, hallOrigin, hallWidth, hallHeight, network);
+
+            string[] first = ["woodcutters_hut", "sawpit", "fishing_hut", "storehouse"];
+            var placed = new List<(string Type, EntityId Id, TileCoord Origin)>();
+            foreach (string typeName in first)
+            {
+                if (TryPlaceNear(host, typeName, centre, network, out EntityId id, out TileCoord origin))
+                {
+                    placed.Add((typeName, id, origin));
+                    ConnectBuilding(host, id, origin, roadType, network);
+                }
+            }
+
+            host.RunTicksNow(10 * 120);
+
+            string[] second = ["market", "settler_house", "settler_house", "bakery", "windmill"];
+            foreach (string typeName in second)
+            {
+                if (TryPlaceNear(host, typeName, centre, network, out EntityId id, out TileCoord origin))
+                {
+                    placed.Add((typeName, id, origin));
+                    ConnectBuilding(host, id, origin, roadType, network);
+                }
+            }
+
+            host.RunTicksNow(10 * 120);
+
+            string[] third = ["shrine", "sheep_farm", "weavers_cottage"];
+            foreach (string typeName in third)
+            {
+                if (TryPlaceNear(host, typeName, centre, network, out EntityId id, out TileCoord origin))
+                {
+                    placed.Add((typeName, id, origin));
+                    ConnectBuilding(host, id, origin, roadType, network);
+                }
+            }
+
+            // No grain farm on purpose: the windmill starves on grain, the bakery starves on flour,
+            // and the houses stall on bread. Twenty more days let the sites finish and the chain stall.
+            host.RunTicksNow(20 * 120);
+
+            EntityId bakeryId = EntityId.None;
+            EntityId houseId = EntityId.None;
+            foreach ((string type, EntityId id, TileCoord _) in placed)
+            {
+                if (type == "bakery" && bakeryId.IsNone)
+                {
+                    bakeryId = id;
+                }
+
+                if (type == "settler_house" && houseId.IsNone)
+                {
+                    houseId = id;
+                }
+            }
+
+            GoodId bread = host.Content.Goods.IdOf("bread");
+            GoodId flour = host.Content.Goods.IdOf("flour");
+            Explanation breadExplain = host.Query.Explain.ExplainGood(bread);
+            GD.Print($"[Evenmere] Demo: bread {breadExplain.Root.Key} children={breadExplain.Root.Children.Length}.");
+            foreach (ExplanationLine child in breadExplain.Root.Children)
+            {
+                GD.Print($"[Evenmere] Demo: bread child {child.Key} args={child.Args.Length} subjects={child.Subjects.Length}.");
+            }
+
+            if (host.Query.Production.TryGet(bakeryId, out ProductionInfo production))
+            {
+                GD.Print($"[Evenmere] Demo: bakery {bakeryId.Value} stall={production.Stall} productivity={production.Productivity.PerMille}.");
+            }
+
+            if (host.Query.Population.TryGetHouse(houseId, out HouseInfo house))
+            {
+                GD.Print($"[Evenmere] Demo: house {houseId.Value} tier={host.Content.NameOf(house.Tier)} residents={house.Residents} blocker={house.AdvanceBlocker} decline={house.DeclineTimerDays}.");
+            }
+
+            host.Speed = SimSpeed.Paused;
+            _hasDemo = true;
+
+            Node? scene = host.GetTree().CurrentScene;
+            Node? inspector = scene?.GetNodeOrNull<Node>("InspectorPanel");
+            System.Reflection.MethodInfo? inspectorOpen = inspector?.GetType().GetMethod("Open");
+            if (mode == "house" && !houseId.IsNone)
+            {
+                if (host.Query.Map.TryGetBuilding(houseId, out BuildingInfo home) && rig is not null)
+                {
+                    rig.FocusOnTile(new Vector2I(home.Origin.X, home.Origin.Y));
+                    rig.SetZoom(16f, true);
+                }
+
+                inspectorOpen?.Invoke(inspector, [houseId]);
+                GD.Print($"[Evenmere] Demo: subject link building {houseId.Value} followed; camera focused, inspector opened.");
+            }
+            else if (mode == "hud")
+            {
+                if (host.Query.Map.TryGetBuilding(bakeryId, out BuildingInfo bakery) && rig is not null)
+                {
+                    rig.FocusOnTile(new Vector2I(bakery.Origin.X, bakery.Origin.Y));
+                    rig.SetZoom(40f, true);
+                }
+
+                Node? hud = scene?.GetNodeOrNull<Node>("Hud/HudRoot");
+                hud?.GetType().GetMethod("DebugShowGoodTip")?.Invoke(hud, ["bread"]);
+                // The HUD builds its chips a frame after the world starts, so keep showing the tip
+                // until the screenshot frame; each call re-reads the live explanation.
+                _pendingHudTipFrames = 300;
+                // Follow one good subject link in the log: flour explains the bakery stall.
+                Explanation flourExplain = host.Query.Explain.ExplainGood(flour);
+                GD.Print($"[Evenmere] Demo: subject link good flour followed; ExplainGood(flour) root={flourExplain.Root.Key} children={flourExplain.Root.Children.Length}.");
+            }
+            else
+            {
+                if (host.Query.Map.TryGetBuilding(bakeryId, out BuildingInfo bakery) && rig is not null)
+                {
+                    rig.FocusOnTile(new Vector2I(bakery.Origin.X, bakery.Origin.Y));
+                    rig.SetZoom(16f, true);
+                }
+
+                inspectorOpen?.Invoke(inspector, [bakeryId]);
+                Explanation flourExplain2 = host.Query.Explain.ExplainGood(flour);
+                GD.Print($"[Evenmere] Demo: subject link good flour followed; ExplainGood(flour) root={flourExplain2.Root.Key} children={flourExplain2.Root.Children.Length}.");
+            }
+
+            GD.Print($"[Evenmere] Demo: --demo-explain={mode} ready; hash={host.ComputeStateHash():x16}.");
+        }
+        catch (Exception ex)
+        {
+            GD.Print($"[Evenmere] Demo: --demo-explain failed: {ex.Message.ReplaceLineEndings(" ")}");
+        }
+    }
+
     // After the first frames rendered (so the incremental rebuilds log), demolishes the sawpit for a half refund and
     // rebuilds it on the spot: the pool cannot cover the full bill, so it stalls partway as the evidence site with
     // scaffolding and a half-scaled body. Skipped while benching so the frame times stay a steady state.
@@ -1046,6 +1245,529 @@ internal sealed class DebugDriver
         catch (Exception ex)
         {
             GD.Print($"[Evenmere] Demo: debug road failed: {ex.Message.ReplaceLineEndings(" ")}");
+        }
+    }
+
+    // Starts the placement tools for the M1-21 screenshots: `--tool-build=ID`, `--tool-road=ID` or `--tool-demolish`
+    // picks the tool, `--tool-tile` / `--tool-anchor` pin the hover and the drag, and `--tool-spot` finds a tile by
+    // itself (valid, invalid or warning). `--tool-invalid` forces a rejection for the toast shot and `--tool-gamepad`
+    // shows the virtual cursor ring with no pad attached.
+    private void ApplyToolOptions(SimHost host)
+    {
+        bool wantsTool = !string.IsNullOrEmpty(_options.ToolBuild) || !string.IsNullOrEmpty(_options.ToolRoad)
+            || _options.ToolDemolish || !string.IsNullOrEmpty(_options.ToolSpot) || _options.ToolInvalid || _options.ToolGamepad;
+        if (!wantsTool && string.IsNullOrEmpty(_options.ToolTile) && string.IsNullOrEmpty(_options.ToolAnchor))
+        {
+            return;
+        }
+
+        if (host.GetTree().CurrentScene?.GetNodeOrNull<ToolController>("Tools") is not { } tools)
+        {
+            GD.Print("[Evenmere] Tools: no Tools node; skipping --tool-* flags.");
+            return;
+        }
+
+        BuildingTypeId buildType = DefaultDebugBuildType(host);
+        bool roadMode = false;
+        if (!string.IsNullOrEmpty(_options.ToolBuild) && TryBuildingId(host, _options.ToolBuild, out BuildingTypeId build))
+        {
+            tools.BeginBuild(build);
+            buildType = build;
+        }
+        else if (!string.IsNullOrEmpty(_options.ToolRoad) && TryBuildingId(host, _options.ToolRoad, out BuildingTypeId road))
+        {
+            tools.BeginRoad(road);
+            roadMode = true;
+        }
+        else if (_options.ToolDemolish || (!string.IsNullOrEmpty(_options.ToolSpot) && string.IsNullOrEmpty(_options.ToolBuild) && string.IsNullOrEmpty(_options.ToolRoad)))
+        {
+            tools.BeginDemolish();
+        }
+
+        if (!string.IsNullOrEmpty(_options.ToolSpot))
+        {
+            ApplyToolSpot(host, tools, buildType, roadMode);
+        }
+        else
+        {
+            if (TryParseTile(_options.ToolTile, out TileCoord tile))
+            {
+                tools.DebugPinHover(tile);
+                GD.Print($"[Evenmere] Tools: pinned hover ({tile.X}, {tile.Y}).");
+            }
+
+            if (roadMode && TryParseTile(_options.ToolAnchor, out TileCoord anchor) && TryParseTile(_options.ToolTile, out TileCoord current))
+            {
+                tools.DebugSetRoadDrag(anchor, current);
+                GD.Print($"[Evenmere] Tools: road drag ({anchor.X}, {anchor.Y})..({current.X}, {current.Y}).");
+            }
+        }
+
+        if (_options.ToolInvalid)
+        {
+            tools.DebugDemoReject();
+        }
+
+        if (_options.ToolGamepad)
+        {
+            VirtualCursor? cursor = host.GetTree().CurrentScene?.GetNodeOrNull<VirtualCursor>("CameraRig/VirtualCursor");
+            if (cursor is null)
+            {
+                GD.Print("[Evenmere] Tools: no virtual cursor; skipping --tool-gamepad.");
+            }
+            else
+            {
+                cursor.SetActive(true);
+                GD.Print(cursor.TryGetTile(out Vector2I cursorTile)
+                    ? $"[Evenmere] Tools: gamepad cursor at ({cursorTile.X}, {cursorTile.Y})."
+                    : "[Evenmere] Tools: gamepad cursor shown but off the map.");
+            }
+        }
+    }
+
+    // Pins the hover (and the road drag) from a want instead of coordinates: with the demolish tool it pins the
+    // Founders' Hall, whose hover already says it is protected; with the road tool it finds a draggable L path.
+    private void ApplyToolSpot(SimHost host, ToolController tools, BuildingTypeId buildType, bool roadMode)
+    {
+        if (tools.Mode == ToolMode.Demolish)
+        {
+            if (TryFindHall(host, out TileCoord origin, out _, out _))
+            {
+                tools.DebugPinHover(origin);
+                GD.Print($"[Evenmere] Tools: pinned demolish hover on the hall ({origin.X}, {origin.Y}).");
+            }
+
+            return;
+        }
+
+        if (roadMode)
+        {
+            if (FindRoadSpot(host, out TileCoord anchor, out TileCoord current))
+            {
+                tools.DebugSetRoadDrag(anchor, current);
+                tools.DebugPinHover(current);
+                GD.Print($"[Evenmere] Tools: road drag ({anchor.X}, {anchor.Y})..({current.X}, {current.Y}).");
+            }
+            else
+            {
+                GD.Print("[Evenmere] Tools: no draggable road spot; pass --tool-anchor and --tool-tile instead.");
+            }
+
+            return;
+        }
+
+        if (FindBuildSpot(host, buildType, _options.ToolSpot, out TileCoord tile))
+        {
+            tools.DebugPinHover(tile);
+            GD.Print($"[Evenmere] Tools: pinned {_options.ToolSpot} spot ({tile.X}, {tile.Y}).");
+        }
+        else
+        {
+            GD.Print($"[Evenmere] Tools: no {_options.ToolSpot} spot; pass --tool-tile instead.");
+        }
+    }
+
+    // The first buildable the island lists, for the invalid-placement toast when no build tool is running.
+    private static BuildingTypeId DefaultDebugBuildType(SimHost host)
+    {
+        foreach (string name in host.Content.Buildings.Names)
+        {
+            BuildingTypeId id = host.Content.Buildings.IdOf(name);
+            if (!host.Content.Buildings.Get(id).RoadCost.HasValue)
+            {
+                return id;
+            }
+        }
+
+        return host.Content.Buildings.IdOf(host.Content.Buildings.Names[0]);
+    }
+
+    private static bool TryBuildingId(SimHost host, string name, out BuildingTypeId id)
+    {
+        try
+        {
+            id = host.Content.Buildings.IdOf(name);
+            return true;
+        }
+        catch (Exception ex) when (ex is KeyNotFoundException or ArgumentException)
+        {
+            GD.Print($"[Evenmere] Tools: unknown building '{name}'; skipping the tool flag.");
+            id = default;
+            return false;
+        }
+    }
+
+    private static bool TryParseTile(string text, out TileCoord tile)
+    {
+        tile = default;
+        if (string.IsNullOrEmpty(text))
+        {
+            return false;
+        }
+
+        string[] parts = text.Split(',');
+        if (parts.Length == 2 && int.TryParse(parts[0], out int x) && int.TryParse(parts[1], out int y))
+        {
+            tile = new TileCoord(x, y);
+            return true;
+        }
+
+        GD.Print($"[Evenmere] Tools: ignoring malformed tile '{text}'; want 'x,y'.");
+        return false;
+    }
+
+    // Spirals out from the hall for the first tile that matches the want: placeable with no warnings (valid),
+    // refused (refused), or placeable with a warning, preferring no road access (warning). An invalid search prefers
+    // open ground so the red ghost reads, falling back to an occupied tile. A valid search that finds no warning-free
+    // tile relaxes to the nearest placeable tile. A forest search takes the first placeable tile on forest terrain,
+    // for the ghost-on-forest shot. Rotations are tried in order, so the run frames the same tile every time.
+    private static bool FindBuildSpot(SimHost host, BuildingTypeId type, string want, out TileCoord tile)
+    {
+        tile = default;
+        TileCoord centre = FindHallCentre(host);
+        TileCoord fallback = default;
+        bool hasFallback = false;
+        for (int r = 0; r <= 64; r++)
+        {
+            for (int y = centre.Y - r; y <= centre.Y + r; y++)
+            {
+                for (int x = centre.X - r; x <= centre.X + r; x++)
+                {
+                    if (Math.Max(Math.Abs(x - centre.X), Math.Abs(y - centre.Y)) != r)
+                    {
+                        continue;
+                    }
+
+                    for (int rot = 0; rot < 4; rot++)
+                    {
+                        var rotation = (Rotation)rot;
+                        PlacementResult result = host.Query.Placement.Validate(type, x, y, rotation);
+                        bool match = want switch
+                        {
+                            "valid" => result.CanPlace && result.Warnings.IsEmpty,
+                            "invalid" => !result.CanPlace && host.Query.Map.BuildingAt(x, y).IsNone,
+                            "warning" => result.CanPlace && !result.Warnings.IsEmpty && result.Has(PlacementIssue.NoRoadAccess),
+                            "forest" => result.CanPlace && result.Warnings.IsEmpty && IsForest(host, x, y),
+                            _ => false,
+                        };
+                        if (match)
+                        {
+                            tile = new TileCoord(x, y);
+                            return true;
+                        }
+
+                        if (!hasFallback)
+                        {
+                            if (result.CanPlace && !result.Warnings.IsEmpty)
+                            {
+                                fallback = new TileCoord(x, y);
+                                hasFallback = true;
+                            }
+                            else if (want == "invalid" && !result.CanPlace)
+                            {
+                                fallback = new TileCoord(x, y);
+                                hasFallback = true;
+                            }
+                            else if (want == "forest" && result.CanPlace && IsForest(host, x, y))
+                            {
+                                fallback = new TileCoord(x, y);
+                                hasFallback = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // A warning anywhere beats no warning, and an occupied tile beats no red ghost: a valid search relaxes to
+        // the nearest warned tile, a warning search keeps the first warned tile it saw, and an invalid search keeps
+        // the first refused tile.
+        if (hasFallback && want is "valid" or "warning" or "invalid" or "forest")
+        {
+            tile = fallback;
+            return true;
+        }
+
+        return false;
+    }
+
+    // The first start near the hall whose east-six, south-four L path validates as road. It first tries a fixed
+    // patch south of the hall, which the hall mesh never occludes from the camera, then spirals out.
+    private static bool FindRoadSpot(SimHost host, out TileCoord anchor, out TileCoord current)
+    {
+        anchor = default;
+        current = default;
+        BuildingTypeId road = host.Content.Buildings.IdOf("dirt_road");
+        TileCoord centre = FindHallCentre(host);
+        var path = new TileCoord[16];
+        if (TryFindHall(host, out TileCoord hallOrigin, out _, out _))
+        {
+            var south = new TileCoord(hallOrigin.X - 2, hallOrigin.Y + 4);
+            var southEnd = new TileCoord(south.X + 6, south.Y + 4);
+            if (southEnd.IsInside(host.Query.Map.Width, host.Query.Map.Height)
+                && ToolPaths.BuildLPath(south, southEnd, false, path.AsSpan()) == 11
+                && host.Query.Placement.ValidateRoad(path.AsSpan(0, 11), road).CanPlace)
+            {
+                anchor = south;
+                current = southEnd;
+                return true;
+            }
+        }
+
+        for (int r = 4; r <= 64; r++)
+        {
+            for (int y = centre.Y - r; y <= centre.Y + r; y++)
+            {
+                for (int x = centre.X - r; x <= centre.X + r; x++)
+                {
+                    if (Math.Max(Math.Abs(x - centre.X), Math.Abs(y - centre.Y)) != r)
+                    {
+                        continue;
+                    }
+
+                    var start = new TileCoord(x, y);
+                    var end = new TileCoord(x + 6, y + 4);
+                    if (!end.IsInside(host.Query.Map.Width, host.Query.Map.Height))
+                    {
+                        continue;
+                    }
+
+                    int count = ToolPaths.BuildLPath(start, end, false, path.AsSpan());
+                    if (count == 11 && host.Query.Placement.ValidateRoad(path.AsSpan(0, count), road).CanPlace)
+                    {
+                        anchor = start;
+                        current = end;
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsForest(SimHost host, int x, int y)
+    {
+        if (x < 0 || y < 0 || x >= host.Query.Map.Width || y >= host.Query.Map.Height)
+        {
+            return false;
+        }
+
+        TileInfo tile = host.Query.Map.GetTile(x, y);
+        return host.Content.Terrains.NameOf(tile.Terrain) == "forest";
+    }
+
+    private static TileCoord FindHallCentre(SimHost host)
+    {
+        if (TryFindHall(host, out TileCoord origin, out int width, out int height))
+        {
+            return new TileCoord(origin.X + (width / 2), origin.Y + (height / 2));
+        }
+
+        return new TileCoord(host.Query.Map.Width / 2, host.Query.Map.Height / 2);
+    }
+
+    // Loads a save in-game for the evidence runs (M1-26): --load-save=tests/fixtures/saves/v1-slice.evsave.
+    // A relative path is tried as given, then against the ancestors of the working directory, so the flag works
+    // whether Godot runs from game/ or from the repo root.
+    private static void LoadDebugSave(SimHost host, string path)
+    {
+        try
+        {
+            string resolved = ResolveDebugPath(path);
+            SaveReport report = host.LoadGame(resolved);
+            GD.Print($"[Evenmere] Debug: loaded save '{resolved}' hash={host.ComputeStateHash():x16} remapped={report.Remapped.Count} ruins={report.Ruins.Count} dropped={report.Dropped.Count}.");
+        }
+        catch (Exception ex)
+        {
+            GD.Print($"[Evenmere] Debug: --load-save failed: {ex.Message.ReplaceLineEndings(" ")}");
+        }
+    }
+
+    private static string ResolveDebugPath(string path)
+    {
+        if (Path.IsPathRooted(path) || File.Exists(path))
+        {
+            return path;
+        }
+
+        string? dir = Directory.GetCurrentDirectory();
+        for (int i = 0; i < 4 && dir is not null; i++)
+        {
+            string candidate = Path.Combine(dir, path);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            dir = Directory.GetParent(dir)?.FullName;
+        }
+
+        return path;
+    }
+
+    // The M1-26 evidence setup: three houses (one batched completion toast) plus a sawpit with no road access
+    // (a NoRoadAccess advice pin), then the oldest advice dismissed for the dismissal evidence. The world is paused
+    // afterwards so the toasts stay up for the screenshots.
+    private static void RunDemoNotifications(SimHost host)
+    {
+        try
+        {
+            TileCoord centre = FindHallCentre(host);
+            BuildingTypeId road = host.Content.Buildings.IdOf("dirt_road");
+            var network = new HashSet<TileCoord>();
+            if (TryFindHall(host, out TileCoord hallOrigin, out int hallWidth, out int hallHeight))
+            {
+                for (int y = hallOrigin.Y; y < hallOrigin.Y + hallHeight; y++)
+                {
+                    for (int x = hallOrigin.X; x < hallOrigin.X + hallWidth; x++)
+                    {
+                        network.Add(new TileCoord(x, y));
+                    }
+                }
+            }
+
+            // The houses join the road network (sites only build in storehouse reach); the sawpit stays
+            // road-less on purpose, so it raises advice.
+            var houses = new List<EntityId>();
+            for (int i = 0; i < 3; i++)
+            {
+                if (TryPlaceNear(host, "settler_house", centre, network, out EntityId id, out TileCoord origin))
+                {
+                    houses.Add(id);
+                    ConnectBuilding(host, id, origin, road, network);
+                }
+            }
+
+            int placed = houses.Count;
+
+            // The sawpit goes far from the hall's roads on purpose: without road access it raises advice.
+            TileCoord far = new(centre.X, centre.Y);
+            BuildingTypeId sawpit = host.Content.Buildings.IdOf("sawpit");
+            bool sawpitPlaced = false;
+            for (int r = 20; r <= 60 && !sawpitPlaced; r++)
+            {
+                for (int y = centre.Y - r; y <= centre.Y + r && !sawpitPlaced; y++)
+                {
+                    for (int x = centre.X - r; x <= centre.X + r && !sawpitPlaced; x++)
+                    {
+                        if (Math.Max(Math.Abs(x - centre.X), Math.Abs(y - centre.Y)) != r)
+                        {
+                            continue;
+                        }
+
+                        if (host.Query.Placement.Validate(sawpit, x, y, Rotation.Deg0).CanPlace)
+                        {
+                            host.Enqueue(new PlaceBuilding(sawpit, x, y, Rotation.Deg0));
+                            host.RunTicksNow(1);
+                            far = new TileCoord(x, y);
+                            sawpitPlaced = true;
+                            GD.Print($"[Evenmere] Debug: placed road-less sawpit at ({x}, {y}) for advice evidence.");
+                        }
+                    }
+                }
+            }
+
+            // Run days until the new sites finish (same-day completions batch into one toast), then two more days
+            // so the advisors notice the road-less sawpit.
+            int waited = 0;
+            while (waited < 20 && CountSites(host) > 0)
+            {
+                host.RunTicksNow(120);
+                waited++;
+            }
+
+            foreach (BuildingInfo building in host.Query.Map.Buildings)
+            {
+                if (building.State == BuildingState.Site)
+                {
+                    string stall = host.Query.Construction.TryGetSite(building.Id, out SiteInfo site) ? site.Stall.ToString() : "unknown";
+                    GD.Print($"[Evenmere] Debug: leftover site {host.Content.NameOf(building.Type)} {building.Id.Value} stall={stall} reach={host.Query.Roads.IsInStorehouseReach(building.Id)}.");
+                }
+            }
+
+            host.RunTicksNow(2 * 120);
+
+            int active = 0;
+            int oldest = -1;
+            foreach (AdviceView advice in host.Query.Advisors.Active())
+            {
+                active++;
+                if (oldest < 0 || advice.Id < oldest)
+                {
+                    oldest = advice.Id;
+                }
+            }
+
+            GD.Print($"[Evenmere] Debug: --demo-notifications placed {placed} house(s) sawpit={sawpitPlaced} after {waited} day(s); advice active={active}.");
+
+            if (oldest >= 0)
+            {
+                host.Enqueue(new DismissAdvice(oldest));
+                host.RunTicksNow(1);
+                int left = 0;
+                foreach (AdviceView _ in host.Query.Advisors.Active())
+                {
+                    left++;
+                }
+
+                GD.Print($"[Evenmere] Debug: DismissAdvice {oldest} enqueued; note gone, {left} advice note(s) left.");
+            }
+
+            host.Speed = SimSpeed.Paused;
+            GD.Print($"[Evenmere] Debug: --demo-notifications ready; hash={host.ComputeStateHash():x16}.");
+        }
+        catch (Exception ex)
+        {
+            GD.Print($"[Evenmere] Debug: --demo-notifications failed: {ex.Message.ReplaceLineEndings(" ")}");
+        }
+    }
+
+    private static int CountSites(SimHost host)
+    {
+        int sites = 0;
+        foreach (BuildingInfo building in host.Query.Map.Buildings)
+        {
+            if (building.State == BuildingState.Site)
+            {
+                sites++;
+            }
+        }
+
+        return sites;
+    }
+
+    // Scripts the feed for the evidence screenshots: history:<filter> opens the history with a filter applied,
+    // and click focuses the newest building notification (logging the inspector open).
+    private void ApplyFeedOptions(SimHost host)
+    {
+        if (string.IsNullOrEmpty(_options.DemoFeed))
+        {
+            return;
+        }
+
+        if (host.GetTree().CurrentScene?.GetNodeOrNull<Node>("NotificationFeed") is not { } feed)
+        {
+            GD.Print("[Evenmere] Debug: no NotificationFeed node; skipping --demo-feed.");
+            return;
+        }
+
+        string mode = _options.DemoFeed;
+        if (mode == "click")
+        {
+            feed.GetType().GetMethod("DebugClickNewestBuilding")?.Invoke(feed, []);
+        }
+        else if (mode == "collapse")
+        {
+            feed.GetType().GetMethod("DebugSetAdviceCollapsed")?.Invoke(feed, [true]);
+        }
+        else if (mode.StartsWith("history:", StringComparison.Ordinal))
+        {
+            feed.GetType().GetMethod("DebugShowHistory")?.Invoke(feed, [mode["history:".Length..]]);
+        }
+        else
+        {
+            GD.Print($"[Evenmere] Debug: ignoring malformed --demo-feed '{mode}'; want 'history:<filter>', 'click' or 'collapse'.");
         }
     }
 }

@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="MessagePack" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\game\Evenmere.Game.csproj" />
+    <ProjectReference Include="..\..\src\Evenmere.Sim\Evenmere.Sim.csproj" />
+    <ProjectReference Include="..\..\src\Evenmere.Content\Evenmere.Content.csproj" />
+    <ProjectReference Include="..\..\src\Evenmere.Core\Evenmere.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\tests\Evenmere.Sim.Tests\Architecture\StateTypeWalker.cs" Link="Architecture\StateTypeWalker.cs" />
+    <Compile Include="..\..\tests\Evenmere.Sim.Tests\Architecture\TypeNames.cs" Link="Architecture\TypeNames.cs" />
+    <Compile Include="..\..\tests\Evenmere.Sim.Tests\Architecture\FrameworkAssemblies.cs" Link="Architecture\FrameworkAssemblies.cs" />
+  </ItemGroup>
+
+</Project>

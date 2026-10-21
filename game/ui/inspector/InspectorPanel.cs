@@ -1,0 +1,651 @@
+using Evenmere.Content;
+using Evenmere.Content.Definitions;
+using Evenmere.Core.Ids;
+using Evenmere.Game.Controls;
+using Evenmere.Game.Host;
+using Evenmere.Game.Rendering.Camera;
+using Evenmere.Game.Ui.Common;
+using Evenmere.Game.Ui.Explain;
+using Evenmere.Game.Ui.Progress;
+using Evenmere.Game.Ui.Tools;
+using Evenmere.Sim;
+using Evenmere.Sim.Queries.Types;
+using Evenmere.Sim.Systems.Construction.Commands;
+using Evenmere.Sim.Systems.Population.Commands;
+using Evenmere.Sim.Systems.Production.Commands;
+using Evenmere.Sim.Systems.Workforce.Commands;
+using Godot;
+
+namespace Evenmere.Game.Ui.Inspector;
+
+/// <summary>
+/// The building and house inspector: a docked panel on the right, opened from
+/// <c>ToolController.BuildingClicked</c> while idle. It shows the name, state and
+/// productivity breakdown (<see cref="IExplainQueries.ExplainBuilding"/>), buffers,
+/// workforce fill and storehouse reach, plus pause and priority toggles and
+/// demolish and upgrade buttons. Houses show tier, residents, needs, advance and
+/// decline (<see cref="IExplainQueries.ExplainHouse"/>). It refreshes at most
+/// four times a second and closes on <c>tool_cancel</c> or its Close button.
+/// </summary>
+public sealed partial class InspectorPanel : PanelContainer
+{
+    private const float PanelWidth = 416f;
+    private const float PanelTop = 150f;
+    private const float PanelMargin = 16f;
+
+    private SimHost? _host;
+    private CameraRig? _rig;
+    private ContentDb? _builtFor;
+    private UiStrings? _strings;
+    private EntityId _target = EntityId.None;
+    private bool _hasTarget;
+    private double _secondsSinceRefresh;
+    private bool _everRefreshed;
+
+    private Label? _title;
+    private Label? _stateLabel;
+    private Label? _workforceLabel;
+    private ExplanationView? _explain;
+    private Button? _closeButton;
+    private Button? _pauseButton;
+    private Button? _priorityButton;
+    private Button? _demolishButton;
+    private Button? _upgradeButton;
+    private Button? _lockButton;
+    private ConfirmationDialog? _demolishConfirm;
+
+    /// <summary>Gets or sets the path to the <see cref="SimHost"/> node, relative to this node.</summary>
+    [Export]
+    public NodePath HostPath { get; set; } = new("../SimHost");
+
+    /// <summary>Gets or sets the path to the <see cref="CameraRig"/> node, relative to this node.</summary>
+    [Export]
+    public NodePath RigPath { get; set; } = new("../CameraRig");
+
+    /// <summary>Gets or sets the path to the tools node that raises <c>BuildingClicked</c>, relative to this node.</summary>
+    [Export]
+    public NodePath ToolsPath { get; set; } = new("../Tools");
+
+    /// <summary>Gets or sets the path to the research panel, hidden while the inspector is open.</summary>
+    [Export]
+    public NodePath ResearchPath { get; set; } = new("../ResearchPanel");
+
+    /// <summary>Gets or sets the path to the civics panel, hidden while the inspector is open.</summary>
+    [Export]
+    public NodePath CulturePath { get; set; } = new("../CulturePanel");
+
+    /// <summary>Gets the inspected building, or <see cref="EntityId.None"/> when closed.</summary>
+    public EntityId Target => _hasTarget ? _target : EntityId.None;
+
+    /// <inheritdoc />
+    public override void _Ready()
+    {
+        Place();
+        PanelTheme.Apply(this);
+        _host = GetNodeOrNull<SimHost>(HostPath);
+        _rig = GetNodeOrNull<CameraRig>(RigPath);
+        if (_host is null)
+        {
+            GD.PushError($"[Evenmere] inspector: no SimHost at '{HostPath}'; the inspector stays empty.");
+            return;
+        }
+
+        BuildChrome();
+        if (GetNodeOrNull<ToolController>(ToolsPath) is { } tools)
+        {
+            tools.BuildingClicked += OnBuildingClicked;
+        }
+
+        _host.EventsDrained += OnEvents;
+        Visible = false;
+    }
+
+    /// <inheritdoc />
+    public override void _ExitTree()
+    {
+        if (GetNodeOrNull<ToolController>(ToolsPath) is { } tools)
+        {
+            tools.BuildingClicked -= OnBuildingClicked;
+        }
+
+        if (_host is not null)
+        {
+            _host.EventsDrained -= OnEvents;
+        }
+    }
+
+    /// <inheritdoc />
+    public override void _Process(double delta)
+    {
+        if (_host is not { IsRunning: true } host)
+        {
+            return;
+        }
+
+        if (!ReferenceEquals(_builtFor, host.Content))
+        {
+            RebuildFor(host);
+        }
+
+        // A research or civics panel opened elsewhere hides this one, so at most one
+        // docked panel is open (the inspector hides them when it opens).
+        if (Visible && OtherPanelOpen())
+        {
+            Visible = false;
+            _hasTarget = false;
+        }
+
+        if (!Visible || !_hasTarget)
+        {
+            return;
+        }
+
+        _secondsSinceRefresh += delta;
+        if (_everRefreshed && _secondsSinceRefresh < ViewModel.MinRefreshIntervalSeconds)
+        {
+            return;
+        }
+
+        _secondsSinceRefresh = 0;
+        _everRefreshed = true;
+        Refresh();
+    }
+
+    /// <inheritdoc />
+    public override void _UnhandledInput(InputEvent @event)
+    {
+        // Unhandled, matching the pause menu: while a tool is active the tools see Esc first and
+        // cancel the tool, and only an idle Esc closes this panel.
+        if (!Visible || @event.IsEcho())
+        {
+            return;
+        }
+
+        if (InputMap.HasAction("tool_cancel") && @event.IsActionPressed("tool_cancel"))
+        {
+            Visible = false;
+            _hasTarget = false;
+            GetViewport().SetInputAsHandled();
+        }
+    }
+
+    /// <summary>Opens the inspector on a building.</summary>
+    /// <param name="building">The building's entity ID.</param>
+    public void Open(EntityId building)
+    {
+        _target = building;
+        _hasTarget = true;
+        HideOthers();
+        Visible = true;
+        _secondsSinceRefresh = double.MaxValue;
+        GD.Print($"[Evenmere] Inspector: opened on building {building.Value}.");
+    }
+
+    /// <summary>Closes the inspector.</summary>
+    public void Close()
+    {
+        Visible = false;
+        _hasTarget = false;
+    }
+
+    private void OnBuildingClicked(EntityId building) => Open(building);
+
+    private void OnEvents(IReadOnlyList<SimEvent> events) => _secondsSinceRefresh = double.MaxValue;
+
+    private void Place()
+    {
+        AnchorLeft = 1f;
+        AnchorRight = 1f;
+        AnchorTop = 0f;
+        AnchorBottom = 1f;
+        OffsetLeft = -PanelWidth;
+        OffsetRight = -PanelMargin;
+        OffsetTop = PanelTop;
+        OffsetBottom = -PanelMargin;
+        MouseFilter = Control.MouseFilterEnum.Stop;
+    }
+
+    private void RebuildFor(SimHost host)
+    {
+        _builtFor = host.Content;
+        _strings = new UiStrings(host.Locale);
+        _explain?.ResetContent(host.Content, _strings, host.Query.Explain.ExplainGood, BuildingNameOf, StorehouseReachOf);
+        Retitle();
+        _secondsSinceRefresh = double.MaxValue;
+    }
+
+    private void BuildChrome()
+    {
+        var margin = new MarginContainer();
+        margin.AddThemeConstantOverride("margin_left", 12);
+        margin.AddThemeConstantOverride("margin_top", 12);
+        margin.AddThemeConstantOverride("margin_right", 12);
+        margin.AddThemeConstantOverride("margin_bottom", 12);
+        AddChild(margin);
+
+        var top = new VBoxContainer();
+        top.AddThemeConstantOverride("separation", 8);
+        margin.AddChild(top);
+
+        var header = new HBoxContainer();
+        header.AddThemeConstantOverride("separation", 8);
+        top.AddChild(header);
+
+        _title = new Label { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        header.AddChild(_title);
+
+        _closeButton = new Button { FocusMode = Control.FocusModeEnum.All };
+        _closeButton.Pressed += Close;
+        header.AddChild(_closeButton);
+
+        _stateLabel = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        top.AddChild(_stateLabel);
+
+        _workforceLabel = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        top.AddChild(_workforceLabel);
+
+        _explain = new ExplanationView { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+        _explain.BuildingLinkActivated += OnLinkBuilding;
+        top.AddChild(_explain);
+
+        var buttons = new HBoxContainer();
+        buttons.AddThemeConstantOverride("separation", 8);
+        top.AddChild(buttons);
+
+        _pauseButton = new Button { FocusMode = Control.FocusModeEnum.All };
+        _pauseButton.Pressed += TogglePause;
+        buttons.AddChild(_pauseButton);
+
+        _priorityButton = new Button { FocusMode = Control.FocusModeEnum.All };
+        _priorityButton.Pressed += TogglePriority;
+        buttons.AddChild(_priorityButton);
+
+        var second = new HBoxContainer();
+        second.AddThemeConstantOverride("separation", 8);
+        top.AddChild(second);
+
+        _demolishButton = new Button { FocusMode = Control.FocusModeEnum.All };
+        _demolishButton.Pressed += AskDemolish;
+        second.AddChild(_demolishButton);
+
+        _upgradeButton = new Button { FocusMode = Control.FocusModeEnum.All };
+        _upgradeButton.Pressed += DoUpgrade;
+        second.AddChild(_upgradeButton);
+
+        _lockButton = new Button { FocusMode = Control.FocusModeEnum.All };
+        _lockButton.Pressed += ToggleLock;
+        second.AddChild(_lockButton);
+
+        _demolishConfirm = new ConfirmationDialog();
+        AddChild(_demolishConfirm);
+        _demolishConfirm.Confirmed += DoDemolish;
+    }
+
+    private void Retitle()
+    {
+        if (_strings is null || _closeButton is null)
+        {
+            return;
+        }
+
+        _closeButton.Text = _strings.Get("ui.inspector.close");
+        _closeButton.TooltipText = _strings.Get("ui.inspector.close.tip");
+    }
+
+    private bool OtherPanelOpen()
+    {
+        return (GetNodeOrNull<Control>(ResearchPath) is { Visible: true })
+            || (GetNodeOrNull<Control>(CulturePath) is { Visible: true });
+    }
+
+    private void HideOthers()
+    {
+        if (GetNodeOrNull<Control>(ResearchPath) is { } research)
+        {
+            research.Visible = false;
+        }
+
+        if (GetNodeOrNull<Control>(CulturePath) is { } culture)
+        {
+            culture.Visible = false;
+        }
+
+        // Opening by click leaves the demolish or build tool running; the inspector
+        // is for looking, so tools go back to idle through Cancel.
+        if (GetNodeOrNull<ToolController>(ToolsPath) is { } tools)
+        {
+            tools.Cancel();
+        }
+    }
+
+    private void Refresh()
+    {
+        if (_host is not { IsRunning: true } host || _strings is null || _explain is null)
+        {
+            return;
+        }
+
+        UiStrings strings = _strings;
+        if (!host.Query.Map.TryGetBuilding(_target, out BuildingInfo building))
+        {
+            if (_title is not null)
+            {
+                _title.Text = strings.Get("ui.inspector.title");
+            }
+
+            if (_stateLabel is not null)
+            {
+                _stateLabel.Text = strings.Get("ui.inspector.unknown");
+            }
+
+            _explain.Clear();
+            SetButtonsVisible(pause: false, priority: false, demolish: false, upgrade: false, lockToggle: false);
+            return;
+        }
+
+        ContentDb content = host.Content;
+
+        bool isHouse = host.Query.Population.TryGetHouse(_target, out HouseInfo house);
+        string state = building.State switch
+        {
+            BuildingState.Site => strings.Get("ui.inspector.state.site"),
+            BuildingState.Active => strings.Get("ui.inspector.state.active"),
+            BuildingState.Paused => strings.Get("ui.inspector.state.paused"),
+            BuildingState.Ruin => strings.Get("ui.inspector.state.ruin"),
+            _ => building.State.ToString(),
+        };
+        if (isHouse)
+        {
+            // The tier is the headline; the building name stays as the small subtitle.
+            string tierName = strings.TierName(content.NameOf(house.Tier));
+            if (_title is not null)
+            {
+                _title.Text = strings.Format("ui.inspector.house.title", ("tier", tierName));
+            }
+
+            if (_stateLabel is not null)
+            {
+                _stateLabel.Text = $"{BuildingDisplayName(content, strings, building.Type)} · {state}";
+            }
+        }
+        else
+        {
+            if (_title is not null)
+            {
+                _title.Text = BuildingDisplayName(content, strings, building.Type);
+            }
+
+            if (_stateLabel is not null)
+            {
+                _stateLabel.Text = state;
+            }
+        }
+
+        if (_workforceLabel is not null)
+        {
+            if (isHouse)
+            {
+                string tierName = strings.TierName(content.NameOf(house.Tier));
+                _workforceLabel.Text = strings.Format(
+                    "ui.inspector.house.residents",
+                    ("residents", NumberFormat.Count(house.Residents)),
+                    ("capacity", NumberFormat.Count(house.Capacity)),
+                    ("target", NumberFormat.Count(house.TargetResidents)));
+                _workforceLabel.TooltipText = strings.Format("ui.inspector.house.tier", ("tier", tierName));
+            }
+            else
+            {
+                Evenmere.Core.Numerics.Ratio fill = host.Query.Workforce.FillOf(_target);
+                _workforceLabel.Text = strings.Format(
+                    "ui.inspector.workforce",
+                    ("fill", ExplainFormat.FormatPercent(fill)));
+            }
+        }
+
+        Explanation explanation = isHouse
+            ? host.Query.Explain.ExplainHouse(_target)
+            : host.Query.Explain.ExplainBuilding(_target);
+        _explain.Setup(content, strings, host.Query.Explain.ExplainGood, BuildingNameOf, StorehouseReachOf);
+        _explain.ShowRoot(explanation);
+
+        UpdateButtons(host, strings, content, building, isHouse, house);
+        GD.Print($"[Evenmere] Inspector: refreshed {_target.Value} ({content.NameOf(building.Type)}) state={building.State}.");
+    }
+
+    private void UpdateButtons(SimHost host, UiStrings strings, ContentDb content, BuildingInfo building, bool isHouse, HouseInfo house)
+    {
+        bool isSite = building.State == BuildingState.Site;
+        bool paused = building.State == BuildingState.Paused;
+        bool isProducer = host.Query.Production.TryGet(_target, out _);
+        bool needsWorkers = content.Get(building.Type).Workforce is not null;
+        bool highPriority = host.Query.Workforce.IsHighPriority(_target);
+
+        if (_pauseButton is not null)
+        {
+            _pauseButton.Visible = isProducer && !isSite;
+            _pauseButton.Text = paused ? strings.Get("ui.inspector.resume") : strings.Get("ui.inspector.pause");
+            _pauseButton.TooltipText = paused ? strings.Get("ui.inspector.resume.tip") : strings.Get("ui.inspector.pause.tip");
+        }
+
+        if (_priorityButton is not null)
+        {
+            _priorityButton.Visible = needsWorkers && !isSite && !isHouse;
+            _priorityButton.Text = (highPriority ? "[x] " : "[ ] ") + strings.Get("ui.inspector.priority");
+            _priorityButton.TooltipText = strings.Get("ui.inspector.priority.tip");
+            _priorityButton.Disabled = false;
+        }
+
+        if (_demolishButton is not null)
+        {
+            _demolishButton.Visible = true;
+            _demolishButton.Text = strings.Get("ui.inspector.demolish");
+            _demolishButton.TooltipText = strings.Get("ui.inspector.demolish.tip");
+        }
+
+        BuildingTypeId? upgrade = FindUpgrade(content, building.Type);
+        if (_upgradeButton is not null)
+        {
+            _upgradeButton.Visible = upgrade.HasValue && !isSite;
+            if (upgrade.HasValue)
+            {
+                string name = BuildingDisplayName(content, strings, upgrade.Value);
+                _upgradeButton.Text = strings.Format("ui.inspector.upgrade", ("name", name));
+                _upgradeButton.TooltipText = strings.Get("ui.inspector.upgrade.tip");
+            }
+        }
+
+        if (_lockButton is not null)
+        {
+            _lockButton.Visible = isHouse;
+            if (isHouse)
+            {
+                _lockButton.Text = house.UpgradeLocked
+                    ? strings.Get("ui.inspector.house.unlock")
+                    : strings.Get("ui.inspector.house.lock");
+                _lockButton.TooltipText = house.UpgradeLocked
+                    ? strings.Get("ui.inspector.house.unlock.tip")
+                    : strings.Get("ui.inspector.house.lock.tip");
+            }
+        }
+    }
+
+    private void SetButtonsVisible(bool pause, bool priority, bool demolish, bool upgrade, bool lockToggle)
+    {
+        if (_pauseButton is not null)
+        {
+            _pauseButton.Visible = pause;
+        }
+
+        if (_priorityButton is not null)
+        {
+            _priorityButton.Visible = priority;
+        }
+
+        if (_demolishButton is not null)
+        {
+            _demolishButton.Visible = demolish;
+        }
+
+        if (_upgradeButton is not null)
+        {
+            _upgradeButton.Visible = upgrade;
+        }
+
+        if (_lockButton is not null)
+        {
+            _lockButton.Visible = lockToggle;
+        }
+    }
+
+    private void TogglePause()
+    {
+        if (_host is not { IsRunning: true } host || !_hasTarget)
+        {
+            return;
+        }
+
+        if (!host.Query.Map.TryGetBuilding(_target, out BuildingInfo building))
+        {
+            return;
+        }
+
+        bool paused = building.State == BuildingState.Paused;
+        host.Enqueue(new SetBuildingPaused(_target, !paused));
+        _secondsSinceRefresh = double.MaxValue;
+    }
+
+    private void TogglePriority()
+    {
+        if (_host is not { IsRunning: true } host || !_hasTarget)
+        {
+            return;
+        }
+
+        bool high = host.Query.Workforce.IsHighPriority(_target);
+        host.Enqueue(new SetWorkforcePriority(_target, !high));
+        _secondsSinceRefresh = double.MaxValue;
+    }
+
+    private void AskDemolish()
+    {
+        if (_host is not { IsRunning: true } host || !_hasTarget || _strings is null || _demolishConfirm is null)
+        {
+            return;
+        }
+
+        string name = host.Query.Map.TryGetBuilding(_target, out BuildingInfo building)
+            ? BuildingDisplayName(host.Content, _strings, building.Type)
+            : _strings.Get("ui.inspector.unknown");
+        _demolishConfirm.Title = _strings.Format("ui.inspector.demolish.confirm_title", ("name", name));
+        _demolishConfirm.DialogText = _strings.Get("ui.inspector.demolish.confirm_text");
+        _demolishConfirm.GetOkButton().Text = _strings.Get("ui.inspector.demolish.confirm_ok");
+        _demolishConfirm.GetCancelButton().Text = _strings.Get("ui.inspector.demolish.cancel");
+        _demolishConfirm.PopupCentered();
+    }
+
+    private void DoDemolish()
+    {
+        if (_host is not { IsRunning: true } host || !_hasTarget)
+        {
+            return;
+        }
+
+        host.Enqueue(new Demolish(_target));
+        GD.Print($"[Evenmere] Inspector: enqueued Demolish {_target.Value}.");
+        Close();
+    }
+
+    private void DoUpgrade()
+    {
+        if (_host is not { IsRunning: true } host || !_hasTarget)
+        {
+            return;
+        }
+
+        if (!host.Query.Map.TryGetBuilding(_target, out BuildingInfo building))
+        {
+            return;
+        }
+
+        if (FindUpgrade(host.Content, building.Type) is { } upgrade)
+        {
+            host.Enqueue(new UpgradeBuilding(_target, upgrade));
+            GD.Print($"[Evenmere] Inspector: enqueued UpgradeBuilding {_target.Value} to {host.Content.NameOf(upgrade)}.");
+        }
+
+        _secondsSinceRefresh = double.MaxValue;
+    }
+
+    private void ToggleLock()
+    {
+        if (_host is not { IsRunning: true } host || !_hasTarget)
+        {
+            return;
+        }
+
+        if (!host.Query.Population.TryGetHouse(_target, out HouseInfo house))
+        {
+            return;
+        }
+
+        host.Enqueue(new SetHouseUpgradeLock(_target, !house.UpgradeLocked));
+        _secondsSinceRefresh = double.MaxValue;
+    }
+
+    /// <summary>Names a building for its subject-link button, falling back to the raw ID when it is gone.</summary>
+    private string BuildingNameOf(EntityId id)
+    {
+        if (_host is { IsRunning: true } host && _strings is not null
+            && host.Query.Map.TryGetBuilding(id, out BuildingInfo info))
+        {
+            return BuildingDisplayName(host.Content, _strings, info.Type);
+        }
+
+        return $"#{id.Value}";
+    }
+
+    /// <summary>Reads a storehouse's reach in tiles from content, or 0 when it is gone.</summary>
+    private int StorehouseReachOf(EntityId storehouse)
+    {
+        if (_host is { IsRunning: true } host && host.Query.Map.TryGetBuilding(storehouse, out BuildingInfo info))
+        {
+            return host.Content.Get(info.Type).Storage?.Reach ?? 0;
+        }
+
+        return 0;
+    }
+
+    private void OnLinkBuilding(EntityId building)
+    {
+        _rig?.FocusOnTile(new Vector2I(0, 0));
+        if (_host is { IsRunning: true } host && host.Query.Map.TryGetBuilding(building, out BuildingInfo info))
+        {
+            _rig?.FocusOnTile(new Vector2I(info.Origin.X, info.Origin.Y));
+            GD.Print($"[Evenmere] Inspector: subject link to building {building.Value}; camera focused, inspector opened.");
+        }
+
+        Open(building);
+    }
+
+    private static BuildingTypeId? FindUpgrade(ContentDb content, BuildingTypeId current)
+    {
+        for (int i = 0; i < content.Buildings.Count; i++)
+        {
+            var candidate = BuildingTypeId.From(checked((ushort)i));
+            BuildingDef def = content.Buildings.Get(candidate);
+            if (def.UpgradeOf.HasValue && def.UpgradeOf.Value.Equals(current))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private static string BuildingDisplayName(ContentDb content, UiStrings strings, BuildingTypeId type)
+    {
+        string key = $"building.{content.NameOf(type)}.name";
+        string text = strings.Get(key);
+        return string.Equals(text, key, StringComparison.Ordinal) ? content.NameOf(type) : text;
+    }
+}

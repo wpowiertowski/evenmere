@@ -64,7 +64,7 @@ The orchestrator is a Claude Code session, or the developer, working through one
    - the code follows AGENTS.md (determinism, layering, conventions);
    - the design matches the card and the docs.
 6. **Verify:** run `scripts/verify.sh` in the worktree yourself.
-7. **Feedback loop:** if the review or the verification finds anything, send specific, actionable feedback to the **same** subagent (SendMessage) and repeat steps 5–6. Don't fix it yourself, and don't start a fresh agent.
+7. **Feedback loop:** if the review or the verification finds anything, send specific, actionable feedback to the **same** subagent (SendMessage) and repeat steps 5–6. Don't fix it yourself, and don't start a fresh agent. Push the branch and open the PR (step 8) before or during this loop, so CI verifies every round of fixes; only a PR whose CI is green may be merged.
 8. **Commit and merge** once the change is approved:
    - Before M1-29: commit in the worktree as `<ID>: <title>`, `git merge --no-ff` into `main`, update the task's status to `done` in the milestone index, then push.
    - From M1-29 onward: commit, push the branch, open a PR titled `<ID>: <title>`, wait for green CI, and squash-merge.

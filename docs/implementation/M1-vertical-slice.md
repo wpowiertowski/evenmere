@@ -56,19 +56,19 @@
 | M1-13 | Integration: new game and end-to-end scenarios | sim | M1-01, M1-03 to M1-12 | done |
 | M1-14 | Save/load v1 and command log | sim | M1-13 | done |
 | M1-15 | Advisors v1 | sim | M1-12 | done |
-| M1-16 | Balance bot v1 | tools | M1-13 | todo |
+| M1-16 | Balance bot v1 | tools | M1-13 | done |
 | M1-17 | Camera rig and input actions | game | M0-09 | done |
 | M1-18 | UI theme, HUD and speed controls | game | M0-09 | done |
 | M1-19 | Terrain and water rendering | game | M1-01, M1-17 | done |
 | M1-20 | Buildings, roads and sites (placeholder meshes) | game | M1-19, M1-06 | done |
-| M1-21 | Placement, road and demolish tools | game | M1-20 | todo |
+| M1-21 | Placement, road and demolish tools | game | M1-20 | done |
 | M1-22 | Carts and walkers | game | M1-20, M1-09 | todo |
 | M1-23 | Build menu | game | M1-18, M1-21 | todo |
-| M1-24 | Inspector and explain tooltips | game | M1-18, M1-12 | todo |
+| M1-24 | Inspector and explain tooltips | game | M1-18, M1-12 | done |
 | M1-25 | Research and civics panels (list view) | game | M1-18, M1-11 | done |
-| M1-26 | Notification feed | game | M1-18, M1-15 | todo |
-| M1-27 | Main menu, pause menu and save/load UI | game | M1-14, M1-18 | todo |
-| M1-28 | Godot smoke v2 and view boundary check | game | M1-13, M1-20, M1-27 | todo |
+| M1-26 | Notification feed | game | M1-18, M1-15 | done |
+| M1-27 | Main menu, pause menu and save/load UI | game | M1-14, M1-18 | done |
+| M1-28 | Godot smoke v2 and view boundary check | game | M1-13, M1-20, M1-27 | done |
 | M1-29 | GitHub CI and PR flow | infra | M1-28, M1-16 | todo |
 | M1-30 | Vertical-slice playtest and gate review | human | M1-29 | todo |
 
@@ -1101,6 +1101,11 @@
 1. The developer plays from a new game to 100 Villagers using only the UI, noting the time taken, every moment of confusion, and any number that didn't explain itself.
 2. The orchestrator attaches the balance bot reports (seeds 1–3), the scenario hashes and the fps measurements.
 3. Triage the findings into new M2 cards or fixes, and record the decisions in the gate record.
+
+**Findings to triage, collected during implementation:**
+
+- **Homespun is optional for the slice target (from M1-16).** On seed 1 the balance bot reaches 100 Villagers at 26.9 game minutes, against a target of 45, without ever producing homespun. Villager houses sit at 8 of 10 residents on fish, bread and the shrine alone. Decide whether homespun should matter more for Villagers, for example through its share of the needs or the occupancy rule, or whether the faster pace is fine.
+- **Placeholder look of river banks (from M1-19).** The river water strip shows a thin lip above the bank where it meets the slope. Judge in play whether it needs work before real art.
 
 **Acceptance:** every gate checkbox is ticked or explicitly waived with a reason.
 

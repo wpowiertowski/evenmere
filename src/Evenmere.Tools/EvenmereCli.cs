@@ -67,6 +67,8 @@ internal static class EvenmereCli
             BuildRun(content, environment),
             BuildContentHash(content, environment),
             BuildHash(environment),
+            BuildReplay(content, environment),
+            BuildBalance(content, environment),
         };
         return root;
     }
@@ -174,6 +176,123 @@ internal static class EvenmereCli
             HashCommand.Execute(parsed.GetValue(save) ?? string.Empty, environment.Output, environment.Error));
         return hash;
     }
+
+    private static Command BuildReplay(Option<string[]> content, ToolEnvironment environment)
+    {
+        var save = new Option<string>("--save")
+        {
+            Description = "The save file to replay.",
+            HelpName = "file",
+            Required = true,
+        };
+
+        var log = new Option<string>("--log")
+        {
+            Description = "The command log recorded with the save's content.",
+            HelpName = "file",
+            Required = true,
+        };
+
+        var ticks = new Option<long>("--ticks")
+        {
+            Description = "The tick to stop at; at least the save's tick.",
+            HelpName = "n",
+            DefaultValueFactory = _ => DefaultTicks,
+            CustomParser = NonNegativeWholeNumber("--ticks"),
+        };
+
+        var replay = new Command("replay", "Load a save, feed it the logged commands and tick to a tick. stdout: 'hash=<x16>'.")
+        {
+            save,
+            log,
+            ticks,
+        };
+        replay.SetAction(parsed =>
+            WithContentRoots(parsed, content, environment, roots =>
+                ReplayCommand.Execute(
+                    roots,
+                    parsed.GetValue(save) ?? string.Empty,
+                    parsed.GetValue(log) ?? string.Empty,
+                    parsed.GetValue(ticks),
+                    environment.Output,
+                    environment.Error)));
+        return replay;
+    }
+
+    private static Command BuildBalance(Option<string[]> content, ToolEnvironment environment)
+    {
+        var map = new Option<string>("--map")
+        {
+            Description = "The island to settle (a folder under maps/).",
+            HelpName = "id",
+            DefaultValueFactory = _ => "starter",
+        };
+
+        var bot = new Option<string?>("--bot")
+        {
+            Description = "The bot script file (tools/bots/<name>.json).",
+            HelpName = "file",
+        };
+
+        var seed = new Option<ulong>("--seed")
+        {
+            Description = "The world seed.",
+            HelpName = "s",
+            DefaultValueFactory = _ => 1,
+        };
+
+        var maxMinutes = new Option<long>("--max-minutes")
+        {
+            Description = "The cap on game minutes to simulate.",
+            HelpName = "m",
+            DefaultValueFactory = _ => 90,
+            CustomParser = PositiveWholeNumber("--max-minutes"),
+        };
+
+        var balance = new Command(
+            "balance",
+            "Play the island with a scripted auto-player and report pacing. stdout: the JSON report; stderr: the text report.")
+        {
+            map,
+            bot,
+            seed,
+            maxMinutes,
+        };
+        balance.SetAction(parsed =>
+        {
+            string? botPath = parsed.GetValue(bot);
+            if (string.IsNullOrWhiteSpace(botPath))
+            {
+                environment.Error.WriteLine("evenmere: --bot needs a script file (for example --bot tools/bots/slice.json).");
+                return ExitCodes.Usage;
+            }
+
+            return WithContentRoots(parsed, content, environment, roots =>
+                BalanceCommand.Execute(
+                    roots,
+                    parsed.GetValue(map) ?? "starter",
+                    botPath,
+                    parsed.GetValue(seed),
+                    parsed.GetValue(maxMinutes),
+                    environment.Output,
+                    environment.Error));
+        });
+        return balance;
+    }
+
+    // Like NonNegativeWholeNumber, but 0 is rejected: a cap of 0 minutes would run nothing.
+    private static Func<ArgumentResult, long> PositiveWholeNumber(string optionName) =>
+        result =>
+        {
+            string text = result.Tokens.Count == 1 ? result.Tokens[0].Value : string.Empty;
+            if (long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out long value) && value > 0)
+            {
+                return value;
+            }
+
+            result.AddError($"{optionName} must be a whole number, 1 or more (got '{text}').");
+            return 0;
+        };
 
     // A parser rather than a validator: a validator that asks for the converted value throws on text that is not a number,
     // which would crash instead of reporting a usage error.

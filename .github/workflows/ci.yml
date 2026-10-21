@@ -1,0 +1,66 @@
+# M1-29: every change lands through a PR whose `verify` checks are green.
+# This runs the same gate agents run locally: restore, build (warnings as errors),
+# all tests with TRX reports, content lint, and the Godot smoke test (REQUIRE_GODOT=1,
+# so a missing Godot fails instead of skipping).
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    name: verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      # Same Godot 4.7.2 .NET build as the development Mac. Export templates are
+      # not installed: verify.sh only runs the headless smoke test.
+      - name: Install Godot 4.7.2 .NET
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: true
+          include-templates: false
+
+      - name: Run verify.sh
+        env:
+          REQUIRE_GODOT: 1
+          EVENMERE_TEST_RESULTS: ${{ runner.temp }}/test-results
+        run: scripts/verify.sh
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: ${{ runner.temp }}/test-results

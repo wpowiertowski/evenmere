@@ -335,16 +335,28 @@ internal sealed class ExplainService(ContentDb content, Func<ISimQueries> querie
         }
 
         int siteBonus = production.BonusPercent - activeSum;
-        parts.Add(new ExplanationLine("explain.building.site_bonus", [ExplainArg.Of(siteBonus)], [], []));
+        if (siteBonus != 0)
+        {
+            // A zero site bonus changes nothing, so the line would only add noise.
+            parts.Add(new ExplanationLine("explain.building.site_bonus", [ExplainArg.Of(siteBonus)], [], []));
+        }
 
-        GameClock now = _clock();
-        parts.Add(new ExplanationLine(
-            "explain.building.season",
-            [ExplainArg.Of(now.Season), ExplainArg.Of(Ratio.One)],
-            [],
-            []));
+        // Nothing in M1 carries a season curve, so the season factor is always neutral and the
+        // line is omitted; a building with a real seasonal curve still shows it.
+        if (SeasonFactor(info.Type) is { } season)
+        {
+            GameClock now = _clock();
+            parts.Add(new ExplanationLine(
+                "explain.building.season",
+                [ExplainArg.Of(now.Season), ExplainArg.Of(season)],
+                [],
+                []));
+        }
 
-        var factors = new List<ExplanationLine>(4)
+        // Buildings without an area-yield spec (bakeries and their kin) always run at full land
+        // yield, so the line would only add noise; gatherers and farms still show it.
+        bool hasAreaYield = HasAreaYield(info.Type);
+        var factors = new List<ExplanationLine>(hasAreaYield ? 3 : 2)
         {
             new("explain.building.workforce", [ExplainArg.Of(production.WorkforceFill)], [], []),
             new(
@@ -352,8 +364,12 @@ internal sealed class ExplainService(ContentDb content, Func<ISimQueries> querie
                 [ExplainArg.Of(production.Recipe)],
                 [],
                 []),
-            new("explain.building.area_yield", [ExplainArg.Of(production.AreaYield)], [], []),
         };
+        if (hasAreaYield)
+        {
+            factors.Add(new("explain.building.area_yield", [ExplainArg.Of(production.AreaYield)], [], []));
+        }
+
         factors.AddRange(parts);
 
         return new ExplanationLine(
@@ -361,6 +377,44 @@ internal sealed class ExplainService(ContentDb content, Func<ISimQueries> querie
             [ExplainArg.Of(production.Productivity)],
             [],
             [.. factors]);
+    }
+
+    /// <summary>Tests whether a building type measures yield from the land around it.</summary>
+    /// <param name="type">The building type.</param>
+    /// <returns><see langword="true"/> when the content gives the type an area-yield spec.</returns>
+    private bool HasAreaYield(BuildingTypeId type) =>
+        type.Value < _content.Buildings.Count && _content.Get(type).Placement.AreaYield is not null;
+
+    /// <summary>Finds the season factor the content gives a building, if it is not neutral.</summary>
+    /// <param name="type">The building type.</param>
+    /// <returns>The factor from the first season curve whose tag the building carries, or <see langword="null"/> when none applies or it is neutral (1000 per-mille).</returns>
+    private Ratio? SeasonFactor(BuildingTypeId type)
+    {
+        if (type.Value >= _content.Buildings.Count || _content.Rules.Seasons.IsEmpty)
+        {
+            return null;
+        }
+
+        ImmutableArray<string> tags = _content.Get(type).Tags;
+        if (tags.IsEmpty)
+        {
+            return null;
+        }
+
+        GameClock now = _clock();
+        foreach (SeasonCurve curve in _content.Rules.Seasons)
+        {
+            foreach (string tag in tags)
+            {
+                if (string.Equals(tag, curve.Tag, StringComparison.Ordinal))
+                {
+                    Ratio factor = curve.Of(now.Season);
+                    return factor == Ratio.One ? null : factor;
+                }
+            }
+        }
+
+        return null;
     }
 
     private ExplanationLine BuildPlain(EntityId building, in BuildingInfo info)

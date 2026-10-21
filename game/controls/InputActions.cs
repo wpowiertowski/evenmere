@@ -50,6 +50,12 @@ public static class InputActions
     /// <summary>Rotate the building or tool being placed (R, X).</summary>
     public static readonly StringName ToolRotate = "tool_rotate";
 
+    /// <summary>Start the road tool (keyboard F only; gamepad players reach it through the build menu).</summary>
+    public static readonly StringName ToolRoad = "tool_road";
+
+    /// <summary>Start the demolish tool (keyboard X and Delete; gamepad players reach it through the build menu).</summary>
+    public static readonly StringName ToolDemolish = "tool_demolish";
+
     /// <summary>Cancel the current tool or close the topmost panel (Escape, right click, B).</summary>
     public static readonly StringName ToolCancel = "tool_cancel";
 
