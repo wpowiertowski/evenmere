@@ -60,7 +60,7 @@ internal sealed class SystemRoster
         var workforce = new WorkforceSystem();
 
         // M1-08 changes the next line to pass the production state.
-        var production = new ProductionSystem();
+        var production = new ProductionSystem(world.Production, content);
 
         // M1-09 changes the next line to pass the logistics state.
         var logistics = new LogisticsSystem();
@@ -108,7 +108,7 @@ internal sealed class SystemRoster
             Counters = progression.Counters,
 
             // M1-08: production buffers, as Logistics sees them.
-            ProductionBuffers = new UnimplementedProductionBuffers(),
+            ProductionBuffers = production.Buffers,
 
             // M1-07: the workforce supply that Population sets.
             WorkforceSupply = new UnimplementedWorkforceSupply(),
