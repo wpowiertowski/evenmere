@@ -75,11 +75,11 @@ internal sealed class SystemRoster
 
         var economy = new EconomySystem();
 
-        // M1-11 changes the next line to pass the research state.
-        var research = new ResearchSystem();
+        // M1-11: the research system runs over the research state, with the content and the late-bound queries.
+        var research = new ResearchSystem(world.Research, content, () => Queries ?? throw new InvalidOperationException("The research system was used before the roster finished building."));
 
-        // M1-11 changes the next line to pass the culture state.
-        var culture = new CultureSystem();
+        // M1-11: the culture system runs over the culture state, with the content and the late-bound queries.
+        var culture = new CultureSystem(world.Culture, content, () => Queries ?? throw new InvalidOperationException("The culture system was used before the roster finished building."));
 
         var progression = new ProgressionSystem(world.Progression, content, modifiers);
 

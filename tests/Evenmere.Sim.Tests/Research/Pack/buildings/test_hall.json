@@ -1,0 +1,16 @@
+{
+  "id": "test_hall",
+  "category": "infrastructure",
+  "era": 1,
+  "footprint": [2, 2],
+  "placement": {
+    "terrain": ["plains", "forest"],
+    "roadAccess": false
+  },
+  "cost": { "timber": 1 },
+  "buildDays": 1,
+  "workforce": { "tier": "settlers", "count": 2 },
+  "outputs": { "knowledge": 6, "culture": 4 },
+  "start": true,
+  "tags": ["hall"]
+}

@@ -51,7 +51,7 @@
 | M1-08 | Production | sim | M1-00 | done |
 | M1-09 | Logistics: carts and transport jobs | sim | M1-00 | done |
 | M1-10 | Needs and population | sim | M1-00 | done |
-| M1-11 | Research and civics | sim | M1-00 | todo |
+| M1-11 | Research and civics | sim | M1-00 | done |
 | M1-12 | Statistics and explain queries | sim | M1-00 | done |
 | M1-13 | Integration: new game and end-to-end scenarios | sim | M1-01, M1-03 to M1-12 | todo |
 | M1-14 | Save/load v1 and command log | sim | M1-13 | todo |

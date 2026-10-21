@@ -1,0 +1,9 @@
+{
+  "id": "test_custom3",
+  "era": 1,
+  "cost": 25,
+  "requires": ["test_custom2"],
+  "effects": [
+    { "traditionSlot": "heritage" }
+  ]
+}

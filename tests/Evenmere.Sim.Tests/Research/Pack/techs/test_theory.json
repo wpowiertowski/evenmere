@@ -1,0 +1,13 @@
+{
+  "id": "test_theory",
+  "era": 1,
+  "cost": 60,
+  "effects": [
+    { "unlockBuilding": "sawpit" }
+  ],
+  "inspiration": {
+    "when": {
+      "count": { "building": "fishing_hut", "atLeast": 1 }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "id": "test_future_civic",
+  "era": 2,
+  "cost": 50,
+  "effects": [
+    { "traditionSlot": "hearth" }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "test_custom",
+  "era": 1,
+  "cost": 40,
+  "effects": [
+    { "traditionSlot": "hearth" }
+  ],
+  "inspiration": {
+    "when": {
+      "count": { "building": "fishing_hut", "atLeast": 1 }
+    }
+  }
+}

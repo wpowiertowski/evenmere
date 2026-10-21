@@ -1,0 +1,10 @@
+{
+  "id": "test_lore",
+  "era": 1,
+  "cost": 25,
+  "effects": [
+    {
+      "modifier": { "stat": "productivity", "target": { "tag": "processing" }, "percent": 10 }
+    }
+  ]
+}

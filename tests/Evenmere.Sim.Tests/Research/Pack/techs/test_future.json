@@ -1,0 +1,8 @@
+{
+  "id": "test_future",
+  "era": 2,
+  "cost": 50,
+  "effects": [
+    { "unlockBuilding": "sawpit" }
+  ]
+}

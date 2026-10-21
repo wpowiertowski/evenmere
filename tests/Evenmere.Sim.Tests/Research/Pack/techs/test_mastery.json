@@ -1,0 +1,9 @@
+{
+  "id": "test_mastery",
+  "era": 1,
+  "cost": 30,
+  "requires": ["test_practice"],
+  "effects": [
+    { "unlockFeature": "expeditions" }
+  ]
+}

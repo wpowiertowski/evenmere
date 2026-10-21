@@ -1,0 +1,9 @@
+{
+  "id": "test_practice",
+  "era": 1,
+  "cost": 40,
+  "requires": ["test_theory"],
+  "effects": [
+    { "unlockRecipe": "saw_timber" }
+  ]
+}

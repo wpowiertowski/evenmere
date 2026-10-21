@@ -1,0 +1,8 @@
+{
+  "id": "test_tales",
+  "era": 1,
+  "cost": 30,
+  "effects": [
+    { "traditionSlot": "heritage" }
+  ]
+}
