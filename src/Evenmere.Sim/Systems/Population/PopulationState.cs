@@ -1,4 +1,5 @@
 using Evenmere.Core.Collections;
+using Evenmere.Sim.Persistence;
 using Evenmere.Sim.Serialization.Formatters;
 using MessagePack;
 
@@ -32,5 +33,6 @@ public sealed class PopulationState
 
     /// <summary>Gets or sets the workers last passed to Workforce for each tier, indexed by <c>TierId.Value</c>; empty until the first house exists.</summary>
     [Key(2)]
+    [ContentIndexed(ContentKind.Tier)]
     public int[] SuppliedWorkers { get; set; } = [];
 }

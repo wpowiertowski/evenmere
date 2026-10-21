@@ -1,6 +1,7 @@
 using Evenmere.Content;
 using Evenmere.Content.Definitions;
 using Evenmere.Core.Numerics;
+using Evenmere.Sim.Persistence;
 using Evenmere.Sim.Queries.Types;
 using MessagePack;
 
@@ -26,26 +27,32 @@ public sealed class ProgressionState
 {
     /// <summary>Gets or sets the unlocked building types, as a bitset over <c>BuildingTypeId.Value</c>.</summary>
     [Key(0)]
+    [ContentIndexed(ContentKind.Building)]
     public ulong[] Buildings { get; set; } = [];
 
     /// <summary>Gets or sets the unlocked recipes, as a bitset over <c>RecipeId.Value</c>.</summary>
     [Key(1)]
+    [ContentIndexed(ContentKind.Recipe)]
     public ulong[] Recipes { get; set; } = [];
 
     /// <summary>Gets or sets the unlocked population tiers, as a bitset over <c>TierId.Value</c>.</summary>
     [Key(2)]
+    [ContentIndexed(ContentKind.Tier)]
     public ulong[] Tiers { get; set; } = [];
 
     /// <summary>Gets or sets the unlocked traditions, as a bitset over <c>TraditionId.Value</c>. Kept for the culture system (M2-07).</summary>
     [Key(3)]
+    [ContentIndexed(ContentKind.Tradition)]
     public ulong[] Traditions { get; set; } = [];
 
     /// <summary>Gets or sets the unlocked festivals, as a bitset over <c>FestivalId.Value</c>. Kept for the culture system (M2-08).</summary>
     [Key(4)]
+    [ContentIndexed(ContentKind.Festival)]
     public ulong[] Festivals { get; set; } = [];
 
     /// <summary>Gets or sets the great-work types that <c>great_works:&lt;type&gt;</c> has switched on, as a bitset over <c>GreatWorkTypeId.Value</c>.</summary>
     [Key(5)]
+    [ContentIndexed(ContentKind.GreatWork)]
     public ulong[] GreatWorks { get; set; } = [];
 
     /// <summary>Gets or sets the opened kinds of ground: bit <c>n</c> is the <see cref="TerrainAccess"/> whose value is <c>n</c>.</summary>
@@ -58,10 +65,12 @@ public sealed class ProgressionState
 
     /// <summary>Gets or sets the index of the current era in string order, the raw value of its <c>EraId</c>.</summary>
     [Key(8)]
+    [ContentValued(ContentKind.Era)]
     public int Era { get; set; }
 
     /// <summary>Gets or sets the tradition slots granted so far, indexed by <see cref="TraditionSlotType"/>. Kept for the culture system (M2-07).</summary>
     [Key(9)]
+    [NotContentIndexed("indexed by TraditionSlotType, a code enum, not a content kind")]
     public int[] TraditionSlots { get; set; } = [];
 
     /// <summary>Gets or sets whether an effect asked to reveal the coastline. Kept for the exploration system (M2-06).</summary>
@@ -70,22 +79,27 @@ public sealed class ProgressionState
 
     /// <summary>Gets or sets the sources whose effects have been applied, sorted by kind and then value. Applying a source again is a no-op.</summary>
     [Key(11)]
+    [ContentValued(ContentKind.Tech, ContentKind.Civic, ContentKind.Tradition, ContentKind.Festival, ContentKind.Monument, ContentKind.Happening)]
     public EffectSource[] AppliedSources { get; set; } = [];
 
     /// <summary>Gets or sets the points credited since they were last taken, indexed by <see cref="PointKind"/>. Never negative.</summary>
     [Key(12)]
+    [NotContentIndexed("indexed by PointKind, a code enum, not a content kind")]
     public Amount[] Points { get; set; } = [];
 
     /// <summary>Gets or sets the cumulative production of each good in milli-units, indexed by <c>GoodId.Value</c>.</summary>
     [Key(13)]
+    [ContentIndexed(ContentKind.Good)]
     public long[] Produced { get; set; } = [];
 
     /// <summary>Gets or sets the cumulative consumption of each good in milli-units, indexed by <c>GoodId.Value</c>.</summary>
     [Key(14)]
+    [ContentIndexed(ContentKind.Good)]
     public long[] Consumed { get; set; } = [];
 
     /// <summary>Gets or sets the number of completed buildings of each type, indexed by <c>BuildingTypeId.Value</c>.</summary>
     [Key(15)]
+    [ContentIndexed(ContentKind.Building)]
     public long[] Built { get; set; } = [];
 
     /// <summary>Gets or sets the number of road tiles laid, of any road type.</summary>

@@ -2,6 +2,7 @@ using Evenmere.Content;
 using Evenmere.Content.Definitions;
 using Evenmere.Core.Collections;
 using Evenmere.Core.Ids;
+using Evenmere.Sim.Persistence;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Serialization.Formatters;
 using MessagePack;
@@ -70,34 +71,42 @@ public sealed class MapState
 
     /// <summary>Gets or sets the terrain of each tile, as a <c>TerrainId.Value</c>.</summary>
     [Key(2)]
+    [ContentValued(ContentKind.Terrain)]
     public byte[] Terrain { get; set; } = [];
 
     /// <summary>Gets or sets the elevation of each tile, 0 to 15.</summary>
     [Key(3)]
+    [NotContentIndexed("tile elevation, an integer step, not a content ID")]
     public byte[] Elevation { get; set; } = [];
 
     /// <summary>Gets or sets the <see cref="TileFeatures"/> bits of each tile, including the derived coast.</summary>
     [Key(4)]
+    [NotContentIndexed("tile feature bits, a code enum, not content IDs")]
     public byte[] Features { get; set; } = [];
 
     /// <summary>Gets or sets the <see cref="RiverWidthClass"/> of each tile.</summary>
     [Key(5)]
+    [NotContentIndexed("river width classes, a code enum, not content IDs")]
     public byte[] RiverWidth { get; set; } = [];
 
     /// <summary>Gets or sets the region number of each tile.</summary>
     [Key(6)]
+    [NotContentIndexed("map-local region numbers, not content IDs")]
     public ushort[] Region { get; set; } = [];
 
     /// <summary>Gets or sets the deposit under each tile: 0 for none, otherwise the <see cref="DepositKind"/> value plus one.</summary>
     [Key(7)]
+    [NotContentIndexed("deposit kinds, a code enum, not content IDs")]
     public byte[] Deposit { get; set; } = [];
 
     /// <summary>Gets or sets the fertility bit mask of each tile (bit <c>1 &lt;&lt; (int)CropKind</c> per crop).</summary>
     [Key(8)]
+    [NotContentIndexed("fertility bit masks over a code enum, not content IDs")]
     public uint[] Fertility { get; set; } = [];
 
     /// <summary>Gets or sets the <see cref="SlopeClass"/> of each tile, derived from the elevation when the map is loaded.</summary>
     [Key(9)]
+    [NotContentIndexed("slope classes, a code enum, not content IDs")]
     public byte[] Slope { get; set; } = [];
 
     /// <summary>Gets or sets the building registry: every building, whatever its state, by entity ID.</summary>
@@ -107,6 +116,7 @@ public sealed class MapState
 
     /// <summary>Gets or sets the occupancy grid: the <c>EntityId.Value</c> of the building whose footprint covers each tile, 0 for none.</summary>
     [Key(11)]
+    [NotContentIndexed("entity IDs of the covering buildings, not content IDs")]
     public int[] Occupancy { get; set; } = [];
 
     /// <summary>

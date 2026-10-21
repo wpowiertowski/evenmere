@@ -1,5 +1,6 @@
 using Evenmere.Core.Collections;
 using Evenmere.Core.Ids;
+using Evenmere.Sim.Persistence;
 using Evenmere.Sim.Serialization.Formatters;
 using MessagePack;
 
@@ -33,6 +34,7 @@ public sealed class LogisticsState
     /// ascending order: <c>((long)building « 32) | ((long)good « 1) | direction</c>.
     /// </summary>
     [Key(2)]
+    [ContentValued(ContentKind.Good)]
     public long[] RetryKeys { get; set; } = [];
 
     /// <summary>
@@ -40,5 +42,6 @@ public sealed class LogisticsState
     /// <see cref="RetryKeys"/>: the day after the reservation failed, so a shortage does not retry every tick.
     /// </summary>
     [Key(3)]
+    [NotContentIndexed("parallel to RetryKeys; the remap permutes them together")]
     public long[] RetryDays { get; set; } = [];
 }

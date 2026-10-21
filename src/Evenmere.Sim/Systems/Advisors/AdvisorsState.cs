@@ -1,3 +1,4 @@
+using Evenmere.Sim.Persistence;
 using Evenmere.Sim.Queries.Types;
 using MessagePack;
 
@@ -70,6 +71,7 @@ public sealed class AdvisorsState
 {
     /// <summary>Gets or sets the live notes, one per (kind, subject), sorted by (kind, subject kind, subject value).</summary>
     [Key(0)]
+    [ContentValued(ContentKind.Good, ContentKind.Tier, ContentKind.Building)]
     public AdviceRecord[] Records { get; set; } = [];
 
     /// <summary>Gets or sets the next advice ID; it only ever grows, so IDs are never reused. Starts at 1.</summary>
@@ -78,14 +80,17 @@ public sealed class AdvisorsState
 
     /// <summary>Gets or sets the consecutive daily evaluations each good has been short, indexed by <c>GoodId.Value</c>, capped at 2.</summary>
     [Key(2)]
+    [ContentIndexed(ContentKind.Good)]
     public int[] GoodStreak { get; set; } = [];
 
     /// <summary>Gets or sets the consecutive daily evaluations each tier has been short of workers, indexed by <c>TierId.Value</c>, capped at 2.</summary>
     [Key(3)]
+    [ContentIndexed(ContentKind.Tier)]
     public int[] TierStreak { get; set; } = [];
 
     /// <summary>Gets or sets the dismissal suppressions, sorted by (kind, subject kind, subject value).</summary>
     [Key(4)]
+    [ContentValued(ContentKind.Good, ContentKind.Tier, ContentKind.Building)]
     public Suppression[] Suppressions { get; set; } = [];
 
     /// <summary>Grows the streak arrays to the loaded content's goods and tiers, keeping any values a loaded state already holds.</summary>

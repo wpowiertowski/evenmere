@@ -66,6 +66,7 @@ internal static class EvenmereCli
             BuildLint(content, environment),
             BuildRun(content, environment),
             BuildContentHash(content, environment),
+            BuildHash(environment),
         };
         return root;
     }
@@ -154,6 +155,24 @@ internal static class EvenmereCli
             WithContentRoots(parsed, content, environment, roots =>
                 ContentHashCommand.Execute(roots, environment.Output, environment.Error)));
         return contentHash;
+    }
+
+    private static Command BuildHash(ToolEnvironment environment)
+    {
+        var save = new Option<string>("--save")
+        {
+            Description = "The save file to hash.",
+            HelpName = "file",
+            Required = true,
+        };
+
+        var hash = new Command("hash", "Print the state hash of a save file (16 lowercase hex digits, the form run prints).")
+        {
+            save,
+        };
+        hash.SetAction(parsed =>
+            HashCommand.Execute(parsed.GetValue(save) ?? string.Empty, environment.Output, environment.Error));
+        return hash;
     }
 
     // A parser rather than a validator: a validator that asks for the converted value throws on text that is not a number,

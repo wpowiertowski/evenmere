@@ -1,3 +1,4 @@
+using Evenmere.Sim.Persistence;
 using MessagePack;
 
 namespace Evenmere.Sim.Systems.Statistics;
@@ -39,10 +40,12 @@ public sealed class StatisticsState
 
     /// <summary>Gets or sets the daily samples, flat by series then ring slot (see the class remarks).</summary>
     [Key(3)]
+    [ContentIndexed(ContentKind.Good, ContentKind.Tier)]
     public long[] Daily { get; set; } = [];
 
     /// <summary>Gets or sets the seasonal averages, flat by series then ring slot (see the class remarks).</summary>
     [Key(4)]
+    [ContentIndexed(ContentKind.Good, ContentKind.Tier)]
     public long[] Seasonal { get; set; } = [];
 
     /// <summary>Gets or sets how many seasons have been averaged in all.</summary>
@@ -51,6 +54,7 @@ public sealed class StatisticsState
 
     /// <summary>Gets or sets the last-seen cumulative consumption per good, in milli-units, so each day samples the delta.</summary>
     [Key(6)]
+    [ContentIndexed(ContentKind.Good)]
     public long[] LastConsumed { get; set; } = [];
 
     /// <summary>Gets how many series the state holds for its sized goods and tiers.</summary>

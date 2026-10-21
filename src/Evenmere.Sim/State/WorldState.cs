@@ -3,6 +3,7 @@ using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Core.Rng;
 using Evenmere.Core.Time;
+using Evenmere.Sim.Persistence;
 using Evenmere.Sim.Systems.Advisors;
 using Evenmere.Sim.Systems.Construction;
 using Evenmere.Sim.Systems.Culture;
@@ -52,6 +53,7 @@ public sealed class WorldState
     /// <c>SimContext.Rng</c>, by reference, so a draw advances the stored generator.
     /// </summary>
     [Key(3)]
+    [NotContentIndexed("one random stream per system, not content data")]
     public Pcg32[] SystemRngs { get; set; } = [];
 
     /// <summary>Gets or sets the map service's state. Filled by M1-01.</summary>
