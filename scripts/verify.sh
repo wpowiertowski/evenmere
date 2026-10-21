@@ -16,7 +16,26 @@ dotnet restore
 dotnet build -c Release --no-restore
 
 # --- section: test ---
-dotnet test -c Release --no-build
+# When EVENMERE_TEST_RESULTS names a directory, each test project also writes its TRX
+# report (named per assembly, so all five land side by side) and the reports are moved into
+# that directory, even when the test run fails, so CI can upload them with `if: always()`.
+# CI sets this to $RUNNER_TEMP/test-results. Local runs without the variable behave exactly
+# as before.
+if [ -n "${EVENMERE_TEST_RESULTS:-}" ]; then
+    mkdir -p "$EVENMERE_TEST_RESULTS"
+    move_trx() {
+        for trx in TestResults/*.trx; do
+            [ -f "$trx" ] && mv "$trx" "$EVENMERE_TEST_RESULTS/"
+        done
+        rmdir TestResults 2>/dev/null || true
+    }
+    trap move_trx EXIT
+    dotnet test -c Release --no-build -- --report-trx
+    trap - EXIT
+    move_trx
+else
+    dotnet test -c Release --no-build
+fi
 
 # --- section: lint ---
 # The build section above already built Evenmere.Tools in Release, so --no-build is safe here. `lint` exits 1 on any content
