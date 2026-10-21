@@ -41,7 +41,7 @@
 | ID | Title | Lane | Depends on | Status |
 | --- | --- | --- | --- | --- |
 | M1-00 | Cross-system interfaces, commands, events and test fakes | sim | M0 gate | done |
-| M1-01 | Map model, map loading and building registry | sim | M1-00 | todo |
+| M1-01 | Map model, map loading and building registry | sim | M1-00 | done |
 | M1-02 | Vertical-slice content | content | M0-04 | done |
 | M1-03 | Starter island map | content | M1-01, M1-02 | todo |
 | M1-04 | Progression core: unlocks, effects, modifiers, ledger, counters | sim | M1-00 | done |
