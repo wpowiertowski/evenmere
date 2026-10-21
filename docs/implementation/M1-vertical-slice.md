@@ -68,7 +68,7 @@
 | M1-25 | Research and civics panels (list view) | game | M1-18, M1-11 | done |
 | M1-26 | Notification feed | game | M1-18, M1-15 | done |
 | M1-27 | Main menu, pause menu and save/load UI | game | M1-14, M1-18 | done |
-| M1-28 | Godot smoke v2 and view boundary check | game | M1-13, M1-20, M1-27 | todo |
+| M1-28 | Godot smoke v2 and view boundary check | game | M1-13, M1-20, M1-27 | done |
 | M1-29 | GitHub CI and PR flow | infra | M1-28, M1-16 | todo |
 | M1-30 | Vertical-slice playtest and gate review | human | M1-29 | todo |
 
