@@ -1,5 +1,7 @@
 using Evenmere.Game.Host.Debug;
 using Evenmere.Game.Host.Persistence;
+using Evenmere.Game.Host.Smoke;
+using Evenmere.Sim.Persistence;
 using Evenmere.Game.Rendering.Camera;
 using Evenmere.Game.Rendering.Terrain;
 using Evenmere.Game.Ui.Menus;
@@ -131,8 +133,10 @@ public sealed partial class Main : Node3D
     }
 
     /// <summary>
-    /// The headless check behind <c>scripts/godot-smoke.sh</c>: create the world, run N ticks as fast as possible, print one
-    /// <c>SMOKE OK hash=&lt;16 hex digits&gt;</c> line and exit 0, or print <c>SMOKE FAIL &lt;message&gt;</c> and exit 1.
+    /// The headless check behind <c>scripts/godot-smoke.sh</c>: without <c>--smoke-save</c> it creates the world and runs N ticks
+    /// as fast as possible; with a save and log it loads the save and replays the log across real frames with the full
+    /// scene active. Either way it prints one <c>SMOKE OK hash=&lt;16 hex digits&gt;</c> line and exits 0, or prints
+    /// <c>SMOKE FAIL &lt;message&gt;</c> and exits 1.
     /// </summary>
     private void RunSmoke(SimHost host, string[] args)
     {
@@ -140,6 +144,12 @@ public sealed partial class Main : Node3D
         try
         {
             var options = LaunchOptions.Parse(args);
+            if (options.SmokeSave is not null || options.SmokeLog is not null)
+            {
+                RunSmokeV2(host, options);
+                return;
+            }
+
             host.StartNewGame(options.Seed, options.Map);
             host.RunTicksNow(options.SmokeTicks ?? 0);
             GD.Print($"SMOKE OK hash={host.ComputeStateHash():x16}");
@@ -151,6 +161,21 @@ public sealed partial class Main : Node3D
             GD.PrintErr(ex.ToString());
             GetTree().Quit(1);
         }
+    }
+
+    private void RunSmokeV2(SimHost host, LaunchOptions options)
+    {
+        if (options.SmokeSave is null || options.SmokeLog is null)
+        {
+            throw new InvalidOperationException("Smoke v2 needs both --smoke-save and --smoke-log.");
+        }
+
+        host.LoadGame(options.SmokeSave);
+        using FileStream log = File.OpenRead(options.SmokeLog);
+        IReadOnlyList<(long Tick, Sim.Command Command)> entries = CommandLogReader.ForContent(log, host.Content);
+        var runner = new SmokeRunner();
+        AddChild(runner);
+        runner.Setup(host, entries, options.SmokeTicks ?? 0);
     }
 
     /// <summary>

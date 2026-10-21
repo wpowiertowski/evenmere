@@ -65,6 +65,14 @@ public sealed class CommandLogWriter : IDisposable
 /// current content's. A command that names an item the content no longer has cannot be applied faithfully (its raw ID
 /// would point at a different item), so it is dropped.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Use <see cref="ForContent"/> when the log was recorded against the same content objects given here, such as the
+/// smoke fixture replayed by the game: it builds identity tables internally, so the raw IDs are already current.
+/// A log from different content (an older save, a remapped world) must go through the save's own tables instead,
+/// as <see cref="Replay"/> does with <c>SaveGame.ReadInner</c>; reading it here would silently point at the wrong items.
+/// </para>
+/// </remarks>
 public sealed class CommandLogReader
 {
     private readonly Stream _stream;
@@ -79,6 +87,21 @@ public sealed class CommandLogReader
         ArgumentNullException.ThrowIfNull(tables);
         _stream = stream;
         _tables = tables;
+    }
+
+    /// <summary>
+    /// Reads a log recorded against the same content objects given here, building identity tables internally.
+    /// A log from different content must go through the save's own tables instead, as <see cref="Replay"/> does.
+    /// </summary>
+    /// <param name="log">The log stream; the reader never closes it.</param>
+    /// <param name="content">The content the log was recorded with.</param>
+    /// <returns>The (tick, command) pairs in file order.</returns>
+    /// <exception cref="InvalidDataException">An entry is malformed or names an unknown command type.</exception>
+    public static IReadOnlyList<(long Tick, Command Command)> ForContent(Stream log, ContentDb content)
+    {
+        ArgumentNullException.ThrowIfNull(log);
+        ArgumentNullException.ThrowIfNull(content);
+        return new CommandLogReader(log, SaveTables.Identity(content)).ReadAll();
     }
 
     /// <summary>Reads every entry, remapping content IDs and dropping commands about gone items.</summary>
