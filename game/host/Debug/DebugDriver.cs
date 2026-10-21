@@ -4,10 +4,13 @@ using Evenmere.Game.Host;
 using Evenmere.Game.Rendering.Camera;
 using Evenmere.Game.Rendering.Terrain;
 using Evenmere.Game.Ui.Tools;
+using Evenmere.Sim;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Advisors;
 using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
+using Evenmere.Sim.Systems.Logistics;
+using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
 using Evenmere.Sim.Persistence;
 using Evenmere.Sim.Systems.Advisors.Commands;
@@ -39,6 +42,11 @@ internal sealed class DebugDriver
     private SimHost? _host;
 
     private bool _hasDemo;
+    private bool _overlay;
+    private int _overlayMatches;
+    private long _overlayLoggedTick = -480;
+    private readonly Dictionary<EntityId, long> _predictedEnds = new();
+    private readonly HashSet<long> _seenPredictions = new();
     private Vector2I _demoCluster = new(30, 96);
     private Vector2I _demoSite = new(30, 96);
     private Vector2I _demoPause = new(30, 96);
@@ -89,6 +97,14 @@ internal sealed class DebugDriver
         _terrain = terrain;
         _host = host;
 
+        if (_options.CartOverlay)
+        {
+            // Subscribed before the demos run, so the jobs their setups create are observed from the first tick.
+            _overlay = true;
+            host.EventsDrained += OnOverlayEvents;
+            GD.Print("[Evenmere] cart-overlay: armed; logging predicted arrivals and visual-vs-event matches.");
+        }
+
         if (!string.IsNullOrEmpty(_options.LoadSave))
         {
             LoadDebugSave(host, _options.LoadSave);
@@ -107,6 +123,12 @@ internal sealed class DebugDriver
         if (!string.IsNullOrEmpty(_options.DemoExplain))
         {
             RunDemoExplain(host, rig, _options.DemoExplain);
+        }
+
+        if (_options.CartOverlay)
+        {
+            RunCartFixture(host);
+            host.Speed = SimSpeed.X4;
         }
 
         if (rig is null)
@@ -300,6 +322,157 @@ internal sealed class DebugDriver
 
         GD.Print($"BENCH frames={sorted.Length} avg_ms={avgMs:F2} p99_ms={p99Ms:F2} fps={fps:F1}");
         main.GetTree().Quit(0);
+    }
+
+    // The cart overlay (M1-22 evidence): every job's predicted arrival tick is its PhaseEndTick, so sampling the active
+    // jobs after each tick batch records it, and a TransportJobCompleted whose last recorded end equals its event tick
+    // proves the replayed cart arrived on the sim's tick. Completions without an exact match print nothing, so a short
+    // phase that a coarse batch stepped over never logs a misleading line.
+    private void OnOverlayEvents(IReadOnlyList<SimEvent> events)
+    {
+        if (!_overlay || _host is null)
+        {
+            return;
+        }
+
+        foreach (TransportJobView job in _host.Query.Logistics.ActiveJobs())
+        {
+            long packed = ((long)job.Id.Value << 8) | (byte)job.Phase;
+            if (_seenPredictions.Add(packed))
+            {
+                GD.Print($"[Evenmere] cart-overlay: job {job.Id.Value} phase {job.Phase} predicted arrival tick {job.PhaseEndTick}");
+            }
+
+            _predictedEnds[job.Id] = job.PhaseEndTick;
+        }
+
+        foreach (SimEvent ev in events)
+        {
+            if (ev is not TransportJobCompleted completed)
+            {
+                continue;
+            }
+
+            if (_predictedEnds.TryGetValue(completed.Job, out long visual) && visual == completed.Tick)
+            {
+                GD.Print($"[Evenmere] cart-overlay: cart {completed.Job.Value} arrived visually at tick {visual} (event tick {completed.Tick})");
+                _overlayMatches++;
+            }
+
+            _predictedEnds.Remove(completed.Job);
+        }
+
+        // Periodic status so an empty match list still says whether the world ticks and works.
+        if (_host.CurrentTick - _overlayLoggedTick >= 480)
+        {
+            _overlayLoggedTick = _host.CurrentTick;
+            int carts = 0;
+            foreach (TransportJobView job in _host.Query.Logistics.ActiveJobs())
+            {
+                carts++;
+            }
+
+            GoodId fish = _host.Content.Goods.IdOf("fish");
+            GoodId wood = _host.Content.Goods.IdOf("wood");
+            GD.Print($"[Evenmere] cart-overlay: tick {_host.CurrentTick} residents={_host.Query.Population.TotalResidents} jobs={carts} matches={_overlayMatches} fishStock={_host.Query.Storage.Stock(fish).Milli} woodStock={_host.Query.Storage.Stock(wood).Milli} fishMade={_host.Query.Production.ProducedYesterday(fish).Milli}.");
+        }
+    }
+
+    // Minimal logistics fixture for the overlay (M1-22 evidence): the demo's houses advance to Villagers, whose
+    // workforce cannot staff the slice producers, so no carts ever run there. Refund three stalled chain buildings,
+    // house the refund in locked Settlers beside a fishing hut, and carts keep running. Demo-only, behind --cart-overlay.
+    private static void RunCartFixture(SimHost host)
+    {
+        try
+        {
+            if (!TryFindHall(host, out TileCoord hallOrigin, out int hallWidth, out int hallHeight))
+            {
+                GD.Print("[Evenmere] Life: no founders hall; skipping the cart fixture.");
+                return;
+            }
+
+            var centre = new TileCoord(hallOrigin.X + (hallWidth / 2), hallOrigin.Y + (hallHeight / 2));
+            BuildingTypeId roadType = host.Content.Buildings.IdOf("dirt_road");
+            var network = new HashSet<TileCoord>();
+            for (int y = hallOrigin.Y; y < hallOrigin.Y + hallHeight; y++)
+            {
+                for (int x = hallOrigin.X; x <= hallOrigin.X + hallWidth - 1; x++)
+                {
+                    network.Add(new TileCoord(x, y));
+                }
+            }
+
+            for (int y = centre.Y - 45; y <= centre.Y + 45; y++)
+            {
+                for (int x = centre.X - 45; x <= centre.X + 45; x++)
+                {
+                    if (host.Query.Roads.RoadAt(x, y) is not null)
+                    {
+                        network.Add(new TileCoord(x, y));
+                    }
+                }
+            }
+
+            int freed = 0;
+            foreach (BuildingInfo building in host.Query.Map.ActiveBuildings)
+            {
+                if (freed >= 3)
+                {
+                    break;
+                }
+
+                string name = host.Content.Buildings.NameOf(building.Type);
+                if (name is "windmill" or "bakery" or "weavers_cottage")
+                {
+                    host.Enqueue(new Demolish(building.Id));
+                    freed++;
+                }
+            }
+
+            host.RunTicksNow(1);
+
+            if (TryPlaceNear(host, "fishing_hut", centre, network, out EntityId fish, out TileCoord fishOrigin))
+            {
+                ConnectBuilding(host, fish, fishOrigin, roadType, network);
+            }
+
+            int houses = 0;
+            for (int n = 0; n < 8 && houses < 5; n++)
+            {
+                if (!TryPlaceNear(host, "settler_house", centre, network, out EntityId house, out TileCoord houseOrigin))
+                {
+                    break;
+                }
+
+                ConnectBuilding(host, house, houseOrigin, roadType, network);
+                if (!host.Query.Roads.IsInStorehouseReach(house))
+                {
+                    host.Enqueue(new Demolish(house));
+                    host.RunTicksNow(1);
+                    continue;
+                }
+
+                houses++;
+            }
+
+            host.RunTicksNow(480);
+            int locked = 0;
+            foreach (BuildingInfo building in host.Query.Map.ActiveBuildings)
+            {
+                if (host.Query.Population.TryGetHouse(building.Id, out HouseInfo house) && !house.UpgradeLocked)
+                {
+                    host.Enqueue(new SetHouseUpgradeLock(building.Id, true));
+                    locked++;
+                }
+            }
+
+            host.RunTicksNow(1);
+            GD.Print($"[Evenmere] Life: cart fixture: {houses} new house(s), {locked} locked, fishing hut {fish.Value}.");
+        }
+        catch (Exception ex)
+        {
+            GD.Print($"[Evenmere] Life: cart fixture failed: {ex.Message.ReplaceLineEndings(" ")}");
+        }
     }
 
     private bool RequireDemo()

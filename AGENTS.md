@@ -97,8 +97,7 @@ A task is done when all of these hold:
 - **Branches:** each task works in its own git worktree, created by the orchestrator.
 - **Implementing agents do not commit.** Leave your changes uncommitted in the worktree. The orchestrator reviews the full diff, sends feedback for you to address, and commits once the change is approved.
 - **Commit message** (written by the orchestrator): `<ID>: <imperative summary>` with a body explaining what and why, plus the attribution trailer the session specifies.
-- **Until GitHub CI exists** (task M1-29), the orchestrator verifies each task with `scripts/verify.sh`, commits, merges into `main` with `--no-ff`, and pushes.
-- **After M1-29,** every change lands through a pull request: CI must be green, and `main` is protected, so direct pushes are blocked.
+- **Every change lands through a pull request whose CI is green.** Direct pushes to `main` are blocked by branch protection. The orchestrator pushes the task branch, opens a PR titled `<ID>: <title>`, waits for the `verify` checks to pass, and squash-merges. Fill in `.github/pull_request_template.md` on every PR.
 - Never rewrite published history on `main`.
 
 ## Reporting back

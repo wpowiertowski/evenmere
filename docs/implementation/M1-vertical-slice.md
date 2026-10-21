@@ -62,7 +62,7 @@
 | M1-19 | Terrain and water rendering | game | M1-01, M1-17 | done |
 | M1-20 | Buildings, roads and sites (placeholder meshes) | game | M1-19, M1-06 | done |
 | M1-21 | Placement, road and demolish tools | game | M1-20 | done |
-| M1-22 | Carts and walkers | game | M1-20, M1-09 | todo |
+| M1-22 | Carts and walkers | game | M1-20, M1-09 | done |
 | M1-23 | Build menu | game | M1-18, M1-21 | done |
 | M1-24 | Inspector and explain tooltips | game | M1-18, M1-12 | done |
 | M1-25 | Research and civics panels (list view) | game | M1-18, M1-11 | done |
@@ -1105,6 +1105,8 @@
 **Findings to triage, collected during implementation:**
 
 - **Homespun is optional for the slice target (from M1-16).** On seed 1 the balance bot reaches 100 Villagers at 26.9 game minutes, against a target of 45, without ever producing homespun. Villager houses sit at 8 of 10 residents on fish, bread and the shrine alone. Decide whether homespun should matter more for Villagers, for example through its share of the needs or the occupancy rule, or whether the faster pace is fine.
+- **Settlers run out as houses advance (from M1-22).** In the `--demo-buildings` world, every house advances to Villagers, so no Settlers are left to staff the Settler-workforce producers, and the economy stalls. Players have to lock some houses to keep a Settler workforce. Decide whether the slice needs a clearer cue, through the advisors, the build menu or the tutorial, or a design change, such as Villagers also filling Settler jobs.
+- **Carts are hard to see at island zoom (from M1-22).** Carts are about 12 px at zoom 40 and blend into the dirt roads. Consider brighter cart bodies or a light outline before real art.
 - **Placeholder look of river banks (from M1-19).** The river water strip shows a thin lip above the bank where it meets the slope. Judge in play whether it needs work before real art.
 
 **Acceptance:** every gate checkbox is ticked or explicitly waived with a reason.

@@ -1,0 +1,51 @@
+# M1-29: nightly balance-bot check on the slice script (seeds 1-3).
+# A seed that misses its target does not fail the job (the miss is reported, exit 0);
+# an invalid script or a crash exits non-zero and fails it. M2 adds perf.
+name: nightly
+
+on:
+  schedule:
+    # 07:00 UTC daily: midnight in Portland, off-peak everywhere.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  balance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Build
+        run: dotnet build Evenmere.sln -c Release --nologo
+
+      - name: Run balance bot (seeds 1-3)
+        run: |
+          mkdir -p balance-reports
+          for seed in 1 2 3; do
+            dotnet run --project src/Evenmere.Tools -c Release --no-build -- balance --map starter --bot tools/bots/slice.json --seed "$seed" --max-minutes 90 > "balance-reports/balance-seed$seed.json" 2> "balance-reports/balance-seed$seed.txt"
+          done
+
+      - name: Upload balance reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: balance-reports
+          path: balance-reports

@@ -63,6 +63,14 @@ public sealed class LaunchOptionsTests
     }
 
     [Fact]
+    public void DebugLaunchOptions_ParsesLifeFlags()
+    {
+        var options = DebugLaunchOptions.Parse(["--cart-overlay", "--life-walkers=500"]);
+        options.CartOverlay.ShouldBeTrue();
+        options.LifeWalkers.ShouldBe(500);
+    }
+
+    [Fact]
     public void DebugLaunchOptions_BadBench_Throws()
     {
         Should.Throw<FormatException>(() => DebugLaunchOptions.Parse(["--bench-frames=many"]));
