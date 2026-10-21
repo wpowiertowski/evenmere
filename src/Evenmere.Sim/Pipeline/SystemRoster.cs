@@ -67,11 +67,11 @@ internal sealed class SystemRoster
 
         var exploration = new ExplorationSystem();
 
-        // M1-10 changes the next line to pass the needs state.
-        var needs = new NeedsSystem();
+        // M1-10 changes the next line to pass the needs state (and the population state, whose house records carry the need masks).
+        var needs = new NeedsSystem(world.Needs, world.Population, content);
 
         // M1-10 changes the next line to pass the population state.
-        var population = new PopulationSystem();
+        var population = new PopulationSystem(world.Population, content);
 
         var economy = new EconomySystem();
 
