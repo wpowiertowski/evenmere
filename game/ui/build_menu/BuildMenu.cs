@@ -6,9 +6,11 @@ using Evenmere.Game.Data.Visuals;
 using Evenmere.Game.Host;
 using Evenmere.Game.Ui.Common;
 using Evenmere.Game.Ui.Hud;
+using Evenmere.Game.Ui.Inspector;
 using Evenmere.Game.Ui.Progress;
 using Evenmere.Game.Ui.Tools;
 using Evenmere.Sim;
+using Evenmere.Sim.Queries.Types;
 using Godot;
 
 namespace Evenmere.Game.Ui.BuildMenu;
@@ -31,9 +33,9 @@ namespace Evenmere.Game.Ui.BuildMenu;
 /// keys never change the speed.
 /// </para>
 /// <para>
-/// Exclusivity: opening the menu hides the research and civics panels, and the menu closes itself if either panel
-/// becomes visible (for example through the HUD-adjacent toggles, which this task may not edit). There is no shared
-/// exclusivity hook between the panels, so this polling is the whole mechanism.
+/// Exclusivity: opening the menu hides the research, civics and inspector panels, and the menu closes itself if
+/// any of them becomes visible (for example through the HUD-adjacent toggles, which this task may not edit).
+/// There is no shared exclusivity hook between the panels, so this polling is the whole mechanism.
 /// </para>
 /// </remarks>
 public sealed partial class BuildMenu : PanelContainer
@@ -54,6 +56,7 @@ public sealed partial class BuildMenu : PanelContainer
     private ToolController? _tools;
     private Control? _research;
     private Control? _culture;
+    private InspectorPanel? _inspector;
     private ContentDb? _builtFor;
     private BuildMenuViewModel? _model;
     private UiStrings? _strings;
@@ -83,6 +86,10 @@ public sealed partial class BuildMenu : PanelContainer
     /// <summary>Gets or sets the path to the civics panel, hidden when this menu opens.</summary>
     [Export]
     public NodePath CulturePath { get; set; } = new("../CulturePanel");
+
+    /// <summary>Gets or sets the path to the inspector panel, closed when this menu opens and closing this menu when it opens.</summary>
+    [Export]
+    public NodePath InspectorPath { get; set; } = new("../InspectorPanel");
 
     /// <summary>Gets a value indicating whether the menu is open.</summary>
     public bool IsOpen => Visible;
@@ -125,6 +132,8 @@ public sealed partial class BuildMenu : PanelContainer
             _culture.Visible = false;
         }
 
+        _inspector?.Close();
+
         Visible = true;
         HudRoot.SpeedHotkeysSuspended = true;
         _model.MarkDirty();
@@ -148,6 +157,7 @@ public sealed partial class BuildMenu : PanelContainer
         _tools = GetNodeOrNull<ToolController>(ToolsPath);
         _research = GetNodeOrNull<Control>(ResearchPath);
         _culture = GetNodeOrNull<Control>(CulturePath);
+        _inspector = GetNodeOrNull<InspectorPanel>(InspectorPath);
         if (_host is null)
         {
             GD.PushError($"[Evenmere] build menu: no SimHost at '{HostPath}'; the menu stays empty.");
@@ -197,9 +207,9 @@ public sealed partial class BuildMenu : PanelContainer
 
         _model?.Advance(delta);
 
-        // The research and civics panels only know about each other; if either opened (their toggles, their
-        // hotkeys), the menu yields. This is the other half of the exclusivity with ShowMenu.
-        if (Visible && ((_research?.Visible ?? false) || (_culture?.Visible ?? false)))
+        // The research, civics and inspector panels only know about each other (and the inspector only about the
+        // trees); if any opened, the menu yields. This is the other half of the exclusivity with ShowMenu.
+        if (Visible && ((_research?.Visible ?? false) || (_culture?.Visible ?? false) || (_inspector?.Visible ?? false)))
         {
             HideMenu();
         }
@@ -882,9 +892,9 @@ public sealed partial class BuildMenu : PanelContainer
                         _navPhase = 3;
                         _navWait = 0;
                     }
-                    else if (step.StartsWith("target_direct=", StringComparison.Ordinal))
+                    else if (step == "inspect")
                     {
-                        TargetDirect(menu, step["target_direct=".Length..]);
+                        OpenInspector(menu);
                         _navPhase = 3;
                         _navWait = 0;
                     }
@@ -907,7 +917,7 @@ public sealed partial class BuildMenu : PanelContainer
                     }
                     else
                     {
-                        GD.Print($"[Evenmere] BuildMenuNav: unknown step '{step}'; want left, right, up, down, accept, dpad_left, dpad_right, dpad_up, dpad_down, pad_accept, back, focus_hud, research or focus_research=<tech>.");
+                        GD.Print($"[Evenmere] BuildMenuNav: unknown step '{step}'; want left, right, up, down, accept, dpad_left, dpad_right, dpad_up, dpad_down, pad_accept, back, focus_hud, research, menu, esc, inspect or focus_research=<tech>.");
                         _navPhase = 3;
                         _navWait = NavSettleFrames;
                     }
@@ -1038,8 +1048,11 @@ public sealed partial class BuildMenu : PanelContainer
             // tool_cancel together (one layer must answer; see the (d) proof).
             "focus_hud" => new InputEventJoypadButton { ButtonIndex = JoyButton.Back, Pressed = pressed },
             "back" => new InputEventJoypadButton { ButtonIndex = JoyButton.B, Pressed = pressed },
-            // The research toggle is an action: the same press a keyboard T makes.
+            // The research and menu toggles are actions: the same press a keyboard T or B makes.
             "research" => new InputEventAction { Action = "ui_research", Pressed = pressed },
+            "menu" => new InputEventAction { Action = InputActions.UiBuildMenu, Pressed = pressed },
+            // Escape lives on both ui_cancel and tool_cancel, like the physical key.
+            "esc" => new InputEventKey { Keycode = Key.Escape, Pressed = pressed },
             _ => null,
         };
 
@@ -1064,22 +1077,29 @@ public sealed partial class BuildMenu : PanelContainer
                 target = host.Content.Techs.NameOf(targetId);
             }
 
-            return $"menu={menu.Visible} tool={menu._tools?.Mode} speed={host?.Speed} target={target} tick={host?.CurrentTick}";
+            return $"menu={menu.Visible} tool={menu._tools?.Mode} speed={host?.Speed} inspector={menu._inspector?.Visible} target={target} tick={host?.CurrentTick}";
         }
 
-        // Enqueues a research target directly, to bisect a button-vs-sim failure: if this sets the target, the sim
-        // path is fine and the button never sent.
-        private static void TargetDirect(BuildMenu menu, string tech)
+        // Opens the inspector on the first building (the Founders' Hall), for the layer-order proof: the same
+        // Open(EntityId) the tools call on click.
+        private static void OpenInspector(BuildMenu menu)
         {
-            if (menu._host is not { IsRunning: true } host || !host.Content.Techs.TryGet(tech, out TechId techId))
+            if (menu._inspector is null || menu._host is not { IsRunning: true } host)
             {
-                GD.Print($"[Evenmere] BuildMenuNav: target_direct={tech} no world or tech.");
+                GD.Print("[Evenmere] BuildMenuNav: inspect with no inspector or world.");
                 return;
             }
 
-            host.Enqueue(new Evenmere.Sim.Systems.Research.Commands.SetResearchTarget(techId));
-            GD.Print($"[Evenmere] BuildMenuNav: target_direct={tech} enqueued.");
+            foreach (BuildingInfo building in host.Query.Map.Buildings)
+            {
+                menu._inspector.Open(building.Id);
+                GD.Print($"[Evenmere] BuildMenuNav: inspect building {building.Id.Value}.");
+                return;
+            }
+
+            GD.Print("[Evenmere] BuildMenuNav: inspect found no building.");
         }
+
         private static void FocusResearch(BuildMenu menu, string tech)
         {
             if (menu._research is null || menu._host is not { IsRunning: true } host)

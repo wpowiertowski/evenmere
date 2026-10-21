@@ -13,6 +13,8 @@ namespace Evenmere.Game.Ui.Menus;
 /// Menu. The simulation pauses while it is open and resumes at the previous speed on resume. Saving and loading go
 /// through <see cref="SaveService"/>, the slot list comes from <see cref="SaveSlots"/>, and an autosave runs every
 /// <see cref="MenuText.AutosaveDays"/> in-game days into the single <c>autosave</c> slot, between ticks.
+/// Main.tscn keeps this node near the top so it receives unhandled <c>tool_cancel</c> last, after every tool and
+/// panel; its CanvasLayer still draws it on top.
 /// </summary>
 public sealed partial class PauseMenu : Control
 {

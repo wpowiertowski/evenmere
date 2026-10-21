@@ -30,6 +30,8 @@ script = ExtResource("1_main")
 [node name="SimHost" type="Node" parent="."]
 script = ExtResource("2_host")
 
+[node name="PauseMenu" parent="." instance=ExtResource("14_pause")]
+
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_sky")
 
@@ -73,5 +75,3 @@ script = ExtResource("16_buildmenu")
 
 [node name="NotificationFeed" type="Control" parent="."]
 script = ExtResource("15_feed")
-
-[node name="PauseMenu" parent="." instance=ExtResource("14_pause")]
