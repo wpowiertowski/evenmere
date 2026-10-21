@@ -88,8 +88,8 @@ internal sealed class SystemRoster
         // M1-15 changes the next line to pass the advisors state.
         var advisors = new AdvisorsSystem();
 
-        // M1-12 changes the next line to pass the statistics state.
-        var statistics = new StatisticsSystem();
+        // M1-12: the statistics system samples the daily history into the statistics state.
+        var statistics = new StatisticsSystem(world.Statistics, content);
 
         // The write services. Each is a throwing stand-in until the task named beside it replaces its line(s).
         Services = new SimServices
@@ -168,8 +168,8 @@ internal sealed class SystemRoster
             Statistics = statistics.Queries,
             Placement = new PlacementQueries(buildingPlacement, roadPlacement),
 
-            // M1-12: the explain service.
-            Explain = new ExplainQueries(),
+            // M1-12: the explain service answers the good, building and house queries.
+            Explain = new ExplainQueries(content, () => Queries ?? throw new InvalidOperationException("The explain service was used before the roster finished building."), () => world.Clock),
         };
     }
 
