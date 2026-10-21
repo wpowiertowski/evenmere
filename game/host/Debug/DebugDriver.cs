@@ -3,6 +3,7 @@ using Evenmere.Core.Ids;
 using Evenmere.Game.Host;
 using Evenmere.Game.Rendering.Camera;
 using Evenmere.Game.Rendering.Terrain;
+using Evenmere.Game.Ui.Tools;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
@@ -157,6 +158,10 @@ internal sealed class DebugDriver
                 rig.FocusOnTile(new Vector2I(16, 74));
                 rig.SetZoom(42f, true);
                 break;
+            case "hall":
+                rig.FocusOnTile(new Vector2I(34, 97));
+                rig.SetZoom(18f, true);
+                break;
             default:
                 GD.PushWarning($"[Evenmere] unknown --camera-view '{_options.CameraView}'; want 'overview', 'landing', 'slopes' or 'mouth'.");
                 break;
@@ -166,6 +171,8 @@ internal sealed class DebugDriver
         {
             LayDemoRoad(host);
         }
+
+        ApplyToolOptions(host);
     }
 
     /// <summary>Runs the per-frame debug paths: the picking check, then the frame bench.</summary>
@@ -874,5 +881,324 @@ internal sealed class DebugDriver
         {
             GD.Print($"[Evenmere] Demo: debug road failed: {ex.Message.ReplaceLineEndings(" ")}");
         }
+    }
+
+    // Starts the placement tools for the M1-21 screenshots: `--tool-build=ID`, `--tool-road=ID` or `--tool-demolish`
+    // picks the tool, `--tool-tile` / `--tool-anchor` pin the hover and the drag, and `--tool-spot` finds a tile by
+    // itself (valid, invalid or warning). `--tool-invalid` forces a rejection for the toast shot and `--tool-gamepad`
+    // shows the virtual cursor ring with no pad attached.
+    private void ApplyToolOptions(SimHost host)
+    {
+        bool wantsTool = !string.IsNullOrEmpty(_options.ToolBuild) || !string.IsNullOrEmpty(_options.ToolRoad)
+            || _options.ToolDemolish || !string.IsNullOrEmpty(_options.ToolSpot) || _options.ToolInvalid || _options.ToolGamepad;
+        if (!wantsTool && string.IsNullOrEmpty(_options.ToolTile) && string.IsNullOrEmpty(_options.ToolAnchor))
+        {
+            return;
+        }
+
+        if (host.GetTree().CurrentScene?.GetNodeOrNull<ToolController>("Tools") is not { } tools)
+        {
+            GD.Print("[Evenmere] Tools: no Tools node; skipping --tool-* flags.");
+            return;
+        }
+
+        BuildingTypeId buildType = DefaultDebugBuildType(host);
+        bool roadMode = false;
+        if (!string.IsNullOrEmpty(_options.ToolBuild) && TryBuildingId(host, _options.ToolBuild, out BuildingTypeId build))
+        {
+            tools.BeginBuild(build);
+            buildType = build;
+        }
+        else if (!string.IsNullOrEmpty(_options.ToolRoad) && TryBuildingId(host, _options.ToolRoad, out BuildingTypeId road))
+        {
+            tools.BeginRoad(road);
+            roadMode = true;
+        }
+        else if (_options.ToolDemolish || (!string.IsNullOrEmpty(_options.ToolSpot) && string.IsNullOrEmpty(_options.ToolBuild) && string.IsNullOrEmpty(_options.ToolRoad)))
+        {
+            tools.BeginDemolish();
+        }
+
+        if (!string.IsNullOrEmpty(_options.ToolSpot))
+        {
+            ApplyToolSpot(host, tools, buildType, roadMode);
+        }
+        else
+        {
+            if (TryParseTile(_options.ToolTile, out TileCoord tile))
+            {
+                tools.DebugPinHover(tile);
+                GD.Print($"[Evenmere] Tools: pinned hover ({tile.X}, {tile.Y}).");
+            }
+
+            if (roadMode && TryParseTile(_options.ToolAnchor, out TileCoord anchor) && TryParseTile(_options.ToolTile, out TileCoord current))
+            {
+                tools.DebugSetRoadDrag(anchor, current);
+                GD.Print($"[Evenmere] Tools: road drag ({anchor.X}, {anchor.Y})..({current.X}, {current.Y}).");
+            }
+        }
+
+        if (_options.ToolInvalid)
+        {
+            tools.DebugDemoReject();
+        }
+
+        if (_options.ToolGamepad)
+        {
+            VirtualCursor? cursor = host.GetTree().CurrentScene?.GetNodeOrNull<VirtualCursor>("CameraRig/VirtualCursor");
+            if (cursor is null)
+            {
+                GD.Print("[Evenmere] Tools: no virtual cursor; skipping --tool-gamepad.");
+            }
+            else
+            {
+                cursor.SetActive(true);
+                GD.Print(cursor.TryGetTile(out Vector2I cursorTile)
+                    ? $"[Evenmere] Tools: gamepad cursor at ({cursorTile.X}, {cursorTile.Y})."
+                    : "[Evenmere] Tools: gamepad cursor shown but off the map.");
+            }
+        }
+    }
+
+    // Pins the hover (and the road drag) from a want instead of coordinates: with the demolish tool it pins the
+    // Founders' Hall, whose hover already says it is protected; with the road tool it finds a draggable L path.
+    private void ApplyToolSpot(SimHost host, ToolController tools, BuildingTypeId buildType, bool roadMode)
+    {
+        if (tools.Mode == ToolMode.Demolish)
+        {
+            if (TryFindHall(host, out TileCoord origin, out _, out _))
+            {
+                tools.DebugPinHover(origin);
+                GD.Print($"[Evenmere] Tools: pinned demolish hover on the hall ({origin.X}, {origin.Y}).");
+            }
+
+            return;
+        }
+
+        if (roadMode)
+        {
+            if (FindRoadSpot(host, out TileCoord anchor, out TileCoord current))
+            {
+                tools.DebugSetRoadDrag(anchor, current);
+                tools.DebugPinHover(current);
+                GD.Print($"[Evenmere] Tools: road drag ({anchor.X}, {anchor.Y})..({current.X}, {current.Y}).");
+            }
+            else
+            {
+                GD.Print("[Evenmere] Tools: no draggable road spot; pass --tool-anchor and --tool-tile instead.");
+            }
+
+            return;
+        }
+
+        if (FindBuildSpot(host, buildType, _options.ToolSpot, out TileCoord tile))
+        {
+            tools.DebugPinHover(tile);
+            GD.Print($"[Evenmere] Tools: pinned {_options.ToolSpot} spot ({tile.X}, {tile.Y}).");
+        }
+        else
+        {
+            GD.Print($"[Evenmere] Tools: no {_options.ToolSpot} spot; pass --tool-tile instead.");
+        }
+    }
+
+    // The first buildable the island lists, for the invalid-placement toast when no build tool is running.
+    private static BuildingTypeId DefaultDebugBuildType(SimHost host)
+    {
+        foreach (string name in host.Content.Buildings.Names)
+        {
+            BuildingTypeId id = host.Content.Buildings.IdOf(name);
+            if (!host.Content.Buildings.Get(id).RoadCost.HasValue)
+            {
+                return id;
+            }
+        }
+
+        return host.Content.Buildings.IdOf(host.Content.Buildings.Names[0]);
+    }
+
+    private static bool TryBuildingId(SimHost host, string name, out BuildingTypeId id)
+    {
+        try
+        {
+            id = host.Content.Buildings.IdOf(name);
+            return true;
+        }
+        catch (Exception ex) when (ex is KeyNotFoundException or ArgumentException)
+        {
+            GD.Print($"[Evenmere] Tools: unknown building '{name}'; skipping the tool flag.");
+            id = default;
+            return false;
+        }
+    }
+
+    private static bool TryParseTile(string text, out TileCoord tile)
+    {
+        tile = default;
+        if (string.IsNullOrEmpty(text))
+        {
+            return false;
+        }
+
+        string[] parts = text.Split(',');
+        if (parts.Length == 2 && int.TryParse(parts[0], out int x) && int.TryParse(parts[1], out int y))
+        {
+            tile = new TileCoord(x, y);
+            return true;
+        }
+
+        GD.Print($"[Evenmere] Tools: ignoring malformed tile '{text}'; want 'x,y'.");
+        return false;
+    }
+
+    // Spirals out from the hall for the first tile that matches the want: placeable with no warnings (valid),
+    // refused (refused), or placeable with a warning, preferring no road access (warning). An invalid search prefers
+    // open ground so the red ghost reads, falling back to an occupied tile. A valid search that finds no warning-free
+    // tile relaxes to the nearest placeable tile. A forest search takes the first placeable tile on forest terrain,
+    // for the ghost-on-forest shot. Rotations are tried in order, so the run frames the same tile every time.
+    private static bool FindBuildSpot(SimHost host, BuildingTypeId type, string want, out TileCoord tile)
+    {
+        tile = default;
+        TileCoord centre = FindHallCentre(host);
+        TileCoord fallback = default;
+        bool hasFallback = false;
+        for (int r = 0; r <= 64; r++)
+        {
+            for (int y = centre.Y - r; y <= centre.Y + r; y++)
+            {
+                for (int x = centre.X - r; x <= centre.X + r; x++)
+                {
+                    if (Math.Max(Math.Abs(x - centre.X), Math.Abs(y - centre.Y)) != r)
+                    {
+                        continue;
+                    }
+
+                    for (int rot = 0; rot < 4; rot++)
+                    {
+                        var rotation = (Rotation)rot;
+                        PlacementResult result = host.Query.Placement.Validate(type, x, y, rotation);
+                        bool match = want switch
+                        {
+                            "valid" => result.CanPlace && result.Warnings.IsEmpty,
+                            "invalid" => !result.CanPlace && host.Query.Map.BuildingAt(x, y).IsNone,
+                            "warning" => result.CanPlace && !result.Warnings.IsEmpty && result.Has(PlacementIssue.NoRoadAccess),
+                            "forest" => result.CanPlace && result.Warnings.IsEmpty && IsForest(host, x, y),
+                            _ => false,
+                        };
+                        if (match)
+                        {
+                            tile = new TileCoord(x, y);
+                            return true;
+                        }
+
+                        if (!hasFallback)
+                        {
+                            if (result.CanPlace && !result.Warnings.IsEmpty)
+                            {
+                                fallback = new TileCoord(x, y);
+                                hasFallback = true;
+                            }
+                            else if (want == "invalid" && !result.CanPlace)
+                            {
+                                fallback = new TileCoord(x, y);
+                                hasFallback = true;
+                            }
+                            else if (want == "forest" && result.CanPlace && IsForest(host, x, y))
+                            {
+                                fallback = new TileCoord(x, y);
+                                hasFallback = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // A warning anywhere beats no warning, and an occupied tile beats no red ghost: a valid search relaxes to
+        // the nearest warned tile, a warning search keeps the first warned tile it saw, and an invalid search keeps
+        // the first refused tile.
+        if (hasFallback && want is "valid" or "warning" or "invalid" or "forest")
+        {
+            tile = fallback;
+            return true;
+        }
+
+        return false;
+    }
+
+    // The first start near the hall whose east-six, south-four L path validates as road. It first tries a fixed
+    // patch south of the hall, which the hall mesh never occludes from the camera, then spirals out.
+    private static bool FindRoadSpot(SimHost host, out TileCoord anchor, out TileCoord current)
+    {
+        anchor = default;
+        current = default;
+        BuildingTypeId road = host.Content.Buildings.IdOf("dirt_road");
+        TileCoord centre = FindHallCentre(host);
+        var path = new TileCoord[16];
+        if (TryFindHall(host, out TileCoord hallOrigin, out _, out _))
+        {
+            var south = new TileCoord(hallOrigin.X - 2, hallOrigin.Y + 4);
+            var southEnd = new TileCoord(south.X + 6, south.Y + 4);
+            if (southEnd.IsInside(host.Query.Map.Width, host.Query.Map.Height)
+                && ToolPaths.BuildLPath(south, southEnd, false, path.AsSpan()) == 11
+                && host.Query.Placement.ValidateRoad(path.AsSpan(0, 11), road).CanPlace)
+            {
+                anchor = south;
+                current = southEnd;
+                return true;
+            }
+        }
+
+        for (int r = 4; r <= 64; r++)
+        {
+            for (int y = centre.Y - r; y <= centre.Y + r; y++)
+            {
+                for (int x = centre.X - r; x <= centre.X + r; x++)
+                {
+                    if (Math.Max(Math.Abs(x - centre.X), Math.Abs(y - centre.Y)) != r)
+                    {
+                        continue;
+                    }
+
+                    var start = new TileCoord(x, y);
+                    var end = new TileCoord(x + 6, y + 4);
+                    if (!end.IsInside(host.Query.Map.Width, host.Query.Map.Height))
+                    {
+                        continue;
+                    }
+
+                    int count = ToolPaths.BuildLPath(start, end, false, path.AsSpan());
+                    if (count == 11 && host.Query.Placement.ValidateRoad(path.AsSpan(0, count), road).CanPlace)
+                    {
+                        anchor = start;
+                        current = end;
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsForest(SimHost host, int x, int y)
+    {
+        if (x < 0 || y < 0 || x >= host.Query.Map.Width || y >= host.Query.Map.Height)
+        {
+            return false;
+        }
+
+        TileInfo tile = host.Query.Map.GetTile(x, y);
+        return host.Content.Terrains.NameOf(tile.Terrain) == "forest";
+    }
+
+    private static TileCoord FindHallCentre(SimHost host)
+    {
+        if (TryFindHall(host, out TileCoord origin, out int width, out int height))
+        {
+            return new TileCoord(origin.X + (width / 2), origin.Y + (height / 2));
+        }
+
+        return new TileCoord(host.Query.Map.Width / 2, host.Query.Map.Height / 2);
     }
 }
