@@ -1,0 +1,13 @@
+{
+  "comment": "Load colours for the goods carted around the island (M1-22). Keys are content good IDs; values are sRGB #RRGGBB fills for the load block on each cart. A good with no entry falls back to a neutral sack brown, with one warning per good.",
+  "goods": {
+    "wood": { "colour": "#8A5A2B" },
+    "timber": { "colour": "#C89A5A" },
+    "fish": { "colour": "#6FA8B8" },
+    "wool": { "colour": "#D8D0C0" },
+    "homespun": { "colour": "#C4B49A" },
+    "grain": { "colour": "#D3A944" },
+    "flour": { "colour": "#EDE4D0" },
+    "bread": { "colour": "#A9603F" }
+  }
+}

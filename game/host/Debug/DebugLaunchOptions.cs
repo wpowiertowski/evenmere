@@ -52,6 +52,15 @@ namespace Evenmere.Game.Host.Debug;
 /// connecting them (through <c>SimHost.Enqueue</c>), pause one house next to an active one, and leave the last
 /// buildings as sites, for the M1-20 screenshots. The world is paused afterwards so every shot is deterministic.
 /// </param>
+/// <param name="CartOverlay">
+/// <c>--cart-overlay</c>: log each transport job's predicted arrival tick (<c>PhaseEndTick</c>) and, on
+/// <c>TransportJobCompleted</c>, the visual arrival tick against the event tick, for the M1-22 evidence. The world is
+/// left running (unpaused) so jobs keep flowing past the demo setup.
+/// </param>
+/// <param name="LifeWalkers">
+/// <c>--life-walkers=N</c>: spawn N synthetic walkers spread over the existing buildings for the M1-22 walker bench,
+/// ignoring the residents rule but using the same routes, caching and MultiMesh path. Zero keeps the rule.
+/// </param>
 /// <param name="ToolBuild">
 /// <c>--tool-build=ID</c>: start the M1-21 build tool with the named building type, for the tool screenshots.
 /// Empty starts no tool.
@@ -108,7 +117,9 @@ internal sealed record DebugLaunchOptions(
     string ToolAnchor,
     string ToolSpot,
     bool ToolInvalid,
-    bool ToolGamepad)
+    bool ToolGamepad,
+    bool CartOverlay,
+    int LifeWalkers)
 {
     private const string BenchFramesPrefix = "--bench-frames";
     private const string CameraViewPrefix = "--camera-view=";
@@ -129,9 +140,11 @@ internal sealed record DebugLaunchOptions(
     private const string LoadSavePrefix = "--load-save=";
     private const string DemoNotificationsFlag = "--demo-notifications";
     private const string DemoFeedPrefix = "--demo-feed=";
+    private const string CartOverlayFlag = "--cart-overlay";
+    private const string LifeWalkersPrefix = "--life-walkers=";
 
     /// <summary>The options for a normal run: no bench, default camera, no checks.</summary>
-    public static DebugLaunchOptions None => new(string.Empty, false, string.Empty, null, string.Empty, false, false, string.Empty, false, false, string.Empty, string.Empty, string.Empty, false, string.Empty, string.Empty, string.Empty, false, false);
+    public static DebugLaunchOptions None => new(string.Empty, false, string.Empty, null, string.Empty, false, false, string.Empty, false, false, string.Empty, string.Empty, string.Empty, false, string.Empty, string.Empty, string.Empty, false, false, false, 0);
 
     /// <summary>Reads the debug options from the user arguments.</summary>
     /// <param name="userArgs">The user arguments, as <c>OS.GetCmdlineUserArgs()</c> returns them.</param>
@@ -158,6 +171,8 @@ internal sealed record DebugLaunchOptions(
         string toolSpot = string.Empty;
         bool toolInvalid = false;
         bool toolGamepad = false;
+        bool cartOverlay = false;
+        int lifeWalkers = 0;
 
         foreach (string arg in userArgs)
         {
@@ -204,6 +219,7 @@ internal sealed record DebugLaunchOptions(
             {
                 demoBuildings = true;
             }
+
             else if (arg.StartsWith(DemoExplainPrefix, StringComparison.Ordinal))
             {
                 demoExplain = arg == DemoExplainPrefix ? "bakery" : arg.StartsWith(DemoExplainPrefix + "=", StringComparison.Ordinal) ? arg[(DemoExplainPrefix.Length + 1)..] : string.Empty;
@@ -244,8 +260,19 @@ internal sealed record DebugLaunchOptions(
             {
                 toolGamepad = true;
             }
+            else if (arg == CartOverlayFlag)
+            {
+                cartOverlay = true;
+            }
+            else if (arg.StartsWith(LifeWalkersPrefix, StringComparison.Ordinal))
+            {
+                string text = arg[LifeWalkersPrefix.Length..];
+                lifeWalkers = int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out int parsed)
+                    ? parsed
+                    : throw new FormatException($"--life-walkers needs a non-negative whole number, not '{text}'.");
+            }
         }
 
-        return new DebugLaunchOptions(loadSave, demoNotifications, demoFeed, benchFrames, cameraView, staticCamera, showGrid, checkPick, demoDirty, demoBuildings, demoExplain, toolBuild, toolRoad, toolDemolish, toolTile, toolAnchor, toolSpot, toolInvalid, toolGamepad);
+        return new DebugLaunchOptions(loadSave, demoNotifications, demoFeed, benchFrames, cameraView, staticCamera, showGrid, checkPick, demoDirty, demoBuildings, demoExplain, toolBuild, toolRoad, toolDemolish, toolTile, toolAnchor, toolSpot, toolInvalid, toolGamepad, cartOverlay, lifeWalkers);
     }
 }
