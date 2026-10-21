@@ -282,6 +282,12 @@ public sealed partial class PauseMenu : Control
         }
 
         _menuButton.Visible = !_inMenu && _host is { IsRunning: true } && !_open;
+        if (_menuButton.Text == string.Empty && _host is { IsRunning: true })
+        {
+            // The menu texts are set on open; label the corner button from the first running frame instead,
+            // so it never shows as an empty panel while the menu was never opened.
+            RefreshTexts();
+        }
     }
 
     private void Open()
