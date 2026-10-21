@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/visuals/terrain/TerrainPalette.cs" id="1_palette"]
+
+[resource]
+script = ExtResource("1_palette")
+Colors = {
+"beach": Color(0.85, 0.78, 0.58, 1),
+"deep_water": Color(0.1, 0.23, 0.38, 1),
+"fen": Color(0.55, 0.62, 0.4, 1),
+"forest": Color(0.24, 0.45, 0.26, 1),
+"highlands": Color(0.5, 0.47, 0.4, 1),
+"hills": Color(0.55, 0.52, 0.35, 1),
+"marsh": Color(0.35, 0.42, 0.3, 1),
+"peaks": Color(0.75, 0.74, 0.72, 1),
+"plains": Color(0.45, 0.63, 0.33, 1),
+"reef": Color(0.25, 0.6, 0.58, 1),
+"river": Color(0.4, 0.38, 0.28, 1),
+"sea": Color(0.2, 0.42, 0.5, 1)
+}
+Fallback = Color(0.7, 0.3, 0.7, 1)
