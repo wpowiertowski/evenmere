@@ -69,7 +69,7 @@
 | M1-26 | Notification feed | game | M1-18, M1-15 | done |
 | M1-27 | Main menu, pause menu and save/load UI | game | M1-14, M1-18 | done |
 | M1-28 | Godot smoke v2 and view boundary check | game | M1-13, M1-20, M1-27 | done |
-| M1-29 | GitHub CI and PR flow | infra | M1-28, M1-16 | todo |
+| M1-29 | GitHub CI and PR flow | infra | M1-28, M1-16 | done |
 | M1-30 | Vertical-slice playtest and gate review | human | M1-29 | todo |
 
 ---
@@ -1083,6 +1083,15 @@
 - A test PR with a trivial docs change shows both checks green.
 - A PR with a deliberately failing test is blocked.
 - Branch protection is confirmed, by a screenshot or an API response.
+
+**Status note (M1-29 landed in #1):**
+
+- `ci.yml`, `nightly.yml`, the PR template and the docs updates are in place.
+- **Acceptance:**
+  - PR #1 showed both `verify` checks green. The Godot smoke hash was identical on Linux x64 and macOS arm64 (`7c383b1f0a148158`), which also confirms cross-platform determinism.
+  - Draft PR #2, with a deliberately failing test, went red on both checks and was closed unmerged.
+  - PRs #3 and #4 landed M1-22 and M1-23 through the new flow.
+- **Branch protection is not applied.** The repository is private on the free plan, and GitHub answers the protection API with "Upgrade to GitHub Pro or make this repository public". Until the developer chooses an option (GitHub Pro, a public repository, or keeping the PR rule as a convention only), "every change lands through a green PR" is a rule in AGENTS.md, not enforced by GitHub. When protection becomes available, require a PR, require `verify (ubuntu-latest)` and `verify (macos-latest)`, block force pushes, and allow squash merges only.
 
 **Out of scope:** release and export pipelines (M4-09, M4-10).
 
