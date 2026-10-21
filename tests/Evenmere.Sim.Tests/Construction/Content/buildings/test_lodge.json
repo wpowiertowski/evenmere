@@ -1,0 +1,9 @@
+{
+  "id": "test_lodge",
+  "category": "infrastructure",
+  "era": 1,
+  "footprint": [2, 2],
+  "cost": { "timber": 3.001, "wood": 1 },
+  "buildDays": 1,
+  "start": true
+}

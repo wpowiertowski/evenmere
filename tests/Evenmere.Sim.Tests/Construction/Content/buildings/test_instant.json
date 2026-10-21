@@ -1,0 +1,10 @@
+{
+  "id": "test_instant",
+  "category": "infrastructure",
+  "era": 1,
+  "footprint": [1, 1],
+  "placement": { "roadAccess": false },
+  "cost": { "timber": 1 },
+  "buildDays": 0,
+  "start": true
+}

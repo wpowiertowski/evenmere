@@ -1,0 +1,13 @@
+{
+  "id": "test_quarry",
+  "category": "infrastructure",
+  "era": 1,
+  "footprint": [2, 2],
+  "placement": {
+    "deposit": "stone",
+    "areaYield": { "kind": "footprint_deposit" }
+  },
+  "cost": { "timber": 2 },
+  "buildDays": 1,
+  "start": true
+}
