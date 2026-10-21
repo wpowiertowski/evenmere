@@ -5,9 +5,12 @@ using Evenmere.Game.Rendering.Camera;
 using Evenmere.Game.Rendering.Terrain;
 using Evenmere.Game.Ui.Tools;
 using Evenmere.Sim.Queries.Types;
+using Evenmere.Sim.Systems.Advisors;
 using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
+using Evenmere.Sim.Persistence;
+using Evenmere.Sim.Systems.Advisors.Commands;
 using Evenmere.Sim.Systems.Research.Commands;
 using Evenmere.Sim.Systems.Roads.Commands;
 using Godot;
@@ -85,6 +88,16 @@ internal sealed class DebugDriver
         _rig = rig;
         _terrain = terrain;
         _host = host;
+
+        if (!string.IsNullOrEmpty(_options.LoadSave))
+        {
+            LoadDebugSave(host, _options.LoadSave);
+        }
+
+        if (_options.DemoNotifications)
+        {
+            RunDemoNotifications(host);
+        }
 
         if (_options.DemoBuildings)
         {
@@ -179,6 +192,7 @@ internal sealed class DebugDriver
         }
 
         ApplyToolOptions(host);
+        ApplyFeedOptions(host);
     }
 
     /// <summary>Runs the per-frame debug paths: the picking check, then the frame bench.</summary>
@@ -1378,5 +1392,209 @@ internal sealed class DebugDriver
         }
 
         return new TileCoord(host.Query.Map.Width / 2, host.Query.Map.Height / 2);
+    }
+
+    // Loads a save in-game for the evidence runs (M1-26): --load-save=tests/fixtures/saves/v1-slice.evsave.
+    // A relative path is tried as given, then against the ancestors of the working directory, so the flag works
+    // whether Godot runs from game/ or from the repo root.
+    private static void LoadDebugSave(SimHost host, string path)
+    {
+        try
+        {
+            string resolved = ResolveDebugPath(path);
+            SaveReport report = host.LoadGame(resolved);
+            GD.Print($"[Evenmere] Debug: loaded save '{resolved}' hash={host.ComputeStateHash():x16} remapped={report.Remapped.Count} ruins={report.Ruins.Count} dropped={report.Dropped.Count}.");
+        }
+        catch (Exception ex)
+        {
+            GD.Print($"[Evenmere] Debug: --load-save failed: {ex.Message.ReplaceLineEndings(" ")}");
+        }
+    }
+
+    private static string ResolveDebugPath(string path)
+    {
+        if (Path.IsPathRooted(path) || File.Exists(path))
+        {
+            return path;
+        }
+
+        string? dir = Directory.GetCurrentDirectory();
+        for (int i = 0; i < 4 && dir is not null; i++)
+        {
+            string candidate = Path.Combine(dir, path);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            dir = Directory.GetParent(dir)?.FullName;
+        }
+
+        return path;
+    }
+
+    // The M1-26 evidence setup: three houses (one batched completion toast) plus a sawpit with no road access
+    // (a NoRoadAccess advice pin), then the oldest advice dismissed for the dismissal evidence. The world is paused
+    // afterwards so the toasts stay up for the screenshots.
+    private static void RunDemoNotifications(SimHost host)
+    {
+        try
+        {
+            TileCoord centre = FindHallCentre(host);
+            BuildingTypeId road = host.Content.Buildings.IdOf("dirt_road");
+            var network = new HashSet<TileCoord>();
+            if (TryFindHall(host, out TileCoord hallOrigin, out int hallWidth, out int hallHeight))
+            {
+                for (int y = hallOrigin.Y; y < hallOrigin.Y + hallHeight; y++)
+                {
+                    for (int x = hallOrigin.X; x < hallOrigin.X + hallWidth; x++)
+                    {
+                        network.Add(new TileCoord(x, y));
+                    }
+                }
+            }
+
+            // The houses join the road network (sites only build in storehouse reach); the sawpit stays
+            // road-less on purpose, so it raises advice.
+            var houses = new List<EntityId>();
+            for (int i = 0; i < 3; i++)
+            {
+                if (TryPlaceNear(host, "settler_house", centre, network, out EntityId id, out TileCoord origin))
+                {
+                    houses.Add(id);
+                    ConnectBuilding(host, id, origin, road, network);
+                }
+            }
+
+            int placed = houses.Count;
+
+            // The sawpit goes far from the hall's roads on purpose: without road access it raises advice.
+            TileCoord far = new(centre.X, centre.Y);
+            BuildingTypeId sawpit = host.Content.Buildings.IdOf("sawpit");
+            bool sawpitPlaced = false;
+            for (int r = 20; r <= 60 && !sawpitPlaced; r++)
+            {
+                for (int y = centre.Y - r; y <= centre.Y + r && !sawpitPlaced; y++)
+                {
+                    for (int x = centre.X - r; x <= centre.X + r && !sawpitPlaced; x++)
+                    {
+                        if (Math.Max(Math.Abs(x - centre.X), Math.Abs(y - centre.Y)) != r)
+                        {
+                            continue;
+                        }
+
+                        if (host.Query.Placement.Validate(sawpit, x, y, Rotation.Deg0).CanPlace)
+                        {
+                            host.Enqueue(new PlaceBuilding(sawpit, x, y, Rotation.Deg0));
+                            host.RunTicksNow(1);
+                            far = new TileCoord(x, y);
+                            sawpitPlaced = true;
+                            GD.Print($"[Evenmere] Debug: placed road-less sawpit at ({x}, {y}) for advice evidence.");
+                        }
+                    }
+                }
+            }
+
+            // Run days until the new sites finish (same-day completions batch into one toast), then two more days
+            // so the advisors notice the road-less sawpit.
+            int waited = 0;
+            while (waited < 20 && CountSites(host) > 0)
+            {
+                host.RunTicksNow(120);
+                waited++;
+            }
+
+            foreach (BuildingInfo building in host.Query.Map.Buildings)
+            {
+                if (building.State == BuildingState.Site)
+                {
+                    string stall = host.Query.Construction.TryGetSite(building.Id, out SiteInfo site) ? site.Stall.ToString() : "unknown";
+                    GD.Print($"[Evenmere] Debug: leftover site {host.Content.NameOf(building.Type)} {building.Id.Value} stall={stall} reach={host.Query.Roads.IsInStorehouseReach(building.Id)}.");
+                }
+            }
+
+            host.RunTicksNow(2 * 120);
+
+            int active = 0;
+            int oldest = -1;
+            foreach (AdviceView advice in host.Query.Advisors.Active())
+            {
+                active++;
+                if (oldest < 0 || advice.Id < oldest)
+                {
+                    oldest = advice.Id;
+                }
+            }
+
+            GD.Print($"[Evenmere] Debug: --demo-notifications placed {placed} house(s) sawpit={sawpitPlaced} after {waited} day(s); advice active={active}.");
+
+            if (oldest >= 0)
+            {
+                host.Enqueue(new DismissAdvice(oldest));
+                host.RunTicksNow(1);
+                int left = 0;
+                foreach (AdviceView _ in host.Query.Advisors.Active())
+                {
+                    left++;
+                }
+
+                GD.Print($"[Evenmere] Debug: DismissAdvice {oldest} enqueued; note gone, {left} advice note(s) left.");
+            }
+
+            host.Speed = SimSpeed.Paused;
+            GD.Print($"[Evenmere] Debug: --demo-notifications ready; hash={host.ComputeStateHash():x16}.");
+        }
+        catch (Exception ex)
+        {
+            GD.Print($"[Evenmere] Debug: --demo-notifications failed: {ex.Message.ReplaceLineEndings(" ")}");
+        }
+    }
+
+    private static int CountSites(SimHost host)
+    {
+        int sites = 0;
+        foreach (BuildingInfo building in host.Query.Map.Buildings)
+        {
+            if (building.State == BuildingState.Site)
+            {
+                sites++;
+            }
+        }
+
+        return sites;
+    }
+
+    // Scripts the feed for the evidence screenshots: history:<filter> opens the history with a filter applied,
+    // and click focuses the newest building notification (logging the inspector open).
+    private void ApplyFeedOptions(SimHost host)
+    {
+        if (string.IsNullOrEmpty(_options.DemoFeed))
+        {
+            return;
+        }
+
+        if (host.GetTree().CurrentScene?.GetNodeOrNull<Node>("NotificationFeed") is not { } feed)
+        {
+            GD.Print("[Evenmere] Debug: no NotificationFeed node; skipping --demo-feed.");
+            return;
+        }
+
+        string mode = _options.DemoFeed;
+        if (mode == "click")
+        {
+            feed.GetType().GetMethod("DebugClickNewestBuilding")?.Invoke(feed, []);
+        }
+        else if (mode == "collapse")
+        {
+            feed.GetType().GetMethod("DebugSetAdviceCollapsed")?.Invoke(feed, [true]);
+        }
+        else if (mode.StartsWith("history:", StringComparison.Ordinal))
+        {
+            feed.GetType().GetMethod("DebugShowHistory")?.Invoke(feed, [mode["history:".Length..]]);
+        }
+        else
+        {
+            GD.Print($"[Evenmere] Debug: ignoring malformed --demo-feed '{mode}'; want 'history:<filter>', 'click' or 'collapse'.");
+        }
     }
 }
