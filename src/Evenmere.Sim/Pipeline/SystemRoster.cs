@@ -114,7 +114,15 @@ internal sealed class SystemRoster
             WorkforceSupply = workforce.Supply,
         };
 
-        // Lifecycle subscriptions: M1-13 subscribes the listeners here, in pipeline order, once M1-01 has landed.
+        // Lifecycle subscriptions: every listener hears about buildings in pipeline order (M1-13).
+        map.Lifecycle.Subscribe(roads);
+        map.Lifecycle.Subscribe(workforce);
+        map.Lifecycle.Subscribe(production);
+        map.Lifecycle.Subscribe(logistics);
+        map.Lifecycle.Subscribe(population);
+
+        Map = map;
+        Progression = progression;
 
         // The two halves of IPlacementQueries. PlacementQueries forwards to them.
         // M1-06: Construction's building placement check.
@@ -175,6 +183,12 @@ internal sealed class SystemRoster
 
     /// <summary>Gets every system with its cadence: the four services, then the ticked systems in tick order.</summary>
     public IReadOnlyList<PipelineEntry> Entries { get; }
+
+    /// <summary>Gets the map service, so new-game setup can load the island into it.</summary>
+    internal MapSystem Map { get; }
+
+    /// <summary>Gets the progression system, so new-game setup can apply the start unlocks through it.</summary>
+    internal ProgressionSystem Progression { get; }
 
     /// <summary>Gets the query facade over every system.</summary>
     public SimQueries Queries { get; }

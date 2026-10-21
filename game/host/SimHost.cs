@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Evenmere.Content;
 using Evenmere.Content.Locale;
+using Evenmere.Content.Maps;
 using Evenmere.Core.Time;
 using Evenmere.Sim;
 using Evenmere.Sim.Queries;
@@ -91,15 +92,18 @@ public sealed partial class SimHost : Node
     }
 
     /// <summary>
-    /// Loads the content and its display text, and starts a new world, replacing any simulation already running. Problems in
-    /// the locale files are logged as warnings and never stop the game.
+    /// Loads the content and its display text, loads the island and starts a new world on it, replacing any simulation
+    /// already running. Problems in the locale files are logged as warnings and never stop the game.
     /// </summary>
     /// <param name="seed">The world seed.</param>
+    /// <param name="mapId">The island to start on (a folder under <c>maps/</c>); the starter island by default.</param>
     /// <exception cref="ContentLoadException">The content has errors.</exception>
-    public void StartNewGame(ulong seed)
+    /// <exception cref="MapLoadException">The map has errors.</exception>
+    public void StartNewGame(ulong seed, string mapId = LaunchOptions.DefaultMap)
     {
         string root = ContentPaths.Resolve();
         ContentDb content = ContentLoader.Load(root).GetDbOrThrow();
+        MapDef map = MapLoader.Load([root], mapId, content).GetMapOrThrow();
 
         LocaleLoadResult locale = LocaleTable.Load(root, DefaultLanguage);
         foreach (ContentDiagnostic diagnostic in locale.Diagnostics)
@@ -108,7 +112,7 @@ public sealed partial class SimHost : Node
         }
 
         // Held as the interface on purpose: the host exposes queries, never the concrete simulation or its state.
-        _sim = Simulation.CreateNew(content, new NewGameOptions { Seed = seed });
+        _sim = Simulation.CreateNew(content, new NewGameOptions { Seed = seed, Map = map });
         _content = content;
         _locale = locale.Table;
         _stepper.Reset();

@@ -24,6 +24,7 @@ public sealed class PlacementValidationTests
     {
         var world = ConstructionWorld.Create();
         world.StorehouseWithRoad();
+        world.GrantFootprintReach(5, 3, 2, 2);
 
         PlacementResult result = world.Placement().Validate(ConstructionWorld.Type("sawpit"), 5, 3, Rotation.Deg0);
 
@@ -301,6 +302,10 @@ public sealed class PlacementValidationTests
         // column x is x − 1 tiles of road from the storehouse's own access tile.
         var world = ConstructionWorld.Create();
         world.StorehouseWithRoad();
+        if (!outside)
+        {
+            world.GrantFootprintReach(x, 3, 2, 2);
+        }
 
         PlacementResult result = world.Placement().Validate(ConstructionWorld.Type("sawpit"), x, 3, Rotation.Deg0);
 

@@ -35,7 +35,7 @@ The file is read strictly, like content: no comments, no trailing commas, no dup
 | --- | --- | --- |
 | `description` | string, optional | Free text for people. Shown in failure reports. |
 | `content` | string, required | The content folder, relative to the repository root. |
-| `map` | string or null, optional | A map fixture id, or `null` (or absent) for the empty world. **Maps do not exist until M1-01**, so a non-null value fails with a clear "not supported until M1-01" error. |
+| `map` | string or null, optional | The island to start on: a folder under `maps/` in the scenario's content roots, loaded with `MapLoader`. `null` (or absent) keeps the empty world. |
 | `seed` | integer, required | The world seed (an unsigned 64-bit integer). |
 | `ticks` | integer, required | How many ticks to run, 0 or more. |
 | `commands` | array, optional | The scripted commands (below). |
@@ -65,7 +65,9 @@ An unknown name fails with the list of known names, and a "did you mean" hint wh
 - a missing parameter, an unknown property, a `null` for a non-nullable parameter and a value of the wrong type are all errors;
 - content IDs (`GoodId`, `BuildingTypeId`, ...) are written as the item's string id (`"timber"`), and unknown ids fail;
 - `Amount` is written as a decimal string (`"12.5"`) or a JSON number, with the same grammar as content quantities (at most three decimals);
-- `EntityId` is a JSON integer.
+- `EntityId` is a JSON integer, or a tile form `{ "at": [x, y] }` that the runner resolves to the building standing on that tile when the command is enqueued, at its own tick. Resolving to an empty tile fails naming the file and the command index. `slice_decline` demolishes its bakery this way instead of hard-coding the entity id.
+- `TileCoord` is a two-number array `[x, y]`; an array of tiles (`TileCoord[]`, as in `PlaceRoad`) needs no converter of its own.
+- `Rotation` is the number of quarter turns, 0 to 3.
 
 Every command is resolved and deserialised before the first tick, so a mistake in the last command fails at once. A command parameter of any other value type needs a converter in `ScenarioJson.cs`; without one System.Text.Json would silently read it as zero. The task that adds such a command adds the converter.
 
@@ -75,7 +77,8 @@ Checked in this order, and the report shows the first that fails (and lists the 
 
 1. `events`: a list of `{ "type": "<SimEvent type name>", "atLeast": n }` or `{ "type": "...", "exactly": n }`, counted over every event the run drained. `type` is the simple name of a `SimEvent` record in `Evenmere.Sim` (or the test assembly); an unknown name fails with the list of known ones. Use `{ "type": "CommandRejected", "exactly": 0 }` to assert that nothing was refused.
 2. `stock`: an object from a good's string id to `"<op> <quantity>"`, read from the island storage after the last tick. The operators are `>=`, `<=`, `==`, `>` and `<`; the quantity is read with `Amount.Parse`. Whitespace around the quantity is optional (`">=10"`).
-3. `hash`: 16 lowercase hex characters, the state hash (`ComputeStateHash()`) after the last tick. Absent (or `null`) means no golden check.
+3. `residents`: an object from a tier's string id to `"<op> <count>"`, read from `IPopulationQueries.Residents` after the last tick. The operators are the same five; the count must be a whole non-negative integer (`">= 100"`).
+4. `hash`: 16 lowercase hex characters, the state hash (`ComputeStateHash()`) after the last tick. Absent (or `null`) means no golden check.
 
 ## Failure reports
 
@@ -120,6 +123,10 @@ With the variable set to `1`, a scenario whose hash differs from `expect.hash`, 
 
 - `empty_world_10k.json`: the empty world on the minimal content, seed 42, 10,000 ticks, no commands, with its golden hash. It pins the bare skeleton: clock, RNG streams and state layout.
 - `harness/test_commands.json`: scripted commands applied on their ticks, goods landing in the island stock, a handler rejection and an unserved command, with event and stock expectations and a golden hash.
+- `slice_first_houses.json`: roads, 8 houses, a market and a fishing hut on the starter island; the locked houses fill with Settlers.
+- `slice_bread_chain.json`: the full bread chain with storehouse logistics; bread stock rises.
+- `slice_villagers.json`: a scripted build order through Shrine, homespun and bread; at least 100 Villagers by tick 10,800.
+- `slice_decline.json`: the bakery is demolished after Villagers exist; exactly one decline step occurs after the grace days.
 
 ## Adding a test-only command
 

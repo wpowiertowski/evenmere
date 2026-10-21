@@ -25,7 +25,8 @@ public sealed partial class Main : Node3D
             return;
         }
 
-        host.StartNewGame(LaunchOptions.Parse(args).Seed);
+        var options = LaunchOptions.Parse(args);
+        host.StartNewGame(options.Seed, options.Map);
     }
 
     /// <summary>
@@ -38,7 +39,7 @@ public sealed partial class Main : Node3D
         try
         {
             var options = LaunchOptions.Parse(args);
-            host.StartNewGame(options.Seed);
+            host.StartNewGame(options.Seed, options.Map);
             host.RunTicksNow(options.SmokeTicks ?? 0);
             GD.Print($"SMOKE OK hash={host.ComputeStateHash():x16}");
             GetTree().Quit(0);

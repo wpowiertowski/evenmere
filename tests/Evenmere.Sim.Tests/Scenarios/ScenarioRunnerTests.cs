@@ -323,14 +323,133 @@ public sealed class ScenarioRunnerTests
     }
 
     [Fact]
-    public void Run_MapGiven_FailsClearlyUntilMapsExist()
+    public void Run_MapGiven_LoadsTheNamedMapWithTheRealContent()
     {
-        const string Json = """{ "content": "tests/fixtures/content/minimal", "map": "starter", "seed": 1, "ticks": 1 }""";
+        const string Json = """{ "content": "content", "map": "starter", "seed": 1, "ticks": 10 }""";
+
+        ScenarioResult result = Run(Json);
+
+        result.Passed.ShouldBeTrue(result.Report);
+    }
+
+    [Fact]
+    public void Run_UnknownMap_FailsNamingTheFileAndTheMapId()
+    {
+        const string Json = """{ "content": "content", "map": "no_such_island", "seed": 1, "ticks": 1 }""";
 
         ScenarioException error = Should.Throw<ScenarioException>(() => Run(Json));
 
         error.Message.ShouldContain("harness-test.json");
-        error.Message.ShouldContain("map: \"starter\" cannot be loaded; maps are not supported until M1-01");
+        error.Message.ShouldContain("map: cannot load map \"no_such_island\"");
+        error.Message.ShouldContain("maps/no_such_island");
+    }
+
+    [Fact]
+    public void Run_AtForm_ResolvesToTheBuildingOnTheTile()
+    {
+        const string Json = """
+            { "content": "content", "map": "starter", "seed": 1, "ticks": 300,
+              "commands": [
+                { "tick": 1, "type": "PlaceBuilding", "args": { "type": "sawpit", "x": 32, "y": 93, "rotation": 0 } },
+                { "tick": 200, "type": "Demolish", "args": { "building": { "at": [32, 93] } } } ],
+              "expect": { "events": [
+                { "type": "BuildingDemolished", "exactly": 1 },
+                { "type": "CommandRejected", "exactly": 0 } ] } }
+            """;
+
+        ScenarioResult result = Run(Json);
+
+        result.Passed.ShouldBeTrue(result.Report);
+    }
+
+    [Fact]
+    public void Run_PlainIntegerId_StillDemolishesById()
+    {
+        const string Json = """
+            { "content": "content", "map": "starter", "seed": 1, "ticks": 300,
+              "commands": [
+                { "tick": 1, "type": "PlaceBuilding", "args": { "type": "sawpit", "x": 32, "y": 93, "rotation": 0 } },
+                { "tick": 200, "type": "Demolish", "args": { "building": 2 } } ],
+              "expect": { "events": [
+                { "type": "BuildingDemolished", "exactly": 1 },
+                { "type": "CommandRejected", "exactly": 0 } ] } }
+            """;
+
+        ScenarioResult result = Run(Json);
+
+        result.Passed.ShouldBeTrue(result.Report);
+    }
+
+    [Fact]
+    public void Run_AtFormWithNoBuilding_FailsNamingTheFileAndTheCommandIndex()
+    {
+        const string Json = """
+            { "content": "content", "map": "starter", "seed": 1, "ticks": 10,
+              "commands": [ { "tick": 5, "type": "Demolish", "args": { "building": { "at": [10, 10] } } } ] }
+            """;
+
+        ScenarioException error = Should.Throw<ScenarioException>(() => Run(Json));
+
+        error.Message.ShouldContain("harness-test.json");
+        error.Message.ShouldContain("commands[0]");
+        error.Message.ShouldContain("{ \"at\": [10, 10] } names no building");
+    }
+
+    [Theory]
+    [InlineData("{ \"at\": [1] }", "commands[0].args.building: must be { \"at\": [x, y] }")]
+    [InlineData("{ \"at\": [1, 2, 3] }", "commands[0].args.building: must be { \"at\": [x, y] }")]
+    [InlineData("{ \"at\": \"hut\" }", "commands[0].args.building: must be { \"at\": [x, y] }")]
+    [InlineData("{ \"at\": [1, 2], \"extra\": 3 }", "commands[0].args: the args do not fit")]
+    public void Run_MalformedAtForm_FailsNamingTheCommandIndex(string at, string expected)
+    {
+        string json = "{ \"content\": \"content\", \"map\": \"starter\", \"seed\": 1, \"ticks\": 10, "
+            + "\"commands\": [ { \"tick\": 5, \"type\": \"Demolish\", \"args\": { \"building\": " + at + " } } ] }";
+
+        ScenarioException error = Should.Throw<ScenarioException>(() => Run(json));
+
+        error.Message.ShouldContain("harness-test.json");
+        error.Message.ShouldContain(expected);
+    }
+
+    [Fact]
+    public void Run_AtFormOnANonEntityProperty_FailsSayingItFitsOnlyEntityIds()
+    {
+        const string Json = """
+            { "content": "content", "map": "starter", "seed": 1, "ticks": 10,
+              "commands": [ { "tick": 5, "type": "PlaceBuilding", "args": { "type": { "at": [32, 93] }, "x": 32, "y": 93, "rotation": 0 } } ] }
+            """;
+
+        ScenarioException error = Should.Throw<ScenarioException>(() => Run(Json));
+
+        error.Message.ShouldContain("harness-test.json");
+        error.Message.ShouldContain("commands[0].args.type");
+        error.Message.ShouldContain("fits only an entity id");
+    }
+
+    [Fact]
+    public void Run_ResidentsExpectations_CompareAgainstTheFinalCounts()
+    {
+        ScenarioResult result = Run(Make(expect: """{ "residents": { "settlers": "== 0", "villagers": "<= 0" } }"""));
+
+        result.Passed.ShouldBeTrue(result.Report);
+    }
+
+    [Fact]
+    public void Run_ResidentsExpectationNotMet_FailsNamingTheActualCount()
+    {
+        ScenarioResult result = Run(Make(expect: """{ "residents": { "settlers": ">= 1" } }"""));
+
+        result.Passed.ShouldBeFalse();
+        result.Failures.ShouldBe(["residents: expected settlers >= 1, but the island holds 0."]);
+    }
+
+    [Fact]
+    public void Run_UnknownTierInResidents_FailsNamingTheTier()
+    {
+        ScenarioException error = Should.Throw<ScenarioException>(() => Run(Make(expect: """{ "residents": { "peasants": ">= 1" } }""")));
+
+        error.Message.ShouldContain("harness-test.json");
+        error.Message.ShouldContain("expect.residents.peasants: no tier named \"peasants\"");
     }
 
     [Fact]

@@ -119,6 +119,12 @@ internal static class EvenmereCli
             CustomParser = NonNegativeWholeNumber("--hash-every"),
         };
 
+        var map = new Option<string?>("--map")
+        {
+            Description = "The island to start on (a folder under maps/). Omit it for the empty world.",
+            HelpName = "id",
+        };
+
         var run = new Command(
             "run",
             "Create a new game and tick it. stdout: optional 'tick=<t> hash=<x16>' lines, then 'hash=<x16>'. stderr: a per-step timing table (step, calls, total ms, mean us per call).")
@@ -126,6 +132,7 @@ internal static class EvenmereCli
             ticks,
             seed,
             hashEvery,
+            map,
         };
         run.SetAction(parsed =>
             WithContentRoots(parsed, content, environment, roots =>
@@ -134,6 +141,7 @@ internal static class EvenmereCli
                     parsed.GetValue(ticks),
                     parsed.GetValue(seed),
                     parsed.GetValue(hashEvery),
+                    parsed.GetValue(map),
                     environment.Output,
                     environment.Error)));
         return run;

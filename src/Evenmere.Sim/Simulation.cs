@@ -1,6 +1,7 @@
 using Evenmere.Content;
 using Evenmere.Sim.Commands;
 using Evenmere.Sim.Diagnostics;
+using Evenmere.Sim.NewGame;
 using Evenmere.Sim.Pipeline;
 using Evenmere.Sim.Queries;
 using Evenmere.Sim.Serialization;
@@ -23,6 +24,7 @@ public sealed class Simulation : ISimulation, IProfilerReadout
     private readonly SimProfiler _profiler = new();
     private readonly SystemPipeline _pipeline;
     private readonly SimContext _context;
+    private readonly SystemRoster _roster;
     private readonly int _clockSlot;
     private readonly int _commandsSlot;
 
@@ -35,6 +37,7 @@ public sealed class Simulation : ISimulation, IProfilerReadout
         _commandsSlot = _profiler.Register("commands");
 
         var roster = new SystemRoster(world, content);
+        _roster = roster;
         _pipeline = new SystemPipeline(roster.Entries, _profiler);
         _pipeline.RegisterCommands(_router);
         Query = roster.Queries;
@@ -65,7 +68,7 @@ public sealed class Simulation : ISimulation, IProfilerReadout
     /// <inheritdoc />
     public long TimerTicksPerSecond => _profiler.TimerTicksPerSecond;
 
-    /// <summary>Creates an empty world at tick zero. The map comes in M1-01, so there is no island yet.</summary>
+    /// <summary>Creates a world at tick zero. With a map in <paramref name="options"/>, the island is loaded and settled before tick 0 (see NewGameSetup); without one, the world stays empty.</summary>
     /// <param name="content">The loaded content.</param>
     /// <param name="options">The new-game choices.</param>
     /// <returns>The simulation.</returns>
@@ -74,7 +77,13 @@ public sealed class Simulation : ISimulation, IProfilerReadout
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(options);
-        return new Simulation(content, WorldState.CreateNew(content, options.Seed));
+        var simulation = new Simulation(content, WorldState.CreateNew(content, options.Seed));
+        if (options.Map is not null)
+        {
+            NewGameSetup.Run(simulation._context, simulation._roster.Map, simulation._roster.Progression, options.Map);
+        }
+
+        return simulation;
     }
 
     /// <summary>Restores a simulation from the bytes <see cref="SerializeState"/> produced; it continues exactly where that one stopped.</summary>

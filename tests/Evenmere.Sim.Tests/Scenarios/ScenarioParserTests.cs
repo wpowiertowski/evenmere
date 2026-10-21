@@ -152,6 +152,12 @@ public sealed class ScenarioParserTests
     [InlineData("""{ "stock": { "timber": ">= 1.2345" } }""", "is not a quantity")]
     [InlineData("""{ "stock": { "timber": 10 } }""", "expect.stock.timber: must be a string")]
     [InlineData("""{ "stock": [] }""", "expect.stock: must be an object")]
+    [InlineData("""{ "residents": { "settlers": "10" } }""", "expect.residents.settlers: \"10\" must start with one of >=, <=, ==, >, <")]
+    [InlineData("""{ "residents": { "settlers": ">= ten" } }""", "expect.residents.settlers: \"ten\" is not a quantity")]
+    [InlineData("""{ "residents": { "settlers": ">= 1.5" } }""", "expect.residents.settlers: must name a whole non-negative count of residents")]
+    [InlineData("""{ "residents": { "settlers": ">= -1" } }""", "expect.residents.settlers: must name a whole non-negative count of residents")]
+    [InlineData("""{ "residents": { "settlers": 10 } }""", "expect.residents.settlers: must be a string")]
+    [InlineData("""{ "residents": [] }""", "expect.residents: must be an object")]
     [InlineData("""{ "hashes": [] }""", "expect: has an unknown property \"hashes\"")]
     public void Parse_BadExpect_NamesTheFileAndTheProperty(string expect, string expected)
     {
@@ -161,6 +167,20 @@ public sealed class ScenarioParserTests
 
         message.ShouldStartWith(FileName + ": ");
         message.ShouldContain(expected);
+    }
+
+    [Fact]
+    public void Parse_ResidentsExpectations_ReadTierOperatorAndCount()
+    {
+        const string Json = """{ "content": "c", "seed": 1, "ticks": 10, "expect": { "residents": { "settlers": ">= 8", "villagers": "== 100" } } }""";
+
+        ScenarioDefinition scenario = Parse(Json);
+
+        scenario.Expect.Residents.ShouldBe(
+        [
+            new ResidentExpectation("settlers", ComparisonOp.GreaterOrEqual, 8),
+            new ResidentExpectation("villagers", ComparisonOp.Equal, 100),
+        ]);
     }
 
     [Theory]

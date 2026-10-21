@@ -137,22 +137,6 @@ public sealed class ServiceContractTests
     }
 
     [Fact]
-    public void Stubs_EveryUnimplementedService_ThrowsWithTheOwningTaskId()
-    {
-        var calls = new List<(string Name, string Task, Action Call)>
-        {
-            ("BuildingPlacement.Validate", "M1-06", () => new UnimplementedBuildingPlacement().Validate(default, 0, 0, Rotation.Deg0)),
-            ("RoadPlacement.ValidateRoad", "M1-05", () => new UnimplementedRoadPlacement().ValidateRoad([], default)),
-        };
-
-        foreach ((string name, string task, Action call) in calls)
-        {
-            NotImplementedException thrown = Should.Throw<NotImplementedException>(call, name);
-            thrown.Message.ShouldBe(task, name);
-        }
-    }
-
-    [Fact]
     public void PlacementQueries_Facade_ForwardsToTheTwoChecks()
     {
         // The queries facade is real in M1-00: it only forwards, so the building rules (M1-06) and road rules (M1-05) land independently.

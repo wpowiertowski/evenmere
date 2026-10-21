@@ -40,10 +40,11 @@ internal sealed record ScenarioCommandEntry(int Index, int Tick, string Type, Js
 /// <param name="Hash">The golden state hash, or <see langword="null"/> when the file has none.</param>
 /// <param name="Events">The event-count expectations, in file order.</param>
 /// <param name="Stock">The island-stock expectations, in file order.</param>
-internal sealed record ScenarioExpectations(ulong? Hash, IReadOnlyList<EventExpectation> Events, IReadOnlyList<StockExpectation> Stock)
+/// <param name="Residents">The residents-per-tier expectations, in file order.</param>
+internal sealed record ScenarioExpectations(ulong? Hash, IReadOnlyList<EventExpectation> Events, IReadOnlyList<StockExpectation> Stock, IReadOnlyList<ResidentExpectation> Residents)
 {
     /// <summary>Gets an <c>expect</c> block with nothing in it.</summary>
-    public static ScenarioExpectations None { get; } = new(null, [], []);
+    public static ScenarioExpectations None { get; } = new(null, [], [], []);
 }
 
 /// <summary>Expects how many events of one type the run emits.</summary>
@@ -52,6 +53,11 @@ internal sealed record ScenarioExpectations(ulong? Hash, IReadOnlyList<EventExpe
 /// <param name="Exact"><see langword="true"/> for <c>exactly</c>, <see langword="false"/> for <c>atLeast</c>.</param>
 internal sealed record EventExpectation(string Type, int Count, bool Exact);
 
+/// <summary>Expects how many residents of one tier the island holds after the last tick.</summary>
+/// <param name="Tier">The tier's string id.</param>
+/// <param name="Op">How to compare.</param>
+/// <param name="Quantity">The count to compare against.</param>
+internal sealed record ResidentExpectation(string Tier, ComparisonOp Op, int Quantity);
 /// <summary>Expects how much of a good the island storage holds after the last tick.</summary>
 /// <param name="Good">The good's string id.</param>
 /// <param name="Op">How to compare.</param>

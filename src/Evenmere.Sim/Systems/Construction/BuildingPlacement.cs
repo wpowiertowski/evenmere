@@ -24,8 +24,8 @@ namespace Evenmere.Sim.Systems.Construction;
 /// </para>
 /// <para>
 /// The reach and yield warnings are estimates made from the same queries the rest of the simulation reads: the roads
-/// system answers reach and Production answers yield for buildings that exist, but neither can be asked about a building
-/// that does not exist yet. See <see cref="StorehouseReach"/> and <see cref="EstimateYield"/>.
+/// system answers reach for buildings and for footprints that are not built yet, and Production answers yield for
+/// buildings that exist (see <see cref="EstimateYield"/> for the ghost's share).
 /// </para>
 /// </remarks>
 /// <param name="content">The immutable content.</param>
@@ -199,7 +199,7 @@ internal sealed class BuildingPlacement(
             {
                 warnings.Add(new PlacementFinding(PlacementIssue.NoRoadAccess, whole));
             }
-            else if (!StorehouseReach.Covers(content, map, roads, accessTiles))
+            else if (!roads.IsFootprintInStorehouseReach(x, y, size.Width, size.Height))
             {
                 warnings.Add(new PlacementFinding(PlacementIssue.OutsideStorehouseReach, whole));
             }

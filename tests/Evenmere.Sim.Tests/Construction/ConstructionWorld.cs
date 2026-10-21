@@ -159,6 +159,14 @@ internal sealed class ConstructionWorld
     /// <param name="building">The building.</param>
     public void GrantReach(EntityId building) => Sim.Queries.Roads.SetReach(new EntityId(9000), building, 1000);
 
+    /// <summary>Marks an unbuilt footprint as lying in some storehouse's reach, as the roads system would report it.</summary>
+    /// <param name="x">The column of the footprint's top-left tile.</param>
+    /// <param name="y">The row of the footprint's top-left tile.</param>
+    /// <param name="width">The footprint width in tiles.</param>
+    /// <param name="height">The footprint height in tiles.</param>
+    public void GrantFootprintReach(int x, int y, int width, int height) =>
+        Sim.Queries.Roads.SetFootprintReach(x, y, width, height);
+
     /// <summary>Queues a command for the next tick.</summary>
     /// <param name="command">The command.</param>
     public void Enqueue(Command command) => _queue.Enqueue(command);

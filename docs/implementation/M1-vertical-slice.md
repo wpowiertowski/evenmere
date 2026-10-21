@@ -53,7 +53,7 @@
 | M1-10 | Needs and population | sim | M1-00 | done |
 | M1-11 | Research and civics | sim | M1-00 | done |
 | M1-12 | Statistics and explain queries | sim | M1-00 | done |
-| M1-13 | Integration: new game and end-to-end scenarios | sim | M1-01, M1-03 to M1-12 | todo |
+| M1-13 | Integration: new game and end-to-end scenarios | sim | M1-01, M1-03 to M1-12 | done |
 | M1-14 | Save/load v1 and command log | sim | M1-13 | todo |
 | M1-15 | Advisors v1 | sim | M1-12 | done |
 | M1-16 | Balance bot v1 | tools | M1-13 | todo |
@@ -607,7 +607,7 @@
 
 **Steps:**
 
-1. **New game:** `NewGameOptions { Seed, MapId }` does the following:
+1. **New game:** `NewGameOptions { Seed, Map }` does the following. `Map` is a `MapDef` that the caller loads with `MapLoader`, so the simulation does no IO:
    - Loads the `MapDef` into `MapState` and applies the start unlocks.
    - Pre-places the Founders' Hall at `startSite` and adds `startStock` to the pool.
    - Sets the research and civic targets to none.

@@ -131,8 +131,8 @@ internal static class ScenarioParser
             }
 
             RequireObject(expect, "expect");
-            RequireKnown(expect, "expect", "hash", "events", "stock");
-            return new ScenarioExpectations(ReadHash(expect), ReadEvents(expect), ReadStock(expect));
+            RequireKnown(expect, "expect", "hash", "events", "stock", "residents");
+            return new ScenarioExpectations(ReadHash(expect), ReadEvents(expect), ReadStock(expect), ReadResidents(expect));
         }
 
         private ulong? ReadHash(JsonElement expect)
@@ -217,6 +217,43 @@ internal static class ScenarioParser
             }
 
             return stock;
+        }
+
+        private List<ResidentExpectation> ReadResidents(JsonElement expect)
+        {
+            var residents = new List<ResidentExpectation>();
+            if (!expect.TryGetProperty("residents", out JsonElement table) || table.ValueKind == JsonValueKind.Null)
+            {
+                return residents;
+            }
+
+            if (table.ValueKind != JsonValueKind.Object)
+            {
+                throw Fail("expect.residents", "must be an object that maps a tier id to \"<op> <count>\".");
+            }
+
+            foreach (JsonProperty property in table.EnumerateObject())
+            {
+                string where = $"expect.residents.{property.Name}";
+                if (property.Value.ValueKind != JsonValueKind.String)
+                {
+                    throw Fail(where, $"must be a string such as \">= 10\" (operators: {StockComparison.Spellings}).");
+                }
+
+                if (!StockComparison.TryParse(property.Value.GetString() ?? string.Empty, out ComparisonOp op, out Amount quantity, out string error))
+                {
+                    throw Fail(where, error);
+                }
+
+                if (quantity < Amount.Zero || quantity.Milli % 1000 != 0 || quantity.Milli / 1000 > int.MaxValue)
+                {
+                    throw Fail(where, $"must name a whole non-negative count of residents, not \"{property.Value.GetString()}\".");
+                }
+
+                residents.Add(new ResidentExpectation(property.Name, op, (int)(quantity.Milli / 1000)));
+            }
+
+            return residents;
         }
 
         private ulong RequiredSeed(JsonElement obj)

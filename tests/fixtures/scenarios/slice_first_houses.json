@@ -1,0 +1,36 @@
+{
+  "description": "The first streets: roads, 8 houses, a market and a fishing hut on the starter island. Locked against advancing, the houses fill with Settlers.",
+  "content": "content",
+  "map": "starter",
+  "seed": 1,
+  "ticks": 2400,
+  "commands": [
+    { "tick": 1, "type": "PlaceRoad", "args": { "path": [[14,95],[15,95],[16,95],[17,95],[18,95],[19,95],[20,95],[21,95],[22,95],[23,95],[24,95],[25,95],[26,95],[27,95],[28,95],[29,95],[30,95],[31,95],[32,95],[33,95],[34,95],[35,95],[36,95],[37,95],[38,95],[39,95],[40,95]], "roadType": "dirt_road" } },
+    { "tick": 1, "type": "PlaceRoad", "args": { "path": [[29,95],[29,96],[29,97],[29,98],[29,99],[29,100],[29,101],[29,102],[29,103],[29,104]], "roadType": "dirt_road" } },
+    { "tick": 1, "type": "PlaceRoad", "args": { "path": [[5,98],[6,98],[7,98],[8,98],[9,98],[10,98],[11,98],[12,98],[13,98],[14,98],[15,98],[16,98],[17,98],[18,98],[19,98],[20,98],[21,98],[22,98],[23,98],[24,98],[25,98],[26,98],[27,98],[28,98],[29,98]], "roadType": "dirt_road" } },
+    { "tick": 1, "type": "PlaceRoad", "args": { "path": [[18,104],[19,104],[20,104],[21,104],[22,104],[23,104],[24,104],[25,104],[26,104],[27,104],[28,104],[29,104]], "roadType": "dirt_road" } },
+    { "tick": 1, "type": "PlaceBuilding", "args": { "type": "settler_house", "x": 20, "y": 96, "rotation": 0 } },
+    { "tick": 1, "type": "PlaceBuilding", "args": { "type": "settler_house", "x": 23, "y": 96, "rotation": 0 } },
+    { "tick": 1, "type": "PlaceBuilding", "args": { "type": "settler_house", "x": 26, "y": 96, "rotation": 0 } },
+    { "tick": 1, "type": "PlaceBuilding", "args": { "type": "settler_house", "x": 20, "y": 99, "rotation": 0 } },
+    { "tick": 1, "type": "PlaceBuilding", "args": { "type": "settler_house", "x": 23, "y": 99, "rotation": 0 } },
+    { "tick": 1, "type": "PlaceBuilding", "args": { "type": "settler_house", "x": 26, "y": 99, "rotation": 0 } },
+    { "tick": 1, "type": "PlaceBuilding", "args": { "type": "settler_house", "x": 20, "y": 102, "rotation": 0 } },
+    { "tick": 1, "type": "PlaceBuilding", "args": { "type": "settler_house", "x": 23, "y": 102, "rotation": 0 } },
+    { "tick": 1, "type": "PlaceBuilding", "args": { "type": "market", "x": 26, "y": 101, "rotation": 0 } },
+    { "tick": 1, "type": "PlaceBuilding", "args": { "type": "fishing_hut", "x": 5, "y": 99, "rotation": 0 } },
+    { "tick": 300, "type": "SetHouseUpgradeLock", "args": { "house": 2, "locked": true } },
+    { "tick": 300, "type": "SetHouseUpgradeLock", "args": { "house": 3, "locked": true } },
+    { "tick": 300, "type": "SetHouseUpgradeLock", "args": { "house": 4, "locked": true } },
+    { "tick": 300, "type": "SetHouseUpgradeLock", "args": { "house": 5, "locked": true } },
+    { "tick": 300, "type": "SetHouseUpgradeLock", "args": { "house": 6, "locked": true } },
+    { "tick": 300, "type": "SetHouseUpgradeLock", "args": { "house": 7, "locked": true } },
+    { "tick": 300, "type": "SetHouseUpgradeLock", "args": { "house": 8, "locked": true } },
+    { "tick": 300, "type": "SetHouseUpgradeLock", "args": { "house": 9, "locked": true } }
+  ],
+  "expect": {
+    "hash": "7c383b1f0a148158",
+    "residents": { "settlers": "== 48" },
+    "events": [ { "type": "ConstructionCompleted", "exactly": 10 } ]
+  }
+}

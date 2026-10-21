@@ -1,0 +1,810 @@
+{
+  "description": "A scripted build order through Shrine, homespun and bread: the island researches cultivation, husbandry, milling and weaving, raises two full chains and grows to at least 100 Villagers.",
+  "content": "content",
+  "map": "starter",
+  "seed": 1,
+  "ticks": 10800,
+  "commands": [
+    {
+      "tick": 1,
+      "type": "PlaceRoad",
+      "args": {
+        "path": [
+          [
+            14,
+            95
+          ],
+          [
+            15,
+            95
+          ],
+          [
+            16,
+            95
+          ],
+          [
+            17,
+            95
+          ],
+          [
+            18,
+            95
+          ],
+          [
+            19,
+            95
+          ],
+          [
+            20,
+            95
+          ],
+          [
+            21,
+            95
+          ],
+          [
+            22,
+            95
+          ],
+          [
+            23,
+            95
+          ],
+          [
+            24,
+            95
+          ],
+          [
+            25,
+            95
+          ],
+          [
+            26,
+            95
+          ],
+          [
+            27,
+            95
+          ],
+          [
+            28,
+            95
+          ],
+          [
+            29,
+            95
+          ],
+          [
+            30,
+            95
+          ],
+          [
+            31,
+            95
+          ],
+          [
+            32,
+            95
+          ],
+          [
+            33,
+            95
+          ],
+          [
+            34,
+            95
+          ],
+          [
+            35,
+            95
+          ],
+          [
+            36,
+            95
+          ],
+          [
+            37,
+            95
+          ],
+          [
+            38,
+            95
+          ],
+          [
+            39,
+            95
+          ],
+          [
+            40,
+            95
+          ]
+        ],
+        "roadType": "dirt_road"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceRoad",
+      "args": {
+        "path": [
+          [
+            29,
+            95
+          ],
+          [
+            29,
+            96
+          ],
+          [
+            29,
+            97
+          ],
+          [
+            29,
+            98
+          ],
+          [
+            29,
+            99
+          ],
+          [
+            29,
+            100
+          ],
+          [
+            29,
+            101
+          ],
+          [
+            29,
+            102
+          ],
+          [
+            29,
+            103
+          ],
+          [
+            29,
+            104
+          ]
+        ],
+        "roadType": "dirt_road"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceRoad",
+      "args": {
+        "path": [
+          [
+            22,
+            95
+          ],
+          [
+            22,
+            96
+          ],
+          [
+            22,
+            97
+          ],
+          [
+            22,
+            98
+          ]
+        ],
+        "roadType": "dirt_road"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceRoad",
+      "args": {
+        "path": [
+          [
+            25,
+            95
+          ],
+          [
+            25,
+            96
+          ],
+          [
+            25,
+            97
+          ],
+          [
+            25,
+            98
+          ]
+        ],
+        "roadType": "dirt_road"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceRoad",
+      "args": {
+        "path": [
+          [
+            5,
+            98
+          ],
+          [
+            6,
+            98
+          ],
+          [
+            7,
+            98
+          ],
+          [
+            8,
+            98
+          ],
+          [
+            9,
+            98
+          ],
+          [
+            10,
+            98
+          ],
+          [
+            11,
+            98
+          ],
+          [
+            12,
+            98
+          ],
+          [
+            13,
+            98
+          ],
+          [
+            14,
+            98
+          ],
+          [
+            15,
+            98
+          ],
+          [
+            16,
+            98
+          ],
+          [
+            17,
+            98
+          ],
+          [
+            18,
+            98
+          ],
+          [
+            19,
+            98
+          ],
+          [
+            20,
+            98
+          ],
+          [
+            21,
+            98
+          ],
+          [
+            22,
+            98
+          ],
+          [
+            23,
+            98
+          ],
+          [
+            24,
+            98
+          ],
+          [
+            25,
+            98
+          ],
+          [
+            26,
+            98
+          ],
+          [
+            27,
+            98
+          ],
+          [
+            28,
+            98
+          ],
+          [
+            29,
+            98
+          ]
+        ],
+        "roadType": "dirt_road"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceRoad",
+      "args": {
+        "path": [
+          [
+            12,
+            104
+          ],
+          [
+            13,
+            104
+          ],
+          [
+            14,
+            104
+          ],
+          [
+            15,
+            104
+          ],
+          [
+            16,
+            104
+          ],
+          [
+            17,
+            104
+          ],
+          [
+            18,
+            104
+          ],
+          [
+            19,
+            104
+          ],
+          [
+            20,
+            104
+          ],
+          [
+            21,
+            104
+          ],
+          [
+            22,
+            104
+          ],
+          [
+            23,
+            104
+          ],
+          [
+            24,
+            104
+          ],
+          [
+            25,
+            104
+          ],
+          [
+            26,
+            104
+          ],
+          [
+            27,
+            104
+          ],
+          [
+            28,
+            104
+          ],
+          [
+            29,
+            104
+          ],
+          [
+            30,
+            104
+          ],
+          [
+            31,
+            104
+          ],
+          [
+            32,
+            104
+          ],
+          [
+            33,
+            104
+          ],
+          [
+            34,
+            104
+          ],
+          [
+            35,
+            104
+          ],
+          [
+            36,
+            104
+          ]
+        ],
+        "roadType": "dirt_road"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "SetResearchTarget",
+      "args": {
+        "tech": "cultivation"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "SetResearchQueue",
+      "args": {
+        "queue": [
+          "animal_husbandry",
+          "milling",
+          "weaving"
+        ]
+      }
+    },
+    {
+      "tick": 1,
+      "type": "SetCivicTarget",
+      "args": {
+        "civic": "hearth_and_shrine"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 20,
+        "y": 96,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 23,
+        "y": 96,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 26,
+        "y": 96,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 20,
+        "y": 99,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 23,
+        "y": 99,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 26,
+        "y": 99,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 20,
+        "y": 102,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 23,
+        "y": 102,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "market",
+        "x": 26,
+        "y": 101,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "fishing_hut",
+        "x": 5,
+        "y": 99,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "woodcutters_hut",
+        "x": 38,
+        "y": 96,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "sawpit",
+        "x": 32,
+        "y": 93,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 300,
+      "type": "SetHouseUpgradeLock",
+      "args": {
+        "house": 2,
+        "locked": true
+      }
+    },
+    {
+      "tick": 300,
+      "type": "SetHouseUpgradeLock",
+      "args": {
+        "house": 3,
+        "locked": true
+      }
+    },
+    {
+      "tick": 300,
+      "type": "SetHouseUpgradeLock",
+      "args": {
+        "house": 4,
+        "locked": true
+      }
+    },
+    {
+      "tick": 300,
+      "type": "SetHouseUpgradeLock",
+      "args": {
+        "house": 5,
+        "locked": true
+      }
+    },
+    {
+      "tick": 300,
+      "type": "SetHouseUpgradeLock",
+      "args": {
+        "house": 6,
+        "locked": true
+      }
+    },
+    {
+      "tick": 300,
+      "type": "SetHouseUpgradeLock",
+      "args": {
+        "house": 7,
+        "locked": true
+      }
+    },
+    {
+      "tick": 1300,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "grain_farm",
+        "x": 18,
+        "y": 90,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 2000,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "shrine",
+        "x": 23,
+        "y": 93,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "sheep_farm",
+        "x": 28,
+        "y": 91,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 20,
+        "y": 105,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 23,
+        "y": 105,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 26,
+        "y": 105,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 28,
+        "y": 105,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 30,
+        "y": 105,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 34,
+        "y": 105,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 32,
+        "y": 105,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "x": 36,
+        "y": 105,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 6300,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "windmill",
+        "x": 34,
+        "y": 93,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 6300,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "bakery",
+        "x": 36,
+        "y": 93,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 8100,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "weavers_cottage",
+        "x": 34,
+        "y": 96,
+        "rotation": 0
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "shrine",
+        "x": 34,
+        "y": 102,
+        "rotation": 0
+      }
+    }
+  ],
+  "expect": {
+    "hash": "b26cb29d6d756f40",
+    "residents": {
+      "villagers": ">= 100"
+    },
+    "events": [
+      {
+        "type": "TechResearched",
+        "exactly": 4
+      },
+      {
+        "type": "CivicAdopted",
+        "exactly": 1
+      },
+      {
+        "type": "HouseTierAdvanced",
+        "exactly": 10
+      },
+      {
+        "type": "ConstructionCompleted",
+        "exactly": 27
+      }
+    ]
+  }
+}

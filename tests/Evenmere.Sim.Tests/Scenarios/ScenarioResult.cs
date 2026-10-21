@@ -1,4 +1,5 @@
 using System.Globalization;
+using Evenmere.Sim.Diagnostics;
 
 namespace Evenmere.Sim.Tests.Scenarios;
 
@@ -36,6 +37,9 @@ internal sealed record ScenarioRunOptions(bool UpdateGolden)
 /// The readable account of the run: the full failure report when it failed, the golden-update notice when the file was
 /// rewritten, and a one-line summary otherwise.
 /// </param>
+/// <param name="Timings">The profiler's per-step timings at the end of the run, for diagnostics only (never asserted).</param>
+/// <param name="TimerTicksPerSecond">The profiler's timer frequency, for converting <paramref name="Timings"/> to time.</param>
+/// <param name="Ticks">How many ticks the scenario ran.</param>
 internal sealed record ScenarioResult(
     string Scenario,
     bool Passed,
@@ -44,7 +48,10 @@ internal sealed record ScenarioResult(
     IReadOnlyList<SimEvent> Events,
     IReadOnlyList<string> Failures,
     bool GoldenUpdated,
-    string Report);
+    string Report,
+    IReadOnlyList<SystemTiming> Timings,
+    long TimerTicksPerSecond,
+    long Ticks);
 
 /// <summary>Formats state hashes the way scenario files spell them.</summary>
 internal static class HashText

@@ -16,8 +16,7 @@ namespace Evenmere.Sim.Systems.Statistics;
 /// <para>
 /// Each run samples the island as the other daily systems left it: the stock from Storage, the produced and demand
 /// yesterdays from Production and Needs, the consumed delta from the Consumed counter, the residents per tier from
-/// Population, and the active transport jobs from Logistics. Knowledge and culture per day are sampled as zero until the
-/// research and culture systems land (TODO(M1-13)), because their queries are still stand-ins that throw.
+/// Population, the knowledge and culture per day from Research and Culture, and the active transport jobs from Logistics.
 /// </para>
 /// <para>Seasonal rollups average each series over the 10 days of a season once the season completes, keeping 8 seasons.</para>
 /// </remarks>
@@ -101,10 +100,8 @@ internal sealed class StatisticsSystem : ISimSystem
             daily[(((goodCount * 4) + t) * StatisticsState.DailyCapacity) + slot] = residents;
         }
 
-        // TODO(M1-13): sample knowledge and culture per day from the Research/Culture PointsPerDay queries once M1-11 has
-        // landed. Their queries are still stand-ins that throw, so the history holds zeros until then.
-        daily[(((goodCount * 4) + tierCount) * StatisticsState.DailyCapacity) + slot] = 0;
-        daily[((((goodCount * 4) + tierCount) + 1) * StatisticsState.DailyCapacity) + slot] = 0;
+        daily[(((goodCount * 4) + tierCount) * StatisticsState.DailyCapacity) + slot] = ctx.Queries.Research.PointsPerDay.Milli;
+        daily[((((goodCount * 4) + tierCount) + 1) * StatisticsState.DailyCapacity) + slot] = ctx.Queries.Culture.PointsPerDay.Milli;
 
         long jobs = ctx.Queries.Logistics.ActiveJobs().Length;
 
