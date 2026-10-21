@@ -314,10 +314,19 @@ public sealed partial class HudRoot : Control
             _resumeSpeed = viewModel.Speed;
         }
 
+        // The chips are built for every tier, but the view-model lists only the unlocked ones; the rest stay hidden.
         for (int i = 0; i < _residentChips.Count; i++)
         {
-            HudStat stat = viewModel.Residents[i];
-            _residentChips[i].SetValue(stat.Label, stat.Value, stat.Tooltip);
+            if (i < viewModel.Residents.Length)
+            {
+                HudStat stat = viewModel.Residents[i];
+                _residentChips[i].Visible = true;
+                _residentChips[i].SetValue(stat.Label, stat.Value, stat.Tooltip);
+            }
+            else
+            {
+                _residentChips[i].Visible = false;
+            }
         }
 
         _knowledgeChip.SetValue(viewModel.Knowledge.Label, viewModel.Knowledge.Value, viewModel.Knowledge.Tooltip);

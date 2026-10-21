@@ -8,7 +8,7 @@ namespace Evenmere.Game.Ui.Hud;
 /// <summary>
 /// Everything the HUD view-model reads from the game, in one small interface, so the view-model has no Godot types and
 /// tests can feed it numbers. <see cref="SimHostHudSource"/> is the real one. A <see langword="null"/> from a method that
-/// returns a nullable means "no query answers this yet", and the HUD shows a dash.
+/// returns a nullable means no simulation is running, and the HUD shows a dash.
 /// </summary>
 public interface IHudSource
 {
@@ -26,16 +26,21 @@ public interface IHudSource
     /// <returns>The stock in milli-units.</returns>
     Amount Stock(GoodId good);
 
-    /// <summary>Gets the number of residents of a tier.</summary>
+    /// <summary>Gets how many residents live in the houses of a tier.</summary>
     /// <param name="tier">The tier.</param>
-    /// <returns>The residents, or <see langword="null"/> while no query provides them.</returns>
+    /// <returns>The residents, or <see langword="null"/> while no simulation is running.</returns>
     long? Residents(TierId tier);
 
+    /// <summary>Tests whether a population tier is available to houses.</summary>
+    /// <param name="tier">The tier.</param>
+    /// <returns><see langword="true"/> if it is unlocked.</returns>
+    bool IsTierUnlocked(TierId tier);
+
     /// <summary>Gets the knowledge the island gains per game day.</summary>
-    /// <returns>The rate, or <see langword="null"/> while no query provides it.</returns>
+    /// <returns>The rate, or <see langword="null"/> while no simulation is running.</returns>
     Amount? KnowledgePerDay();
 
     /// <summary>Gets the culture the island gains per game day.</summary>
-    /// <returns>The rate, or <see langword="null"/> while no query provides it.</returns>
+    /// <returns>The culture, or <see langword="null"/> while no simulation is running.</returns>
     Amount? CulturePerDay();
 }

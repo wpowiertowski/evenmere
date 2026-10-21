@@ -1,9 +1,13 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" uid="uid://bub5wqwnne33" path="res://host/Main.cs" id="1_main"]
 [ext_resource type="Script" uid="uid://dcmhwhll1gsvl" path="res://host/SimHost.cs" id="2_host"]
 [ext_resource type="PackedScene" path="res://ui/hud/Hud.tscn" id="3_hud"]
 [ext_resource type="PackedScene" path="res://rendering/camera/CameraRig.tscn" id="4_rig"]
+[ext_resource type="Script" path="res://ui/progress/PanelToggles.cs" id="5_toggles"]
+[ext_resource type="Script" path="res://ui/research/ResearchPanel.cs" id="6_research"]
+[ext_resource type="Script" path="res://ui/culture/CulturePanel.cs" id="7_culture"]
+[ext_resource type="Script" path="res://ui/progress/InspirationToast.cs" id="8_toast"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_mode = 1
@@ -28,3 +32,15 @@ transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75
 shadow_enabled = true
 
 [node name="Hud" parent="." instance=ExtResource("3_hud")]
+
+[node name="PanelToggles" type="HBoxContainer" parent="."]
+script = ExtResource("5_toggles")
+
+[node name="ResearchPanel" type="PanelContainer" parent="."]
+script = ExtResource("6_research")
+
+[node name="CulturePanel" type="PanelContainer" parent="."]
+script = ExtResource("7_culture")
+
+[node name="InspirationToast" type="PanelContainer" parent="."]
+script = ExtResource("8_toast")

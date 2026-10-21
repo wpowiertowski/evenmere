@@ -41,6 +41,12 @@ public static class InputActions
     /// <summary>Move gamepad focus into or out of the HUD (Back/Select). Gamepad only; the HUD handles it (M1-18).</summary>
     public static readonly StringName UiFocusHud = "ui_focus_hud";
 
+    /// <summary>Open or close the research panel (T, left stick press).</summary>
+    public static readonly StringName UiResearch = "ui_research";
+
+    /// <summary>Open or close the civics panel (C, right stick press).</summary>
+    public static readonly StringName UiCivics = "ui_civics";
+
     /// <summary>Rotate the building or tool being placed (R, X).</summary>
     public static readonly StringName ToolRotate = "tool_rotate";
 
