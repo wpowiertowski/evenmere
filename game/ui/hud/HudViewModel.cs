@@ -45,8 +45,7 @@ public sealed class HudViewModel : ViewModel
         _strings = strings;
         _dash = strings.Get("ui.hud.unavailable");
 
-        // Tier IDs are in string order; the HUD lists them from the lowest tier up.
-        // TODO(M1-04): list only the tiers the player has unlocked, through IProgressionQueries.IsUnlocked.
+        // Tier IDs are in string order; the HUD lists the unlocked ones from the lowest tier up.
         _tiers = [.. content.TiersByOrder];
         _tierNames = [.. _tiers.Select(tier => strings.TierName(content.NameOf(tier)))];
 
@@ -66,7 +65,7 @@ public sealed class HudViewModel : ViewModel
     /// <summary>Gets the speed the game was running at.</summary>
     public SimSpeed Speed { get; private set; } = SimSpeed.Paused;
 
-    /// <summary>Gets the residents of each tier, lowest tier first.</summary>
+    /// <summary>Gets the residents of each unlocked tier, lowest tier first.</summary>
     public ImmutableArray<HudStat> Residents { get; private set; } = [];
 
     /// <summary>Gets the knowledge gained per day.</summary>
@@ -124,15 +123,20 @@ public sealed class HudViewModel : ViewModel
         DateText = DateOf(clock);
         Speed = _source.Speed;
 
-        ImmutableArray<HudStat>.Builder residents = ImmutableArray.CreateBuilder<HudStat>(_tiers.Length);
+        ImmutableArray<HudStat>.Builder residents = ImmutableArray.CreateBuilder<HudStat>();
         for (int i = 0; i < _tiers.Length; i++)
         {
+            if (!_source.IsTierUnlocked(_tiers[i]))
+            {
+                continue;
+            }
+
             long? count = _source.Residents(_tiers[i]);
             string value = count is { } known ? NumberFormat.Count(known) : _dash;
             residents.Add(new HudStat(_tierNames[i], value, _strings.Format("ui.hud.residents.tip", ("tier", _tierNames[i]), ("count", value))));
         }
 
-        Residents = residents.MoveToImmutable();
+        Residents = residents.ToImmutable();
         Knowledge = RateStat("ui.hud.knowledge", "ui.hud.knowledge.tip", _source.KnowledgePerDay());
         Culture = RateStat("ui.hud.culture", "ui.hud.culture.tip", _source.CulturePerDay());
 

@@ -8,8 +8,7 @@ namespace Evenmere.Game.Ui.Hud;
 
 /// <summary>
 /// Reads the HUD's numbers from the <see cref="SimHost"/> through its read-only queries. This class is the view-model
-/// boundary: a system that is still a stub throws <see cref="NotImplementedException"/> naming its task, and only here is
-/// that turned into "not available yet" (a <see langword="null"/>, shown as a dash), so every other place still fails loudly.
+/// boundary: it never holds simulation state of its own, and every number comes straight from a query.
 /// </summary>
 public sealed class SimHostHudSource : IHudSource
 {
@@ -36,34 +35,14 @@ public sealed class SimHostHudSource : IHudSource
     public Amount Stock(GoodId good) => _host.Query.Storage.Stock(good);
 
     /// <inheritdoc />
-    public long? Residents(TierId tier) => Optional(queries => ReadResidents(queries, tier));
+    public long? Residents(TierId tier) => _host.Query.Population.Residents(tier);
 
     /// <inheritdoc />
-    public Amount? KnowledgePerDay() => Optional(ReadKnowledgePerDay);
+    public bool IsTierUnlocked(TierId tier) => _host.Query.Progression.IsUnlocked(tier);
 
     /// <inheritdoc />
-    public Amount? CulturePerDay() => Optional(ReadCulturePerDay);
+    public Amount? KnowledgePerDay() => _host.Query.Research.PointsPerDay;
 
-    // TODO(M1-10): return queries.Population.Residents(tier).Value (IPopulationQueries.Residents, declared by M1-00).
-    private static long? ReadResidents(ISimQueries queries, TierId tier) => null;
-
-    // TODO(M1-11): return queries.Research.PointsPerDay (IResearchQueries.PointsPerDay, declared by M1-00).
-    private static Amount? ReadKnowledgePerDay(ISimQueries queries) => null;
-
-    // TODO(M1-11): return queries.Culture.PointsPerDay (ICultureQueries.PointsPerDay, declared by M1-00).
-    private static Amount? ReadCulturePerDay(ISimQueries queries) => null;
-
-    private T? Optional<T>(Func<ISimQueries, T?> read)
-        where T : struct
-    {
-        try
-        {
-            return read(_host.Query);
-        }
-        catch (NotImplementedException)
-        {
-            // The query exists but its system is a stub that names the task that will fill it in (M1-00 step 8).
-            return null;
-        }
-    }
+    /// <inheritdoc />
+    public Amount? CulturePerDay() => _host.Query.Culture.PointsPerDay;
 }
