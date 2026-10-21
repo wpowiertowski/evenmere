@@ -1,0 +1,22 @@
+{
+  "region.starter.landing.name": "Landing",
+  "region.starter.landing.desc": "The sheltered peninsula where the Founders came ashore: open plains, a forest belt and stone on the hills.",
+  "region.starter.westford.name": "Westford",
+  "region.starter.westford.desc": "The windswept shore north of the wide river, facing the open sea.",
+  "region.starter.northreach.name": "Northreach",
+  "region.starter.northreach.desc": "The northern headlands above the high moor.",
+  "region.starter.highmoor.name": "Highmoor",
+  "region.starter.highmoor.desc": "High grazing land below the crown, hiding coal and copper seams.",
+  "region.starter.crown.name": "Crown",
+  "region.starter.crown.desc": "The bare peaks at the roof of the island, snow in winter and stone all year.",
+  "region.starter.ironhills.name": "Ironhills",
+  "region.starter.ironhills.desc": "Rust-red hills in the east, rich with iron for a later age.",
+  "region.starter.farshore.name": "Farshore",
+  "region.starter.farshore.desc": "The far eastern shore, first to greet the sunrise.",
+  "region.starter.eastvale.name": "Eastvale",
+  "region.starter.eastvale.desc": "A broad vale beyond the narrow river, good soil waiting for the plough.",
+  "region.starter.marshlands.name": "Marshlands",
+  "region.starter.marshlands.desc": "Low, soggy ground that no builder can use until it is drained.",
+  "region.starter.shoals.name": "Shoals",
+  "region.starter.shoals.desc": "Shallow southern waters where the reef breaks the waves."
+}

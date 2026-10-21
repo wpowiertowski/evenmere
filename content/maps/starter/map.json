@@ -1,0 +1,26 @@
+{
+  "width": 128,
+  "height": 128,
+  "startSite": {
+    "x": 30,
+    "y": 96,
+    "rotation": 0
+  },
+  "startStock": {
+    "timber": 40,
+    "fish": 20,
+    "wood": 10
+  },
+  "regions": {
+    "0": "region.starter.landing",
+    "1": "region.starter.westford",
+    "2": "region.starter.northreach",
+    "3": "region.starter.highmoor",
+    "4": "region.starter.crown",
+    "5": "region.starter.ironhills",
+    "6": "region.starter.farshore",
+    "7": "region.starter.eastvale",
+    "8": "region.starter.marshlands",
+    "9": "region.starter.shoals"
+  }
+}
