@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" uid="uid://bub5wqwnne33" path="res://host/Main.cs" id="1_main"]
 [ext_resource type="Script" uid="uid://dcmhwhll1gsvl" path="res://host/SimHost.cs" id="2_host"]
@@ -13,6 +13,7 @@
 [ext_resource type="Script" path="res://rendering/buildings/BuildingRenderer.cs" id="11_buildings"]
 [ext_resource type="Script" path="res://rendering/roads/RoadRenderer.cs" id="12_roads"]
 [ext_resource type="Script" path="res://ui/tools/ToolController.cs" id="13_tools"]
+[ext_resource type="Script" path="res://ui/inspector/InspectorPanel.cs" id="14_inspector"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_mode = 1
@@ -64,3 +65,6 @@ script = ExtResource("7_culture")
 
 [node name="InspirationToast" type="PanelContainer" parent="."]
 script = ExtResource("8_toast")
+
+[node name="InspectorPanel" type="PanelContainer" parent="."]
+script = ExtResource("14_inspector")

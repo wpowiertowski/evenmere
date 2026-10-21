@@ -1,6 +1,8 @@
 using Evenmere.Content;
+using Evenmere.Core.Ids;
 using Evenmere.Game.Host;
 using Evenmere.Game.Ui.Common;
+using Evenmere.Game.Ui.Explain;
 using Evenmere.Sim;
 using Godot;
 
@@ -33,6 +35,9 @@ public sealed partial class HudRoot : Control
 
     private readonly List<HudChip> _residentChips = [];
     private readonly List<HudChip> _goodChips = [];
+    private GoodId[] _stripGoods = [];
+    private PanelContainer? _explainPopup;
+    private ExplanationView? _explainView;
     private Button[] _speedButtons = [];
     private SimHost? _host;
     private ContentDb? _builtFor;
@@ -189,7 +194,7 @@ public sealed partial class HudRoot : Control
         _viewModel = new HudViewModel(new SimHostHudSource(host), host.Content, strings);
 
         BuildSpeedButtons(strings);
-        BuildChips(strings, _viewModel);
+        BuildChips(host, strings, _viewModel);
         _viewModel.Refreshed += OnRefreshed;
     }
 
@@ -213,6 +218,15 @@ public sealed partial class HudRoot : Control
 
         _residentChips.Clear();
         _goodChips.Clear();
+        _stripGoods = [];
+        if (_explainPopup is not null)
+        {
+            RemoveChild(_explainPopup);
+            _explainPopup.QueueFree();
+            _explainPopup = null;
+            _explainView = null;
+        }
+
         _speedButtons = [];
         _knowledgeChip = null;
         _cultureChip = null;
@@ -268,7 +282,7 @@ public sealed partial class HudRoot : Control
         _ => inputEvent.AsText(),
     };
 
-    private void BuildChips(UiStrings strings, HudViewModel viewModel)
+    private void BuildChips(SimHost host, UiStrings strings, HudViewModel viewModel)
     {
         HFlowContainer stats = GetNode<HFlowContainer>("%StatsFlow");
         HFlowContainer goods = GetNode<HFlowContainer>("%GoodsFlow");
@@ -292,9 +306,13 @@ public sealed partial class HudRoot : Control
         for (int i = 0; i < viewModel.Goods.Length; i++)
         {
             var chip = HudChip.Create(withTrend: true, WidestCount);
+            chip.FocusMode = FocusModeEnum.All;
             goods.AddChild(chip);
             _goodChips.Add(chip);
         }
+
+        BuildExplainPopup(host, strings);
+        HookGoodChips();
 
         OnRefreshed();
     }
@@ -365,6 +383,78 @@ public sealed partial class HudRoot : Control
         for (int i = 0; i < _speedButtons.Length; i++)
         {
             _speedButtons[i].SetPressedNoSignal(_speedOptions[i].Speed == speed);
+        }
+    }
+
+    // The goods tooltip (M1-24): hovering or focusing a chip shows ExplainGood in a compact
+    // two-level ExplanationView. The popup is built once per world and hidden on leave.
+    private void BuildExplainPopup(SimHost host, UiStrings strings)
+    {
+        _stripGoods = [.. HudViewModel.DefaultStripGoods(host.Content)];
+        _explainPopup = new PanelContainer
+        {
+            Visible = false,
+            CustomMinimumSize = new Vector2(400f, 280f),
+            Position = new Vector2(420f, 140f),
+        };
+        _explainView = new ExplanationView { MaxDepth = 2 };
+        _explainPopup.AddChild(_explainView);
+        AddChild(_explainPopup);
+        _explainView.Setup(host.Content, strings, host.Query.Explain.ExplainGood);
+    }
+
+    private void HookGoodChips()
+    {
+        for (int i = 0; i < _goodChips.Count; i++)
+        {
+            int index = i;
+            HudChip chip = _goodChips[i];
+            chip.MouseEntered += () => ShowGoodTip(index);
+            chip.MouseExited += HideGoodTip;
+            chip.FocusEntered += () => ShowGoodTip(index);
+            chip.FocusExited += HideGoodTip;
+        }
+    }
+
+    private void ShowGoodTip(int index)
+    {
+        if (_host is not { IsRunning: true } host || _explainPopup is null || _explainView is null)
+        {
+            return;
+        }
+
+        if ((uint)index >= (uint)_stripGoods.Length)
+        {
+            return;
+        }
+
+        GoodId good = _stripGoods[index];
+        _explainView.Setup(host.Content, new UiStrings(host.Locale), host.Query.Explain.ExplainGood);
+        _explainView.MaxDepth = 2;
+        _explainView.ShowRoot(host.Query.Explain.ExplainGood(good));
+        _explainPopup.Visible = true;
+        GD.Print($"[Evenmere] HUD: explain tooltip for {host.Content.NameOf(good)}.");
+    }
+
+    private void HideGoodTip()
+    {
+        if (_explainPopup is not null)
+        {
+            _explainPopup.Visible = false;
+        }
+    }
+
+    /// <summary>Shows the goods tooltip for a named good (debug screenshots only).</summary>
+    /// <param name="goodName">The string ID, such as <c>bread</c>.</param>
+    public void DebugShowGoodTip(string goodName)
+    {
+        for (int i = 0; i < _stripGoods.Length; i++)
+        {
+            if (_host is { IsRunning: true } host && string.Equals(host.Content.NameOf(_stripGoods[i]), goodName, StringComparison.Ordinal))
+            {
+                ShowGoodTip(i);
+                return;
+            }
         }
     }
 

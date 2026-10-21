@@ -70,6 +70,12 @@ namespace Evenmere.Game.Host.Debug;
 /// <param name="ToolGamepad">
 /// <c>--tool-gamepad</c>: show the gamepad's virtual cursor ring for the gamepad screenshot, even with no pad attached.
 /// </param>
+/// <param name="DemoExplain">
+/// <c>--demo-explain[=bakery|house|hud]</c>: build a stalled-bakery and blocked-house setup for the M1-24
+/// screenshots (bakery with no flour because the windmill has no grain, a house blocked by the bread
+/// shortage), then open the inspector on the bakery, the house, or show the HUD bread tooltip.
+/// Empty means no demo; a bare <c>--demo-explain</c> opens the bakery. The world is paused afterwards.
+/// </param>
 internal sealed record DebugLaunchOptions(
     int? BenchFrames,
     string CameraView,
@@ -78,6 +84,7 @@ internal sealed record DebugLaunchOptions(
     string CheckPick,
     bool DemoDirty,
     bool DemoBuildings,
+    string DemoExplain,
     string ToolBuild,
     string ToolRoad,
     bool ToolDemolish,
@@ -94,6 +101,7 @@ internal sealed record DebugLaunchOptions(
     private const string CheckPickPrefix = "--check-pick=";
     private const string DemoDirtyFlag = "--demo-dirty";
     private const string DemoBuildingsFlag = "--demo-buildings";
+    private const string DemoExplainPrefix = "--demo-explain";
     private const string ToolBuildPrefix = "--tool-build=";
     private const string ToolRoadPrefix = "--tool-road=";
     private const string ToolDemolishFlag = "--tool-demolish";
@@ -104,7 +112,7 @@ internal sealed record DebugLaunchOptions(
     private const string ToolGamepadFlag = "--tool-gamepad";
 
     /// <summary>The options for a normal run: no bench, default camera, no checks.</summary>
-    public static DebugLaunchOptions None => new(null, string.Empty, false, false, string.Empty, false, false, string.Empty, string.Empty, false, string.Empty, string.Empty, string.Empty, false, false);
+    public static DebugLaunchOptions None => new(null, string.Empty, false, false, string.Empty, false, false, string.Empty, string.Empty, string.Empty, false, string.Empty, string.Empty, string.Empty, false, false);
 
     /// <summary>Reads the debug options from the user arguments.</summary>
     /// <param name="userArgs">The user arguments, as <c>OS.GetCmdlineUserArgs()</c> returns them.</param>
@@ -119,6 +127,7 @@ internal sealed record DebugLaunchOptions(
         string checkPick = string.Empty;
         bool demoDirty = false;
         bool demoBuildings = false;
+        string demoExplain = string.Empty;
         string toolBuild = string.Empty;
         string toolRoad = string.Empty;
         bool toolDemolish = false;
@@ -161,6 +170,14 @@ internal sealed record DebugLaunchOptions(
             {
                 demoBuildings = true;
             }
+            else if (arg.StartsWith(DemoExplainPrefix, StringComparison.Ordinal))
+            {
+                demoExplain = arg == DemoExplainPrefix ? "bakery" : arg.StartsWith(DemoExplainPrefix + "=", StringComparison.Ordinal) ? arg[(DemoExplainPrefix.Length + 1)..] : string.Empty;
+                if (string.IsNullOrEmpty(demoExplain))
+                {
+                    demoExplain = "bakery";
+                }
+            }
             else if (arg.StartsWith(ToolBuildPrefix, StringComparison.Ordinal))
             {
                 toolBuild = arg[ToolBuildPrefix.Length..];
@@ -195,6 +212,6 @@ internal sealed record DebugLaunchOptions(
             }
         }
 
-        return new DebugLaunchOptions(benchFrames, cameraView, staticCamera, showGrid, checkPick, demoDirty, demoBuildings, toolBuild, toolRoad, toolDemolish, toolTile, toolAnchor, toolSpot, toolInvalid, toolGamepad);
+        return new DebugLaunchOptions(benchFrames, cameraView, staticCamera, showGrid, checkPick, demoDirty, demoBuildings, demoExplain, toolBuild, toolRoad, toolDemolish, toolTile, toolAnchor, toolSpot, toolInvalid, toolGamepad);
     }
 }
