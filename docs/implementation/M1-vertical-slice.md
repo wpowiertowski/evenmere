@@ -48,7 +48,7 @@
 | M1-05 | Roads, connectivity, reach and coverage fields | sim | M1-00 | done |
 | M1-06 | Construction and placement validation | sim | M1-00 | done |
 | M1-07 | Workforce | sim | M1-00 | todo |
-| M1-08 | Production | sim | M1-00 | todo |
+| M1-08 | Production | sim | M1-00 | done |
 | M1-09 | Logistics: carts and transport jobs | sim | M1-00 | todo |
 | M1-10 | Needs and population | sim | M1-00 | todo |
 | M1-11 | Research and civics | sim | M1-00 | todo |
