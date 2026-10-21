@@ -27,6 +27,20 @@ public interface IRoadsQueries
     /// <returns><see langword="true"/> if a storehouse's road distance to the building is within that storehouse's reach.</returns>
     bool IsInStorehouseReach(EntityId building);
 
+    /// <summary>
+    /// Tests whether a footprint that is not built yet would lie in storehouse reach, for the construction ghost preview. It
+    /// is <see langword="true"/> when some road tile orthogonally adjacent to the footprint lies inside a finished
+    /// storehouse's reach field, using the same fields and costs as <see cref="IsInStorehouseReach"/>. A building later
+    /// placed on the footprint therefore gets the same answer there, except that a storehouse is always in its own reach
+    /// and there is no storehouse here yet.
+    /// </summary>
+    /// <param name="x">The column of the footprint's top-left tile.</param>
+    /// <param name="y">The row of the footprint's top-left tile.</param>
+    /// <param name="width">The footprint width in tiles after rotation.</param>
+    /// <param name="height">The footprint height in tiles after rotation.</param>
+    /// <returns><see langword="true"/> if a road tile touching the footprint is within some storehouse's reach; <see langword="false"/> if none is, or the footprint is empty.</returns>
+    bool IsFootprintInStorehouseReach(int x, int y, int width, int height);
+
     /// <summary>Finds the storehouse nearest to a building by road distance.</summary>
     /// <param name="building">The building or site.</param>
     /// <param name="storehouse">The nearest storehouse whose reach covers the building; the lowest ID wins a tie.</param>

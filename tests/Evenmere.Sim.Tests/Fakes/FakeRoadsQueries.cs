@@ -15,6 +15,7 @@ internal sealed class FakeRoadsQueries : IRoadsQueries
     private readonly HashSet<EntityId> _roadAccess = [];
     private readonly SortedDictionary<(EntityId Storehouse, EntityId Building), int> _costs = [];
     private readonly HashSet<(EntityId House, ServiceKind Service)> _covered = [];
+    private readonly HashSet<(int X, int Y, int Width, int Height)> _footprintReach = [];
     private readonly Dictionary<(EntityId Source, EntityId Destination), TileCoord[]> _entityPaths = [];
     private readonly Dictionary<(TileCoord Source, TileCoord Destination), TileCoord[]> _tilePaths = [];
 
@@ -80,6 +81,21 @@ internal sealed class FakeRoadsQueries : IRoadsQueries
         _tilePaths[(source, destination)] = path;
         return this;
     }
+
+    /// <summary>Puts an unbuilt footprint in storehouse reach.</summary>
+    /// <param name="x">The column of the footprint's top-left tile.</param>
+    /// <param name="y">The row of the footprint's top-left tile.</param>
+    /// <param name="width">The footprint width in tiles.</param>
+    /// <param name="height">The footprint height in tiles.</param>
+    /// <returns>This fake.</returns>
+    public FakeRoadsQueries SetFootprintReach(int x, int y, int width, int height)
+    {
+        _footprintReach.Add((x, y, width, height));
+        return this;
+    }
+
+    /// <inheritdoc />
+    public bool IsFootprintInStorehouseReach(int x, int y, int width, int height) => _footprintReach.Contains((x, y, width, height));
 
     /// <inheritdoc />
     public BuildingTypeId? RoadAt(int x, int y) => _roads.TryGetValue(new TileCoord(x, y), out BuildingTypeId type) ? type : null;

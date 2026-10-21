@@ -45,8 +45,8 @@ internal sealed class SystemRoster
         // M1-01 changes the next line to pass the map state, the entity ID allocator and the content.
         var map = new MapSystem();
 
-        // M1-05 changes the next line to pass the roads state.
-        var roads = new RoadsSystem();
+        // M1-05: Roads reaches the map and progression through the query facade, which is built at the end of this constructor.
+        var roads = new RoadsSystem(world.Roads, content, () => Queries ?? throw new InvalidOperationException("The roads system was used before the roster finished building."));
 
         var storage = new StorageSystem(world.Storage);
 
@@ -123,7 +123,7 @@ internal sealed class SystemRoster
         IBuildingPlacement buildingPlacement = new UnimplementedBuildingPlacement();
 
         // M1-05: Roads' road placement check.
-        IRoadPlacement roadPlacement = new UnimplementedRoadPlacement();
+        IRoadPlacement roadPlacement = roads.Placement;
 
         Entries =
         [
