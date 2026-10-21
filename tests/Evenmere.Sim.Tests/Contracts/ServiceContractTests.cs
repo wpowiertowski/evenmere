@@ -141,14 +141,6 @@ public sealed class ServiceContractTests
     {
         var calls = new List<(string Name, string Task, Action Call)>
         {
-            ("BuildingRegistry.Add", "M1-01", () => new UnimplementedBuildingRegistry().Add(default, 0, 0, Rotation.Deg0, BuildingState.Site)),
-            ("BuildingRegistry.Remove", "M1-01", () => new UnimplementedBuildingRegistry().Remove(default)),
-            ("BuildingRegistry.SetState", "M1-01", () => new UnimplementedBuildingRegistry().SetState(default, BuildingState.Active)),
-            ("BuildingRegistry.SetType", "M1-01", () => new UnimplementedBuildingRegistry().SetType(default, default)),
-            ("BuildingRegistry.SetStage", "M1-01", () => new UnimplementedBuildingRegistry().SetStage(default, 1)),
-            ("BuildingLifecycle.Subscribe", "M1-01", () => new UnimplementedBuildingLifecycle().Subscribe(new CapturingListener([]))),
-            ("DirtyChunks.MarkTile", "M1-01", () => new UnimplementedChunkDirtyTracker().MarkTile(0, 0)),
-            ("DirtyChunks.MarkRect", "M1-01", () => new UnimplementedChunkDirtyTracker().MarkRect(0, 0, 1, 1)),
             ("ProgressionService.ApplyEffects", "M1-04", () => new UnimplementedProgressionService().ApplyEffects(default, ImmutableArray<Effect>.Empty)),
             ("PointsLedger.Credit", "M1-04", () => new UnimplementedPointsLedger().Credit(PointKind.Knowledge, Amount.Zero)),
             ("PointsLedger.TakeToday", "M1-04", () => new UnimplementedPointsLedger().TakeToday(PointKind.Knowledge)),

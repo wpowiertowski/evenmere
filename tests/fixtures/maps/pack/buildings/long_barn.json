@@ -1,0 +1,8 @@
+{
+  "id": "long_barn",
+  "category": "infrastructure",
+  "era": 1,
+  "footprint": [3, 1],
+  "buildDays": 1,
+  "start": true
+}
