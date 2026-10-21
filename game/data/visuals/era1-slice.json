@@ -1,0 +1,19 @@
+{
+  "comment": "Placeholder look of every vertical-slice building (M1-20). Each entry maps a content building ID to an sRGB palette colour, a placeholder shape built by PlaceholderMeshBuilder from the footprint, an optional real scene (unused for now; the factory falls back to the placeholder when empty) and a placeholder icon glyph for later menus. A building ID with no entry falls back to a neutral grey box with one warning per type.",
+  "buildings": {
+    "founders_hall": { "colour": "#C9A86A", "shape": "hall", "scene": null, "icon": "⌂" },
+    "settler_house": { "colour": "#D9C49A", "shape": "house", "scene": null, "icon": "⌂" },
+    "dirt_road": { "colour": "#9A7B52", "shape": "road", "scene": null, "icon": "═" },
+    "storehouse": { "colour": "#8A6A45", "shape": "storehouse", "scene": null, "icon": "▤" },
+    "market": { "colour": "#C46A4A", "shape": "market", "scene": null, "icon": "⚖" },
+    "woodcutters_hut": { "colour": "#7A5C3D", "shape": "hut", "scene": null, "icon": "♣" },
+    "sawpit": { "colour": "#8D7B5F", "shape": "hut", "scene": null, "icon": "🪚" },
+    "fishing_hut": { "colour": "#5E7E8C", "shape": "hut", "scene": null, "icon": "🐟" },
+    "sheep_farm": { "colour": "#7FA35A", "shape": "farm", "scene": null, "icon": "🐑" },
+    "weavers_cottage": { "colour": "#CDBF9B", "shape": "house", "scene": null, "icon": "🧵" },
+    "grain_farm": { "colour": "#D3A944", "shape": "farm", "scene": null, "icon": "🌾" },
+    "windmill": { "colour": "#B9A37E", "shape": "mill", "scene": null, "icon": "🌀" },
+    "bakery": { "colour": "#A9603F", "shape": "house", "scene": null, "icon": "🍞" },
+    "shrine": { "colour": "#D8D2C0", "shape": "shrine", "scene": null, "icon": "✦" }
+  }
+}

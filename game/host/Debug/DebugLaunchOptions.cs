@@ -34,13 +34,19 @@ namespace Evenmere.Game.Host.Debug;
 /// rebuild can be watched in the log. Roads are free and always valid somewhere near the hall; when none fits, it
 /// logs that instead of failing.
 /// </param>
+/// <param name="DemoBuildings">
+/// <c>--demo-buildings</c>: unlock the slice techs and civic, place one of each slice building near the hall with roads
+/// connecting them (through <c>SimHost.Enqueue</c>), pause one house next to an active one, and leave the last
+/// buildings as sites, for the M1-20 screenshots. The world is paused afterwards so every shot is deterministic.
+/// </param>
 internal sealed record DebugLaunchOptions(
     int? BenchFrames,
     string CameraView,
     bool StaticCamera,
     bool ShowGrid,
     string CheckPick,
-    bool DemoDirty)
+    bool DemoDirty,
+    bool DemoBuildings)
 {
     private const string BenchFramesPrefix = "--bench-frames";
     private const string CameraViewPrefix = "--camera-view=";
@@ -48,9 +54,10 @@ internal sealed record DebugLaunchOptions(
     private const string ShowGridFlag = "--show-grid";
     private const string CheckPickPrefix = "--check-pick=";
     private const string DemoDirtyFlag = "--demo-dirty";
+    private const string DemoBuildingsFlag = "--demo-buildings";
 
     /// <summary>The options for a normal run: no bench, default camera, no checks.</summary>
-    public static DebugLaunchOptions None => new(null, string.Empty, false, false, string.Empty, false);
+    public static DebugLaunchOptions None => new(null, string.Empty, false, false, string.Empty, false, false);
 
     /// <summary>Reads the debug options from the user arguments.</summary>
     /// <param name="userArgs">The user arguments, as <c>OS.GetCmdlineUserArgs()</c> returns them.</param>
@@ -64,6 +71,7 @@ internal sealed record DebugLaunchOptions(
         bool showGrid = false;
         string checkPick = string.Empty;
         bool demoDirty = false;
+        bool demoBuildings = false;
 
         foreach (string arg in userArgs)
         {
@@ -94,8 +102,12 @@ internal sealed record DebugLaunchOptions(
             {
                 demoDirty = true;
             }
+            else if (arg == DemoBuildingsFlag)
+            {
+                demoBuildings = true;
+            }
         }
 
-        return new DebugLaunchOptions(benchFrames, cameraView, staticCamera, showGrid, checkPick, demoDirty);
+        return new DebugLaunchOptions(benchFrames, cameraView, staticCamera, showGrid, checkPick, demoDirty, demoBuildings);
     }
 }
