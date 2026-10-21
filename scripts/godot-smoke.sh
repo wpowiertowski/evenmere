@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-# Godot headless smoke test (M0-09). It builds the game assembly, imports the Godot project, then runs the simulation
-# inside Godot through SimHost for a fixed number of ticks and expects one line: SMOKE OK hash=<16 lowercase hex>.
-# That hash is the sim's state hash, so it must equal a plain .NET run with the same content, seed and tick count.
+# Godot headless smoke test v2 (M1-28). It builds the game assembly, imports the Godot project, then runs the full
+# Main.tscn scene across real frames while replaying the committed smoke fixture (a tick-0 save plus its command log).
+# It expects one line: SMOKE OK hash=<16 lowercase hex>. It then replays the same files with `evenmere replay` and
+# fails unless the two hashes are equal, so the game and the headless sim agree.
+#
+# Any engine error fails the run: ERROR:, SCRIPT ERROR or push_error lines in the Godot output mean SMOKE FAIL,
+# even when the SMOKE OK line is present.
 #
 # Skips with exit 0 when Godot 4.7 .NET is not installed, unless REQUIRE_GODOT=1 (then it fails).
 #
@@ -9,8 +13,7 @@
 #   GODOT                 path to (or name of) the Godot .NET binary; otherwise `godot` on PATH, then the macOS app
 #   REQUIRE_GODOT=1       fail instead of skipping when Godot is missing
 #   EVENMERE_CONTENT      content root; otherwise <repo>/content if it has eras/, else the minimal fixture pack
-#   GODOT_SMOKE_TICKS     ticks to run (default 1000)
-#   GODOT_SMOKE_SEED      world seed (default 42)
+#   GODOT_SMOKE_TICKS     ticks to run from the fixture save (default 2400, the fixture's length)
 #   GODOT_SMOKE_TIMEOUT   seconds before a Godot run is killed (default 300); dotnet build gets twice as long
 set -euo pipefail
 
@@ -22,10 +25,11 @@ if ! command -v dotnet >/dev/null 2>&1 && [ -x /usr/local/share/dotnet/dotnet ];
     export PATH="/usr/local/share/dotnet:$PATH"
 fi
 
-SMOKE_TICKS="${GODOT_SMOKE_TICKS:-1000}"
-SMOKE_SEED="${GODOT_SMOKE_SEED:-42}"
+SMOKE_TICKS="${GODOT_SMOKE_TICKS:-2400}"
 RUN_TIMEOUT="${GODOT_SMOKE_TIMEOUT:-300}"
 BUILD_TIMEOUT=$((RUN_TIMEOUT * 2))
+FIXTURE_SAVE="$REPO_ROOT/tests/fixtures/smoke/first_houses.evsave"
+FIXTURE_LOG="$REPO_ROOT/tests/fixtures/smoke/first_houses.evlog"
 
 say() { echo "godot smoke: $*"; }
 fail() { echo "godot smoke: FAILED: $*" >&2; exit 1; }
@@ -78,12 +82,17 @@ if [ -z "${EVENMERE_CONTENT:-}" ]; then
 fi
 export EVENMERE_CONTENT
 
+[ -f "$FIXTURE_SAVE" ] || fail "fixture save not found: $FIXTURE_SAVE"
+[ -f "$FIXTURE_LOG" ] || fail "fixture log not found: $FIXTURE_LOG"
+
 say "using $GODOT_BIN"
 say "content root $EVENMERE_CONTENT"
+say "fixture $FIXTURE_SAVE + $FIXTURE_LOG, $SMOKE_TICKS ticks"
 
 import_log="$(mktemp)"
 smoke_log="$(mktemp)"
-trap 'rm -f "$import_log" "$smoke_log"' EXIT
+replay_log="$(mktemp)"
+trap 'rm -f "$import_log" "$smoke_log" "$replay_log"' EXIT
 
 say "building game/Evenmere.Game.csproj (Debug)"
 status=0
@@ -99,12 +108,17 @@ if [ "$status" -ne 0 ]; then
     fail "godot --import exited with status $status$([ "$status" -eq 142 ] && echo ' (timed out)')"
 fi
 
-say "running $SMOKE_TICKS ticks, seed $SMOKE_SEED"
+say "running smoke v2: $SMOKE_TICKS ticks from the fixture save"
 status=0
-guarded "$RUN_TIMEOUT" "$GODOT_BIN" --headless --path "$REPO_ROOT/game" -- "--smoke-ticks=$SMOKE_TICKS" "--seed=$SMOKE_SEED" >"$smoke_log" 2>&1 || status=$?
+guarded "$RUN_TIMEOUT" "$GODOT_BIN" --headless --path "$REPO_ROOT/game" -- "--smoke-ticks=$SMOKE_TICKS" "--smoke-save=$FIXTURE_SAVE" "--smoke-log=$FIXTURE_LOG" >"$smoke_log" 2>&1 || status=$?
 if [ "$status" -ne 0 ]; then
     cat "$smoke_log" >&2
     fail "godot exited with status $status$([ "$status" -eq 142 ] && echo ' (timed out)')"
+fi
+
+if grep -E -q 'ERROR:|SCRIPT ERROR|push_error' "$smoke_log"; then
+    cat "$smoke_log" >&2
+    fail "engine error in the Godot output (ERROR:/SCRIPT ERROR/push_error)"
 fi
 
 smoke_line="$(grep -E '^SMOKE OK hash=[0-9a-f]{16}$' "$smoke_log" | tail -n 1 || true)"
@@ -113,4 +127,26 @@ if [ -z "$smoke_line" ]; then
     fail "no 'SMOKE OK hash=<16 hex>' line in the Godot output"
 fi
 
-echo "$smoke_line"
+smoke_hash="${smoke_line#SMOKE OK hash=}"
+say "game hash $smoke_hash"
+
+say "replaying the same fixture with evenmere replay"
+status=0
+guarded "$RUN_TIMEOUT" dotnet run --project src/Evenmere.Tools -c Release --no-restore -- --content "$EVENMERE_CONTENT" replay --save "$FIXTURE_SAVE" --log "$FIXTURE_LOG" --ticks "$SMOKE_TICKS" >"$replay_log" 2>&1 || status=$?
+if [ "$status" -ne 0 ]; then
+    cat "$replay_log" >&2
+    fail "evenmere replay exited with status $status"
+fi
+
+replay_line="$(grep -E '^hash=[0-9a-f]{16}$' "$replay_log" | tail -n 1 || true)"
+if [ -z "$replay_line" ]; then
+    cat "$replay_log" >&2
+    fail "no 'hash=<16 hex>' line in the evenmere replay output"
+fi
+
+replay_hash="${replay_line#hash=}"
+say "replay hash $replay_hash"
+
+[ "$smoke_hash" = "$replay_hash" ] || fail "hash mismatch: game $smoke_hash != replay $replay_hash"
+
+echo "SMOKE OK hash=$smoke_hash (game and replay agree)"

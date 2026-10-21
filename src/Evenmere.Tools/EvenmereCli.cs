@@ -67,6 +67,7 @@ internal static class EvenmereCli
             BuildRun(content, environment),
             BuildContentHash(content, environment),
             BuildHash(environment),
+            BuildReplay(content, environment),
             BuildBalance(content, environment),
         };
         return root;
@@ -174,6 +175,48 @@ internal static class EvenmereCli
         hash.SetAction(parsed =>
             HashCommand.Execute(parsed.GetValue(save) ?? string.Empty, environment.Output, environment.Error));
         return hash;
+    }
+
+    private static Command BuildReplay(Option<string[]> content, ToolEnvironment environment)
+    {
+        var save = new Option<string>("--save")
+        {
+            Description = "The save file to replay.",
+            HelpName = "file",
+            Required = true,
+        };
+
+        var log = new Option<string>("--log")
+        {
+            Description = "The command log recorded with the save's content.",
+            HelpName = "file",
+            Required = true,
+        };
+
+        var ticks = new Option<long>("--ticks")
+        {
+            Description = "The tick to stop at; at least the save's tick.",
+            HelpName = "n",
+            DefaultValueFactory = _ => DefaultTicks,
+            CustomParser = NonNegativeWholeNumber("--ticks"),
+        };
+
+        var replay = new Command("replay", "Load a save, feed it the logged commands and tick to a tick. stdout: 'hash=<x16>'.")
+        {
+            save,
+            log,
+            ticks,
+        };
+        replay.SetAction(parsed =>
+            WithContentRoots(parsed, content, environment, roots =>
+                ReplayCommand.Execute(
+                    roots,
+                    parsed.GetValue(save) ?? string.Empty,
+                    parsed.GetValue(log) ?? string.Empty,
+                    parsed.GetValue(ticks),
+                    environment.Output,
+                    environment.Error)));
+        return replay;
     }
 
     private static Command BuildBalance(Option<string[]> content, ToolEnvironment environment)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" uid="uid://bub5wqwnne33" path="res://host/Main.cs" id="1_main"]
 [ext_resource type="Script" uid="uid://dcmhwhll1gsvl" path="res://host/SimHost.cs" id="2_host"]
@@ -7,13 +7,15 @@
 [ext_resource type="Script" path="res://ui/progress/PanelToggles.cs" id="5_toggles"]
 [ext_resource type="Script" path="res://ui/research/ResearchPanel.cs" id="6_research"]
 [ext_resource type="Script" path="res://ui/culture/CulturePanel.cs" id="7_culture"]
-[ext_resource type="Script" path="res://ui/progress/InspirationToast.cs" id="8_toast"]
 [ext_resource type="Script" path="res://rendering/terrain/TerrainRenderer.cs" id="9_terrain"]
 [ext_resource type="Script" path="res://rendering/water/WaterRenderer.cs" id="10_water"]
 [ext_resource type="Script" path="res://rendering/buildings/BuildingRenderer.cs" id="11_buildings"]
 [ext_resource type="Script" path="res://rendering/roads/RoadRenderer.cs" id="12_roads"]
 [ext_resource type="Script" path="res://ui/tools/ToolController.cs" id="13_tools"]
-[ext_resource type="Script" path="res://ui/build_menu/BuildMenu.cs" id="14_buildmenu"]
+[ext_resource type="PackedScene" path="res://ui/menus/PauseMenu.tscn" id="14_pause"]
+[ext_resource type="Script" path="res://ui/inspector/InspectorPanel.cs" id="14_inspector"]
+[ext_resource type="Script" path="res://ui/notifications/NotificationFeed.cs" id="15_feed"]
+[ext_resource type="Script" path="res://ui/build_menu/BuildMenu.cs" id="16_buildmenu"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_mode = 1
@@ -63,8 +65,13 @@ script = ExtResource("6_research")
 [node name="CulturePanel" type="PanelContainer" parent="."]
 script = ExtResource("7_culture")
 
-[node name="InspirationToast" type="PanelContainer" parent="."]
-script = ExtResource("8_toast")
+[node name="InspectorPanel" type="PanelContainer" parent="."]
+script = ExtResource("14_inspector")
 
 [node name="BuildMenu" type="PanelContainer" parent="."]
-script = ExtResource("14_buildmenu")
+script = ExtResource("16_buildmenu")
+
+[node name="NotificationFeed" type="Control" parent="."]
+script = ExtResource("15_feed")
+
+[node name="PauseMenu" parent="." instance=ExtResource("14_pause")]
