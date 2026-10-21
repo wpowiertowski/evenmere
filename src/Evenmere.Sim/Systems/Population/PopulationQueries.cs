@@ -1,18 +1,67 @@
+using Evenmere.Core.Collections;
 using Evenmere.Core.Ids;
 using Evenmere.Sim.Queries;
 using Evenmere.Sim.Queries.Types;
 
 namespace Evenmere.Sim.Systems.Population;
 
-/// <summary>Implements <see cref="IPopulationQueries"/>. M1-00 declares the methods and M1-10 implements them; until then each throws <see cref="NotImplementedException"/>.</summary>
-internal sealed class PopulationQueries : IPopulationQueries
+/// <summary>
+/// Implements <see cref="IPopulationQueries"/> over the population state. Everything it reports was stored by the
+/// system on each house's last daily pass, so it needs no simulation context and is valid between ticks.
+/// </summary>
+/// <param name="state">The population slice of the world state.</param>
+internal sealed class PopulationQueries(PopulationState state) : IPopulationQueries
 {
     /// <inheritdoc />
-    public int TotalResidents => throw new NotImplementedException("M1-10");
+    public int TotalResidents
+    {
+        get
+        {
+            int total = 0;
+            foreach (IdTable<HouseRecord>.Entry entry in state.Houses)
+            {
+                total += entry.Value.Residents;
+            }
+
+            return total;
+        }
+    }
 
     /// <inheritdoc />
-    public int Residents(TierId tier) => throw new NotImplementedException("M1-10");
+    public int Residents(TierId tier)
+    {
+        int total = 0;
+        foreach (IdTable<HouseRecord>.Entry entry in state.Houses)
+        {
+            if (entry.Value.Tier == tier)
+            {
+                total += entry.Value.Residents;
+            }
+        }
+
+        return total;
+    }
 
     /// <inheritdoc />
-    public bool TryGetHouse(EntityId house, out HouseInfo info) => throw new NotImplementedException("M1-10");
+    public bool TryGetHouse(EntityId house, out HouseInfo info)
+    {
+        if (!state.Houses.TryGet(house, out HouseRecord record))
+        {
+            info = default;
+            return false;
+        }
+
+        info = new HouseInfo(
+            house,
+            record.Tier,
+            record.Residents,
+            record.TargetResidents,
+            record.Capacity,
+            record.AdvanceStreakDays,
+            record.DeclineTimerDays,
+            record.UpgradeLocked,
+            state.FestivalActive,
+            record.AdvanceBlocker);
+        return true;
+    }
 }
