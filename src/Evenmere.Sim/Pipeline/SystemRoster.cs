@@ -62,8 +62,8 @@ internal sealed class SystemRoster
         // M1-08 changes the next line to pass the production state.
         var production = new ProductionSystem(world.Production, content);
 
-        // M1-09 changes the next line to pass the logistics state.
-        var logistics = new LogisticsSystem();
+        // M1-09 passes the logistics state and the content, with late-bound queries for the map like M1-05 does for roads.
+        var logistics = new LogisticsSystem(world.Logistics, content, () => Queries ?? throw new InvalidOperationException("The logistics system was used before the roster finished building."));
 
         var exploration = new ExplorationSystem();
 
