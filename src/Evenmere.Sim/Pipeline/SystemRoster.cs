@@ -42,8 +42,8 @@ internal sealed class SystemRoster
         ArgumentNullException.ThrowIfNull(content);
 
         // Services first: they are never ticked, but they register command handlers and answer queries.
-        // M1-01 changes the next line to pass the map state, the entity ID allocator and the content.
-        var map = new MapSystem();
+        // M1-01: the map service gets the map state, the entity ID allocator and the content.
+        var map = new MapSystem(world.Map, world.EntityIds, content);
 
         // M1-05 changes the next line to pass the roads state.
         var roads = new RoadsSystem();
@@ -95,9 +95,9 @@ internal sealed class SystemRoster
         Services = new SimServices
         {
             // M1-01: the map service (building registry, lifecycle, dirty chunks).
-            BuildingRegistry = new UnimplementedBuildingRegistry(),
-            BuildingLifecycle = new UnimplementedBuildingLifecycle(),
-            DirtyChunks = new UnimplementedChunkDirtyTracker(),
+            BuildingRegistry = map.Registry,
+            BuildingLifecycle = map.Lifecycle,
+            DirtyChunks = map.DirtyChunks,
 
             // M0-05: the island goods pool.
             Storage = new StorageService(storage.Pool),

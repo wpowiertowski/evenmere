@@ -1,0 +1,18 @@
+{
+  "width": 16,
+  "height": 16,
+  "startSite": {
+    "x": 9,
+    "y": 9,
+    "rotation": 0
+  },
+  "startStock": {
+    "wood": 20,
+    "timber": 10.5
+  },
+  "regions": {
+    "0": "region.test16.west",
+    "1": "region.test16.east",
+    "A": "region.test16.heights"
+  }
+}

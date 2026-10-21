@@ -8,42 +8,6 @@ namespace Evenmere.Sim.Services;
 // the interfaces before the owning task has landed. Each message is the owning task's ID. The owning task writes the real
 // class in its own folder and replaces one line in SystemRoster.
 
-/// <summary>The stand-in for <see cref="IBuildingRegistry"/> until M1-01.</summary>
-internal sealed class UnimplementedBuildingRegistry : IBuildingRegistry
-{
-    /// <inheritdoc />
-    public EntityId Add(BuildingTypeId type, int x, int y, Rotation rotation, BuildingState state) => throw new NotImplementedException("M1-01");
-
-    /// <inheritdoc />
-    public bool Remove(EntityId building) => throw new NotImplementedException("M1-01");
-
-    /// <inheritdoc />
-    public void SetState(EntityId building, BuildingState state) => throw new NotImplementedException("M1-01");
-
-    /// <inheritdoc />
-    public void SetType(EntityId building, BuildingTypeId type) => throw new NotImplementedException("M1-01");
-
-    /// <inheritdoc />
-    public void SetStage(EntityId building, int stage) => throw new NotImplementedException("M1-01");
-}
-
-/// <summary>The stand-in for <see cref="IBuildingLifecycle"/> until M1-01.</summary>
-internal sealed class UnimplementedBuildingLifecycle : IBuildingLifecycle
-{
-    /// <inheritdoc />
-    public void Subscribe(IBuildingLifecycleListener listener) => throw new NotImplementedException("M1-01");
-}
-
-/// <summary>The stand-in for <see cref="IChunkDirtyTracker"/> until M1-01.</summary>
-internal sealed class UnimplementedChunkDirtyTracker : IChunkDirtyTracker
-{
-    /// <inheritdoc />
-    public void MarkTile(int x, int y) => throw new NotImplementedException("M1-01");
-
-    /// <inheritdoc />
-    public void MarkRect(int minX, int minY, int maxX, int maxY) => throw new NotImplementedException("M1-01");
-}
-
 /// <summary>The stand-in for <see cref="IProductionBuffers"/> until M1-08.</summary>
 internal sealed class UnimplementedProductionBuffers : IProductionBuffers
 {

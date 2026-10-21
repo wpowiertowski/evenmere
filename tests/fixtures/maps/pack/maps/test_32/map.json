@@ -1,0 +1,15 @@
+{
+  "width": 32,
+  "height": 32,
+  "startSite": {
+    "x": 12,
+    "y": 12,
+    "rotation": 1
+  },
+  "startStock": {
+    "wood": 5
+  },
+  "regions": {
+    "0": "region.test32.all"
+  }
+}
