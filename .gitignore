@@ -42,3 +42,6 @@ game/content/
 
 # Agent worktrees (Claude Code)
 .claude/worktrees/
+
+# Local operator notes (not part of the project)
+RPC-STEERING.md
