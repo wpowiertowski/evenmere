@@ -65,7 +65,7 @@
 | M1-22 | Carts and walkers | game | M1-20, M1-09 | todo |
 | M1-23 | Build menu | game | M1-18, M1-21 | todo |
 | M1-24 | Inspector and explain tooltips | game | M1-18, M1-12 | todo |
-| M1-25 | Research and civics panels (list view) | game | M1-18, M1-11 | todo |
+| M1-25 | Research and civics panels (list view) | game | M1-18, M1-11 | done |
 | M1-26 | Notification feed | game | M1-18, M1-15 | todo |
 | M1-27 | Main menu, pause menu and save/load UI | game | M1-14, M1-18 | todo |
 | M1-28 | Godot smoke v2 and view boundary check | game | M1-13, M1-20, M1-27 | todo |
@@ -930,8 +930,9 @@
 1. **Categories:** Housing, Production, Storage & Roads, Services, Culture & Knowledge. A building's category comes from its content `category` and `tags`.
 2. **Entries:** icon, name, cost, workforce and recipe summary. A locked entry is dimmed and shows "Unlocked by <tech/civic>", resolved through `ContentDb` effect sources.
 3. **Interaction:** selecting an entry activates the Build tool. Hotkeys (B, then a number) and full gamepad navigation.
+4. **Gamepad leftover from M1-18 (found in the M1-25 review):** `speed_1`, `speed_2` and `speed_3` are bound to d-pad left, down and right (buttons 13, 12 and 14). Godot's built-in `ui_left`, `ui_down` and `ui_right` focus navigation uses the same buttons, so moving focus in any menu also changes the game speed. Move the speed actions off the d-pad. For example, step the speed with LB and RB while the HUD has focus, or put speed in the HUD focus chain. Keep the d-pad for focus navigation everywhere. This task may edit the `speed_*` entries in `game/project.godot` and the HUD speed handling in `game/ui/hud/` for that purpose only.
 
-**Acceptance:** screenshots of the menu with locked and unlocked items, and gamepad navigation demonstrated.
+**Acceptance:** screenshots of the menu with locked and unlocked items, and gamepad navigation demonstrated without changing the game speed.
 
 **Out of scope:** search and favourites (M4-15).
 
