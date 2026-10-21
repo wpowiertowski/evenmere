@@ -85,8 +85,8 @@ internal sealed class SystemRoster
 
         var happenings = new HappeningsSystem();
 
-        // M1-15 changes the next line to pass the advisors state.
-        var advisors = new AdvisorsSystem();
+        // M1-15: the advisors system runs over the advisors state, with the content for its streak slots and building types.
+        var advisors = new AdvisorsSystem(world.Advisors, content);
 
         // M1-12: the statistics system samples the daily history into the statistics state.
         var statistics = new StatisticsSystem(world.Statistics, content);
