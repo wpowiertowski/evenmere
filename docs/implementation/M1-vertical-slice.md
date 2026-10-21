@@ -61,7 +61,7 @@
 | M1-18 | UI theme, HUD and speed controls | game | M0-09 | done |
 | M1-19 | Terrain and water rendering | game | M1-01, M1-17 | done |
 | M1-20 | Buildings, roads and sites (placeholder meshes) | game | M1-19, M1-06 | done |
-| M1-21 | Placement, road and demolish tools | game | M1-20 | todo |
+| M1-21 | Placement, road and demolish tools | game | M1-20 | done |
 | M1-22 | Carts and walkers | game | M1-20, M1-09 | todo |
 | M1-23 | Build menu | game | M1-18, M1-21 | todo |
 | M1-24 | Inspector and explain tooltips | game | M1-18, M1-12 | todo |
