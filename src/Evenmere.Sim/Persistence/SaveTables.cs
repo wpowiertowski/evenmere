@@ -114,6 +114,20 @@ public sealed class SaveTables
         && IsIdentityMap(_happenings, Content.Happenings.Count) && IsIdentityMap(_eras, Content.Eras.Count)
         && IsIdentityMap(_terrains, Content.Terrains.Count);
 
+    /// <summary>Builds identity maps for content that has not changed: every old index points at itself.</summary>
+    /// <param name="content">The content the log was recorded with.</param>
+    /// <returns>The maps.</returns>
+    internal static SaveTables Identity(ContentDb content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        return new SaveTables(
+            [.. content.Goods.Names], [.. content.Buildings.Names], [.. content.Recipes.Names],
+            [.. content.Tiers.Names], [.. content.Techs.Names], [.. content.Civics.Names],
+            [.. content.Traditions.Names], [.. content.Festivals.Names], [.. content.GreatWorks.Names],
+            [.. content.Monuments.Names], [.. content.Happenings.Names], [.. content.Eras.Names],
+            [.. content.Terrains.Names], content);
+    }
+
     /// <summary>Builds the maps from a header and the current content.</summary>
     /// <param name="header">The save header with the save's string tables.</param>
     /// <param name="content">The current content.</param>
