@@ -48,6 +48,13 @@ public sealed partial class HudRoot : Control
     private SimSpeed _resumeSpeed = SimSpeed.X1;
     private float _uiScaleFactor = UiScale.Default;
 
+    /// <summary>
+    /// Gets or sets whether the keyboard 1-3 speed hotkeys stop changing the speed. The build menu sets it while
+    /// open, so the number keys pick menu entries instead (M1-23). The speed buttons keep working, and so does
+    /// pause on Space; only the 1-3 hotkeys are suspended.
+    /// </summary>
+    public static bool SpeedHotkeysSuspended { get; set; }
+
     /// <summary>Gets or sets the path to the <see cref="SimHost"/> node, relative to this node.</summary>
     [Export]
     public NodePath HostPath { get; set; } = new("../../SimHost");
@@ -132,8 +139,14 @@ public sealed partial class HudRoot : Control
 
         // Handled here rather than in _UnhandledInput: after a click, a speed button holds focus and would otherwise take
         // Space (ui_accept) for itself, so the pause key would press that button instead of pausing.
+        // The 1-3 hotkeys rest while the build menu is open (SpeedHotkeysSuspended): the menu uses those keys to
+        // pick entries, and the speed buttons stay clickable throughout.
         foreach (SpeedOption option in _speedOptions)
         {
+            if (SpeedHotkeysSuspended && option.Speed is SimSpeed.X1 or SimSpeed.X2 or SimSpeed.X4)
+            {
+                continue;
+            }
             if (InputMap.HasAction(option.Action) && @event.IsActionPressed(option.Action))
             {
                 SelectSpeed(option.Speed);

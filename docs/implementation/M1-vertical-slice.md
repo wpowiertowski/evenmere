@@ -63,7 +63,7 @@
 | M1-20 | Buildings, roads and sites (placeholder meshes) | game | M1-19, M1-06 | done |
 | M1-21 | Placement, road and demolish tools | game | M1-20 | done |
 | M1-22 | Carts and walkers | game | M1-20, M1-09 | done |
-| M1-23 | Build menu | game | M1-18, M1-21 | todo |
+| M1-23 | Build menu | game | M1-18, M1-21 | done |
 | M1-24 | Inspector and explain tooltips | game | M1-18, M1-12 | done |
 | M1-25 | Research and civics panels (list view) | game | M1-18, M1-11 | done |
 | M1-26 | Notification feed | game | M1-18, M1-15 | done |
