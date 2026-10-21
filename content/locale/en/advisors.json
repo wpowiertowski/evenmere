@@ -1,0 +1,16 @@
+{
+  "advisor.no_road_access.title": "A building has no road beside it",
+  "advisor.no_road_access.body": "Build a dirt road touching its walls so carts and residents can reach it.",
+  "advisor.outside_storehouse_reach.title": "A building is out of storehouse reach",
+  "advisor.outside_storehouse_reach.body": "Lay road within a storehouse's reach so its goods can join the island pool.",
+  "advisor.good_shortage.title": "A good is running short",
+  "advisor.good_shortage.body": "The island wants more of it each day than it can supply. Add another producer or ease demand.",
+  "advisor.house_cannot_advance.title": "Houses are ready but cannot advance",
+  "advisor.house_cannot_advance.body": "Their needs are met, yet the step up is blocked. Bring in the missing materials or unlock the next tier.",
+  "advisor.no_workforce.title": "A tier is short of workers",
+  "advisor.no_workforce.body": "Its buildings ask for more hands than its residents supply. Grow the tier or build less for now.",
+  "advisor.research_idle.title": "Knowledge is waiting for a choice",
+  "advisor.research_idle.body": "Pick a technology to study so the island's knowledge is put to use.",
+  "advisor.civic_idle.title": "Culture is waiting for a choice",
+  "advisor.civic_idle.body": "Pick a civic to adopt so the island's culture is put to use."
+}
