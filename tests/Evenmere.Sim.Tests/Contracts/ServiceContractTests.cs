@@ -141,7 +141,6 @@ public sealed class ServiceContractTests
     {
         var calls = new List<(string Name, string Task, Action Call)>
         {
-            ("WorkforceSupply.SetSupply", "M1-07", () => new UnimplementedWorkforceSupply().SetSupply(default, 1)),
             ("BuildingPlacement.Validate", "M1-06", () => new UnimplementedBuildingPlacement().Validate(default, 0, 0, Rotation.Deg0)),
             ("RoadPlacement.ValidateRoad", "M1-05", () => new UnimplementedRoadPlacement().ValidateRoad([], default)),
         };

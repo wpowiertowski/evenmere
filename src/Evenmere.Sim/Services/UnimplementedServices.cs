@@ -7,13 +7,6 @@ namespace Evenmere.Sim.Services;
 // the interfaces before the owning task has landed. Each message is the owning task's ID. The owning task writes the real
 // class in its own folder and replaces one line in SystemRoster.
 
-/// <summary>The stand-in for <see cref="IWorkforceSupply"/> until M1-07.</summary>
-internal sealed class UnimplementedWorkforceSupply : IWorkforceSupply
-{
-    /// <inheritdoc />
-    public void SetSupply(TierId tier, int workers) => throw new NotImplementedException("M1-07");
-}
-
 /// <summary>The stand-in for <see cref="IBuildingPlacement"/> until M1-06.</summary>
 internal sealed class UnimplementedBuildingPlacement : IBuildingPlacement
 {
