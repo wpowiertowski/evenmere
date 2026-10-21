@@ -3,7 +3,9 @@ using Evenmere.Content;
 using Evenmere.Content.Locale;
 using Evenmere.Content.Maps;
 using Evenmere.Core.Time;
+using Evenmere.Game.Host.Persistence;
 using Evenmere.Sim;
+using Evenmere.Sim.Persistence;
 using Evenmere.Sim.Queries;
 using Evenmere.Sim.Queries.Types;
 using Godot;
@@ -37,15 +39,35 @@ public sealed partial class SimHost : Node
     private ContentDb? _content;
     private LocaleTable? _locale;
     private SimSpeed _speed = SimSpeed.X1;
+    private ulong _seed = LaunchOptions.DefaultSeed;
+    private string? _mapId;
 
     /// <summary>Raised once per frame in which ticks ran, after the events were drained, with those events in emission order (possibly none).</summary>
     public event Action<IReadOnlyList<SimEvent>>? EventsDrained;
+
+    /// <summary>
+    /// Raised after every enqueued command, with the tick the command is applied on (<see cref="CurrentTick"/> + 1 at
+    /// enqueue time). The <see cref="CommandLogRecorder"/> listens to this to keep the save's <c>.evlog</c> complete.
+    /// </summary>
+    public event Action<long, Command>? CommandEnqueued;
 
     /// <summary>Gets a value indicating whether a simulation has been started.</summary>
     public bool IsRunning => _sim is not null;
 
     /// <summary>Gets the tick the simulation has completed.</summary>
     public long CurrentTick => RequireSim().CurrentTick;
+
+    /// <summary>Gets the world seed the running simulation was started or loaded with (<see cref="LaunchOptions.DefaultSeed"/> when none is running).</summary>
+    public ulong Seed => _seed;
+
+    /// <summary>Gets the island ID the running simulation runs on (<c>starter</c> by default).</summary>
+    public string MapId => _mapId ?? LaunchOptions.DefaultMap;
+
+    /// <summary>
+    /// Gets the running simulation itself, for the save code. Views and tools use <see cref="Query"/> and
+    /// <see cref="Enqueue"/> instead; nothing outside the game assembly may touch this.
+    /// </summary>
+    internal ISimulation Simulation => RequireSim();
 
     /// <summary>Gets the calendar at the current tick.</summary>
     public GameClock Clock => new(RequireSim().CurrentTick);
@@ -129,20 +151,13 @@ public sealed partial class SimHost : Node
     /// <exception cref="MapLoadException">The map has errors.</exception>
     public void StartNewGame(ulong seed, string mapId = LaunchOptions.DefaultMap)
     {
-        string root = ContentPaths.Resolve();
-        ContentDb content = ContentLoader.Load(root).GetDbOrThrow();
-        MapDef map = MapLoader.Load([root], mapId, content).GetMapOrThrow();
-
-        LocaleLoadResult locale = LocaleTable.Load(root, DefaultLanguage);
-        foreach (ContentDiagnostic diagnostic in locale.Diagnostics)
-        {
-            GD.PushWarning($"[Evenmere] locale: {diagnostic}");
-        }
+        EnsureContent();
+        MapDef map = MapLoader.Load([ContentPaths.Resolve()], mapId, Content!).GetMapOrThrow();
 
         // Held as the interface on purpose: the host exposes queries, never the concrete simulation or its state.
-        _sim = Simulation.CreateNew(content, new NewGameOptions { Seed = seed, Map = map });
-        _content = content;
-        _locale = locale.Table;
+        _sim = Evenmere.Sim.Simulation.CreateNew(Content!, new NewGameOptions { Seed = seed, Map = map });
+        _seed = seed;
+        _mapId = mapId;
         _stepper.Reset();
 
         // A fresh map marks every chunk dirty; the terrain renderer builds them all on load, so the marks wait in the
@@ -150,11 +165,79 @@ public sealed partial class SimHost : Node
         DrainDirtyChunks(_sim);
     }
 
-    // TODO(M1-14): start from a save (Simulation.Restore) once the persistence task defines the header and the content check.
+    /// <summary>
+    /// Loads a save file, replacing the simulation already running (or starting one when the game is at the menu).
+    /// The content is loaded first when nothing runs yet; otherwise the running content remaps the save's IDs.
+    /// </summary>
+    /// <param name="savePath">The <c>.evsave</c> path.</param>
+    /// <returns>What loading changed or dropped to fit the current content.</returns>
+    /// <exception cref="ContentLoadException">The content has errors.</exception>
+    /// <exception cref="InvalidDataException">The stream is not a save this version can load.</exception>
+    public SaveReport LoadGame(string savePath)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(savePath);
+        EnsureContent();
 
-    /// <summary>Queues a command for the next tick.</summary>
+        using FileStream stream = File.OpenRead(savePath);
+        (ISimulation simulation, SaveReport report) = SaveGame.Read(stream, Content!);
+        _sim = simulation;
+        _stepper.Reset();
+
+        // The seed and island travel in the save's sidecar; without one (a hand-placed save) keep the previous values.
+        SaveSlotMeta? meta = SaveSlots.ReadMeta(
+            Path.Combine(Path.GetDirectoryName(Path.GetFullPath(savePath)) ?? string.Empty, SaveSlots.SlotIdOf(savePath) + SaveSlots.MetaExtension));
+        if (meta is not null)
+        {
+            _seed = meta.Seed;
+            if (!string.IsNullOrEmpty(meta.MapId))
+            {
+                _mapId = meta.MapId;
+            }
+        }
+
+        DrainDirtyChunks(simulation);
+        return report;
+    }
+
+    /// <summary>Stops the running simulation and forgets it, for quitting back to the main menu.</summary>
+    public void UnloadGame()
+    {
+        _sim = null;
+        _stepper.Reset();
+        _pendingDirty.Clear();
+        _pendingStart = 0;
+    }
+
+    // Loads the content and its display text once, shared by new games and loaded saves. Problems in the locale
+    // files are logged as warnings and never stop the game.
+    private void EnsureContent()
+    {
+        if (_content is not null && _locale is not null)
+        {
+            return;
+        }
+
+        string root = ContentPaths.Resolve();
+        ContentDb content = ContentLoader.Load(root).GetDbOrThrow();
+        LocaleLoadResult locale = LocaleTable.Load(root, DefaultLanguage);
+        foreach (ContentDiagnostic diagnostic in locale.Diagnostics)
+        {
+            GD.PushWarning($"[Evenmere] locale: {diagnostic}");
+        }
+
+        _content = content;
+        _locale = locale.Table;
+    }
+
+    /// <summary>Queues a command for the next tick, then tells the command-log recorder which tick it lands on.</summary>
     /// <param name="command">The command.</param>
-    public void Enqueue(Command command) => RequireSim().Enqueue(command);
+    public void Enqueue(Command command)
+    {
+        ISimulation sim = RequireSim();
+        long appliedTick = sim.CurrentTick + 1;
+        sim.Enqueue(command);
+        CommandEnqueued?.Invoke(appliedTick, command);
+    }
 
     /// <summary>Computes the state hash of the world as it is now.</summary>
     /// <returns>The XxHash64 state hash (ADR-0003).</returns>
