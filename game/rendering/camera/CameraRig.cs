@@ -79,6 +79,10 @@ public sealed partial class CameraRig : Node3D
     [Export(PropertyHint.Range, "10,89,0.5,suffix:°")]
     public float IslandPitchDegrees { get; set; } = 70f;
 
+    /// <summary>Gets or sets the isometric-style starting angle, in degrees. Rotation still turns in 90° steps from it.</summary>
+    [Export(PropertyHint.Range, "0,90,0.5,suffix:°")]
+    public float YawOffsetDegrees { get; set; } = 30f;
+
     /// <summary>Gets or sets how fast a full pan input moves the focus, in zoom distances per second. Panning is slower when zoomed in and faster when zoomed out.</summary>
     [Export(PropertyHint.Range, "0.05,3,0.05")]
     public float PanSpeed { get; set; } = 0.6f;
@@ -148,7 +152,7 @@ public sealed partial class CameraRig : Node3D
     public float Yaw => _yaw;
 
     /// <summary>Gets which of the four quarter turns the view is turning to or resting at, from 0 to 3. Zero looks toward -Z (north) from the +Z side.</summary>
-    public int RotationQuadrant => ((_rotationSteps % 4) + 4) % 4;
+    public int RotationQuadrant => CameraMath.QuadrantForSteps(_rotationSteps);
 
     /// <summary>Gets the map size in tiles.</summary>
     public MapBounds Bounds => new(MapWidthTiles, MapHeightTiles);
@@ -173,6 +177,8 @@ public sealed partial class CameraRig : Node3D
         _focus = new Vector2(centerX, centerZ);
         (float minZoom, float maxZoom) = ZoomRange();
         _logZoom = _targetLogZoom = MathF.Log(Math.Clamp(InitialZoom, minZoom, maxZoom));
+        _yaw = CameraMath.TargetYawRadians(_rotationSteps, YawOffsetDegrees);
+        _yawVelocity = 0f;
         _focusHeight = FocusGroundHeight();
 
         ApplyTransform(minZoom, maxZoom);
@@ -442,14 +448,14 @@ public sealed partial class CameraRig : Node3D
 
     private void UpdateRotation(float dt)
     {
-        float target = _rotationSteps * CameraMath.QuarterTurn;
+        float target = CameraMath.TargetYawRadians(_rotationSteps, YawOffsetDegrees);
         CameraMath.SpringStep(ref _yaw, ref _yawVelocity, target, RotationResponse, dt);
 
         if (MathF.Abs(_yaw - target) < SettleDistance && MathF.Abs(_yawVelocity) < SettleVelocity)
         {
             // At rest: fold whole turns away so the angle never grows without bound.
             _rotationSteps = RotationQuadrant;
-            _yaw = _rotationSteps * CameraMath.QuarterTurn;
+            _yaw = CameraMath.SettledYawRadians(_rotationSteps, YawOffsetDegrees);
             _yawVelocity = 0f;
         }
     }
