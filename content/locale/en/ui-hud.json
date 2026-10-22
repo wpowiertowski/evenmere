@@ -19,7 +19,7 @@
   "ui.hud.workforce.free": "{free} free / {jobs} jobs",
   "ui.hud.workforce.idle": "{free} free",
   "ui.hud.workforce.short": "short {short} / {jobs} jobs",
-  "ui.hud.workforce.tip": "{supply} {tier} can work; buildings ask for {demand}. Workers come only from houses at the {tier} tier: build more houses for {tier}, or open a house and choose Lock upgrades to keep it at {tier}.",
+  "ui.hud.workforce.tip": "{supply} {tier} can work; buildings ask for {demand}. Workers come only from houses at the {tier} tier, and those houses wait to advance while their workers are needed. Build more houses for {tier} to fill the jobs.",
   "ui.hud.knowledge": "Knowledge",
   "ui.hud.culture": "Culture",
   "ui.hud.per_day": "{value}/day",

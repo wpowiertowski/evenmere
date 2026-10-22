@@ -21,7 +21,7 @@ public sealed class HudWorkforceTests
         stat.IsWarning.ShouldBeFalse();
         stat.Tooltip.ShouldContain("30 Settlers can work; buildings ask for 24");
         stat.Tooltip.ShouldContain("houses at the Settlers tier");
-        stat.Tooltip.ShouldContain("Lock upgrades");
+        stat.Tooltip.ShouldContain("wait to advance while their workers are needed");
     }
 
     [Fact]
