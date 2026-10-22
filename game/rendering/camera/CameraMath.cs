@@ -15,6 +15,39 @@ public static class CameraMath
     public static float QuarterTurn => HalfPi;
 
     /// <summary>
+    /// Gets the isometric-style starting angle as a yaw offset in radians. Rotation still turns in 90° steps from it.
+    /// </summary>
+    /// <param name="offsetDegrees">The starting angle in degrees, clockwise about the vertical axis.</param>
+    /// <returns>The offset in radians.</returns>
+    public static float YawOffsetRadians(float offsetDegrees) => offsetDegrees * (MathF.PI / 180f);
+
+    /// <summary>
+    /// Gets the yaw the rotation spring aims at: the offset plus 90° per step. Negative steps turn left.
+    /// </summary>
+    /// <param name="steps">The accumulated quarter turns, which may be outside 0–3 or negative mid-turn.</param>
+    /// <param name="offsetDegrees">The starting angle in degrees.</param>
+    /// <returns>The target yaw in radians.</returns>
+    public static float TargetYawRadians(int steps, float offsetDegrees) =>
+        YawOffsetRadians(offsetDegrees) + (steps * QuarterTurn);
+
+    /// <summary>
+    /// Gets which of the four 90° views the step count means, from the steps alone. The offset never changes it.
+    /// </summary>
+    /// <param name="steps">The accumulated quarter turns, which may be negative.</param>
+    /// <returns>A quadrant from 0 to 3.</returns>
+    public static int QuadrantForSteps(int steps) => ((steps % 4) + 4) % 4;
+
+    /// <summary>
+    /// Gets the resting yaw after the settle snap: the quadrant's quarter turn plus the offset, so the angle never
+    /// grows without bound but keeps the starting angle.
+    /// </summary>
+    /// <param name="quadrant">The quadrant from 0 to 3.</param>
+    /// <param name="offsetDegrees">The starting angle in degrees.</param>
+    /// <returns>The settled yaw in radians.</returns>
+    public static float SettledYawRadians(int quadrant, float offsetDegrees) =>
+        YawOffsetRadians(offsetDegrees) + (quadrant * QuarterTurn);
+
+    /// <summary>
     /// Gets how far a zoom distance sits between street level and island view, measured in log space so that each
     /// mouse-wheel notch (a constant ratio) moves the same distance along the curve.
     /// </summary>
