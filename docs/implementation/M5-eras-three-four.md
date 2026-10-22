@@ -90,7 +90,7 @@ Both eras may ship as free updates after the public build.
 | --- | --- | --- |
 | content | M5-01, M5-02 | `content/**` (Era III files), `content/locale/en/era3-*.json`, `game/data/visuals/era3-*.json` |
 
-**Reads:** progression.md, tech-tree.md and culture-tree.md (Era III).
+**Reads:** progression.md, tech-tree.md and culture-tree.md (Era III), plus progression.md §Upgrade lines (the Era III rows from M2-30).
 
 **Goal:** the complete Enlightenment era as data.
 

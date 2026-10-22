@@ -162,7 +162,7 @@
 | --- | --- | --- |
 | content | M3-01, M3-04 | `content/goods/*`, `content/buildings/*`, `content/recipes/*` (Era II items), `content/locale/en/era2-production.json`, `game/data/visuals/era2-production.json` |
 
-**Reads:** progression.md (Era II tables and chains).
+**Reads:** progression.md (Era II tables and chains, §Upgrade lines, the Era II rows from M2-30).
 
 **Goal:** every Era II good, chain and building as data, with upkeep values.
 
