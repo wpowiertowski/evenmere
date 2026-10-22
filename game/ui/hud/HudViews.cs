@@ -6,7 +6,8 @@ namespace Evenmere.Game.Ui.Hud;
 /// <param name="Label">The name shown beside the number, such as <c>Villagers</c>.</param>
 /// <param name="Value">The formatted number, or the dash when no query provides it yet.</param>
 /// <param name="Tooltip">The sentence shown when the player points at it.</param>
-public readonly record struct HudStat(string Label, string Value, string Tooltip);
+/// <param name="IsWarning">Whether the value needs the warning tint: a tier whose buildings ask for more workers than its houses supply.</param>
+public readonly record struct HudStat(string Label, string Value, string Tooltip, bool IsWarning);
 
 /// <summary>One good in the strip under the top bar.</summary>
 /// <param name="Name">The good's display name.</param>

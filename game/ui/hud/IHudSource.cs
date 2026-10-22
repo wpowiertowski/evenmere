@@ -36,6 +36,16 @@ public interface IHudSource
     /// <returns><see langword="true"/> if it is unlocked.</returns>
     bool IsTierUnlocked(TierId tier);
 
+    /// <summary>Gets how many workers a tier's houses supply.</summary>
+    /// <param name="tier">The tier.</param>
+    /// <returns>The workers that tier's houses supply; 0 when it has no residents.</returns>
+    int WorkforceSupply(TierId tier);
+
+    /// <summary>Gets how many workers a tier's active, unpaused workplaces ask for.</summary>
+    /// <param name="tier">The tier.</param>
+    /// <returns>The workers wanted.</returns>
+    int WorkforceDemand(TierId tier);
+
     /// <summary>Gets the knowledge the island gains per game day.</summary>
     /// <returns>The rate, or <see langword="null"/> while no simulation is running.</returns>
     Amount? KnowledgePerDay();

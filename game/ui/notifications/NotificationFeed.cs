@@ -60,6 +60,11 @@ public sealed partial class NotificationFeed : Control
     private VBoxContainer? _toastBox;
     private Button? _feedButton;
     private PanelContainer? _advicePanel;
+    private Control? _toggles;
+
+    /// <summary>Gets or sets the path to the research/civics toggle buttons, whose bottom edge this column stacks under.</summary>
+    [Export]
+    public NodePath TogglesPath { get; set; } = new("../PanelToggles");
     private Button? _adviceHeader;
     private ScrollContainer? _adviceScroll;
     private VBoxContainer? _adviceRows;
@@ -133,6 +138,7 @@ public sealed partial class NotificationFeed : Control
     public override void _Process(double delta)
     {
         TickToasts(delta);
+        LayoutLeftColumn();
 
         if (_host is not { IsRunning: true } host)
         {
@@ -817,6 +823,44 @@ public sealed partial class NotificationFeed : Control
         _adviceRows = rows;
 
         RetitleAdvice();
+    }
+
+    // Stacks the Notices button and the pinned-notes panel under the HUD toggles' actual bottom edge, so a
+    // taller HUD bar (more tiers, longer workforce text) pushes the whole left column down instead of
+    // overlapping it. Falls back to the placed offsets while the toggles are missing. The panel keeps its
+    // current height when shifted; LayoutAdvice recomputes it from the new top on its own cadence.
+    private void LayoutLeftColumn()
+    {
+        const float TogglesGap = 8f;
+        const float FeedButtonHeight = 44f;
+        const float AdviceGap = 10f;
+
+        if (_toggles is null)
+        {
+            _toggles = GetNodeOrNull<Control>(TogglesPath);
+            if (_toggles is null)
+            {
+                return;
+            }
+        }
+
+        float buttonTop = _toggles.GetGlobalRect().End.Y + TogglesGap;
+        if (_feedButton is not null && Math.Abs(_feedButton.OffsetTop - buttonTop) > 0.5f)
+        {
+            _feedButton.OffsetTop = buttonTop;
+            _feedButton.OffsetBottom = buttonTop + FeedButtonHeight;
+        }
+
+        if (_advicePanel is not null)
+        {
+            float panelTop = (_feedButton?.OffsetBottom ?? buttonTop + FeedButtonHeight) + AdviceGap;
+            if (Math.Abs(_advicePanel.OffsetTop - panelTop) > 0.5f)
+            {
+                float height = _advicePanel.OffsetBottom - _advicePanel.OffsetTop;
+                _advicePanel.OffsetTop = panelTop;
+                _advicePanel.OffsetBottom = panelTop + height;
+            }
+        }
     }
 
     // Sizes the panel to its content, capped at 40% of the viewport height; beyond that the rows scroll.

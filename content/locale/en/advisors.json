@@ -8,7 +8,7 @@
   "advisor.house_cannot_advance.title": "Houses are ready but cannot advance",
   "advisor.house_cannot_advance.body": "Their needs are met, yet the step up is blocked. Bring in the missing materials or unlock the next tier.",
   "advisor.no_workforce.title": "A tier is short of workers",
-  "advisor.no_workforce.body": "Its buildings ask for more hands than its residents supply. Grow the tier or build less for now.",
+  "advisor.no_workforce.body": "Its buildings ask for more hands than its residents supply. Build more houses of that tier, or lock some houses so they stay in it.",
   "advisor.research_idle.title": "Knowledge is waiting for a choice",
   "advisor.research_idle.body": "Pick a technology to study so the island's knowledge is put to use.",
   "advisor.civic_idle.title": "Culture is waiting for a choice",
