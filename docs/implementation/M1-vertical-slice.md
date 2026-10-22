@@ -71,6 +71,7 @@
 | M1-28 | Godot smoke v2 and view boundary check | game | M1-13, M1-20, M1-27 | done |
 | M1-29 | GitHub CI and PR flow | infra | M1-28, M1-16 | done |
 | M1-30 | Vertical-slice playtest and gate review | human | M1-29 | todo |
+| M1-31 | Workforce supply and demand in the HUD | game | M1-18, M1-23, M1-24 | done |
 | M1-32 | Isometric-style camera yaw | game | M1-17 | done |
 | M1-33 | Workforce hold on house advancement | sim | M1-10 | done |
 
@@ -1116,11 +1117,31 @@
 **Findings to triage, collected during implementation:**
 
 - **Homespun is optional for the slice target (from M1-16).** On seed 1 the balance bot reaches 100 Villagers at 26.9 game minutes, against a target of 45, without ever producing homespun. Villager houses sit at 8 of 10 residents on fish, bread and the shrine alone. Decide whether homespun should matter more for Villagers, for example through its share of the needs or the occupancy rule, or whether the faster pace is fine.
-- **Settlers run out as houses advance (from M1-22).** In the `--demo-buildings` world, every house advances to Villagers, so no Settlers are left to staff the Settler-workforce producers, and the economy stalls. Players have to lock some houses to keep a Settler workforce. Decide whether the slice needs a clearer cue, through the advisors, the build menu or the tutorial, or a design change, such as Villagers also filling Settler jobs.
+- **Settlers run out as houses advance (from M1-22).** In the `--demo-buildings` world, every house advances to Villagers, so no Settlers are left to staff the Settler-workforce producers, and the economy stalls. Players have to lock some houses to keep a Settler workforce. Decide whether the slice needs a clearer cue, through the advisors, the build menu or the tutorial, or a design change, such as Villagers also filling Settler jobs. **Decided (developer, M1 playtest):** automatic upgrades stay, and the upgrade lock remains the player's tool. M1-31 adds a per-tier workers-and-jobs indicator to the HUD and the build menu. M1-33 holds a house at its tier while advancing would leave that tier's jobs unstaffed. In the longer term, upgrade lines (M2-30) move jobs up the tiers.
 - **Carts are hard to see at island zoom (from M1-22).** Carts are about 12 px at zoom 40 and blend into the dirt roads. Consider brighter cart bodies or a light outline before real art.
 - **Placeholder look of river banks (from M1-19).** The river water strip shows a thin lip above the bank where it meets the slope. Judge in play whether it needs work before real art.
 
 **Acceptance:** every gate checkbox is ticked or explicitly waived with a reason.
+
+---
+
+### M1-31 · Workforce supply and demand in the HUD
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| game | M1-18, M1-23, M1-24 | `game/ui/hud/**` and `content/locale/en/ui-hud.json`; `game/ui/build_menu/BuildMenuViewModel.cs` and `BuildMenu.cs`, and `content/locale/en/ui-build-menu.json` (the workforce line only); `content/locale/en/explain.json` (the `explain.fix.no_workforce` text only) and `content/locale/en/advisors.json` (the `advisor.no_workforce.*` texts only); `tests/Evenmere.Game.Tests/**`; this file (the M1-31 row and card only) |
+
+**Reads:** progression.md (§Population tiers); `IWorkforceQueries`; the HUD (`HudRoot`, `HudViewModel`, `IHudSource`, `SimHostHudSource`, `HudChip`); the build menu (`BuildMenuViewModel`, each entry's workforce line).
+
+**Goal:** connect residents to jobs in the HUD, so a staffing shortage names its fix (playtest finding: houses advance to Villagers and the Settler workforce runs dry with no cue).
+
+**Steps:**
+
+1. **HUD workforce, per unlocked tier:** beside each tier's resident count show `"workers free / jobs"` (`Settlers 24 · 6 free / 30 jobs`, or `Settlers 12 · short 6 / 18 jobs` when demand outstrips supply), in the warning tint only when short, with the jobs part hidden for a tier with no jobs and no residents. The tooltip explains the fix from locale. `IHudSource` gains `WorkforceSupply(tier)` and `WorkforceDemand(tier)`, implemented in `SimHostHudSource` through `IWorkforceQueries`.
+2. **Build menu:** each entry's workforce line becomes `"3 Settlers (6 free)"`, or `"3 Settlers (none free)"` in the warning tint.
+3. **Texts:** `explain.fix.no_workforce` and `advisor.no_workforce.body` give the same calm advice: workers come only from houses of that tier.
+
+**Acceptance:** screenshots of the short-staffed HUD, its tooltip, and the build menu's `(none free)` line; game unit tests over a fake `IHudSource` cover the free, short, even and hidden cases.
 
 ---
 

@@ -51,7 +51,6 @@ public sealed partial class BuildMenu : PanelContainer
 
     private static readonly Color _lockColour = new(0.72f, 0.52f, 0.2f);
     private static readonly Color _fallbackSwatch = new(0.54f, 0.54f, 0.54f);
-
     private SimHost? _host;
     private ToolController? _tools;
     private Control? _research;
@@ -321,7 +320,7 @@ public sealed partial class BuildMenu : PanelContainer
         _strings = new UiStrings(host.Locale);
         _builtFor = host.Content;
         Dictionary<string, BuildMenuViewModel.BuildingVisualRef> visuals = LoadVisuals(host.Content);
-        _model = new BuildMenuViewModel(host.Content, _strings, host.Query.Progression, visuals, UnlockIndex.Build(host.Content));
+        _model = new BuildMenuViewModel(host.Content, _strings, host.Query.Progression, host.Query.Workforce, visuals, UnlockIndex.Build(host.Content));
         _model.Refreshed += OnRefreshed;
         _model.MarkDirty();
         _model.Advance(10.0);
@@ -620,6 +619,14 @@ public sealed partial class BuildMenu : PanelContainer
         row.Cost.Text = entry.CostText;
         row.Workforce.Visible = entry.WorkforceText is not null;
         row.Workforce.Text = entry.WorkforceText ?? string.Empty;
+        if (entry.WorkforceShort)
+        {
+            row.Workforce.AddThemeColorOverride("font_color", Hud.HudChip.WarningTint);
+        }
+        else
+        {
+            row.Workforce.RemoveThemeColorOverride("font_color");
+        }
         row.Detail.Text = entry.DetailText;
         row.Desc.Visible = entry.Description.Length > 0;
         row.Desc.Text = entry.Description;
@@ -1170,7 +1177,7 @@ public sealed partial class BuildMenu : PanelContainer
             Lock = lockLine;
             Entry = new BuildMenuViewModel.BuildEntry(
                 string.Empty, null, false, string.Empty, string.Empty, string.Empty,
-                string.Empty, null, string.Empty, string.Empty, false, string.Empty);
+                string.Empty, null, false, string.Empty, string.Empty, false, string.Empty);
         }
 
         public PanelContainer Root { get; }

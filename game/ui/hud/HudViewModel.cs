@@ -131,9 +131,7 @@ public sealed class HudViewModel : ViewModel
                 continue;
             }
 
-            long? count = _source.Residents(_tiers[i]);
-            string value = count is { } known ? NumberFormat.Count(known) : _dash;
-            residents.Add(new HudStat(_tierNames[i], value, _strings.Format("ui.hud.residents.tip", ("tier", _tierNames[i]), ("count", value))));
+            residents.Add(ResidentStat(_tiers[i], _tierNames[i], _source.Residents(_tiers[i])));
         }
 
         Residents = residents.ToImmutable();
@@ -157,6 +155,33 @@ public sealed class HudViewModel : ViewModel
         }
 
         Goods = goods.MoveToImmutable();
+    }
+
+    private HudStat ResidentStat(TierId tier, string tierName, long? count)
+    {
+        string countText = count is { } known ? NumberFormat.Count(known) : _dash;
+        int supply = _source.WorkforceSupply(tier);
+        int demand = _source.WorkforceDemand(tier);
+
+        // A tier with no jobs and no residents shows only its count: there is nothing to staff and nothing to explain.
+        if (demand <= 0 && (count ?? 0) <= 0)
+        {
+            return new HudStat(tierName, countText, _strings.Format("ui.hud.residents.tip", ("tier", tierName), ("count", countText)), false);
+        }
+
+        // Residents but no jobs: the tier's workers sit idle, so the jobs part is dropped ("12 · 12 free").
+        string workforce = demand <= 0
+            ? _strings.Format("ui.hud.workforce.idle", ("free", NumberFormat.Count(supply)))
+            : demand > supply
+            ? _strings.Format("ui.hud.workforce.short", ("short", NumberFormat.Count(demand - supply)), ("jobs", NumberFormat.Count(demand)))
+            : _strings.Format("ui.hud.workforce.free", ("free", NumberFormat.Count(supply - demand)), ("jobs", NumberFormat.Count(demand)));
+        string value = _strings.Format("ui.hud.residents.value", ("count", countText), ("workforce", workforce));
+        string tooltip = _strings.Format(
+            "ui.hud.workforce.tip",
+            ("supply", NumberFormat.Count(supply)),
+            ("tier", tierName),
+            ("demand", NumberFormat.Count(demand)));
+        return new HudStat(tierName, value, tooltip, demand > supply);
     }
 
     private static string TrendKey(Trend trend) => trend switch
@@ -185,7 +210,7 @@ public sealed class HudViewModel : ViewModel
     {
         string value = perDay is { } rate ? NumberFormat.Rate(rate) : _dash;
         string shown = perDay is null ? _dash : _strings.Format("ui.hud.per_day", ("value", value));
-        return new HudStat(_strings.Get(labelKey), shown, _strings.Format(tooltipKey, ("value", value)));
+        return new HudStat(_strings.Get(labelKey), shown, _strings.Format(tooltipKey, ("value", value)), false);
     }
 
     /// <summary>Shows the dash everywhere, with the names in place, so the nodes can be built before a simulation exists.</summary>
@@ -195,7 +220,7 @@ public sealed class HudViewModel : ViewModel
         DateText = _dash;
         Speed = SimSpeed.Paused;
 
-        Residents = [.. _tierNames.Select(name => new HudStat(name, _dash, _strings.Format("ui.hud.residents.tip", ("tier", name), ("count", _dash))))];
+        Residents = [.. _tierNames.Select(name => new HudStat(name, _dash, _strings.Format("ui.hud.residents.tip", ("tier", name), ("count", _dash)), false))];
         Knowledge = RateStat("ui.hud.knowledge", "ui.hud.knowledge.tip", null);
         Culture = RateStat("ui.hud.culture", "ui.hud.culture.tip", null);
         Goods = [.. _goodNames.Select(name => new HudGood(name, _dash, Trend.Flat, name))];

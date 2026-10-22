@@ -38,6 +38,9 @@ public sealed partial class HudRoot : Control
     private GoodId[] _stripGoods = [];
     private PanelContainer? _explainPopup;
     private ExplanationView? _explainView;
+    private PanelContainer? _workforceTipPopup;
+    private Label? _workforceTipLabel;
+    private string _debugWorkforceTier = string.Empty;
     private Button[] _speedButtons = [];
     private SimHost? _host;
     private ContentDb? _builtFor;
@@ -97,6 +100,19 @@ public sealed partial class HudRoot : Control
 
         _dateLabel = GetNode<Label>("%DateLabel");
         _host.EventsDrained += OnEventsDrained;
+
+        // Debug screenshots only: --hud-workforce-tip=<tier> shows that tier's workforce tooltip in a popup
+        // once the HUD is built (M1-31 evidence), so the tooltip can be captured without hovering the mouse.
+        if (OS.IsDebugBuild())
+        {
+            foreach (string arg in OS.GetCmdlineUserArgs())
+            {
+                if (arg.StartsWith("--hud-workforce-tip=", StringComparison.Ordinal))
+                {
+                    _debugWorkforceTier = arg["--hud-workforce-tip=".Length..];
+                }
+            }
+        }
 
         // The host starts the world in Main._Ready, which runs after this node's, so the HUD is built from the host's content
         // and locale on the first frame the simulation is running (see _Process).
@@ -232,6 +248,13 @@ public sealed partial class HudRoot : Control
         _residentChips.Clear();
         _goodChips.Clear();
         _stripGoods = [];
+        if (_workforceTipPopup is not null)
+        {
+            RemoveChild(_workforceTipPopup);
+            _workforceTipPopup.QueueFree();
+            _workforceTipPopup = null;
+            _workforceTipLabel = null;
+        }
         if (_explainPopup is not null)
         {
             RemoveChild(_explainPopup);
@@ -300,21 +323,31 @@ public sealed partial class HudRoot : Control
         HFlowContainer stats = GetNode<HFlowContainer>("%StatsFlow");
         HFlowContainer goods = GetNode<HFlowContainer>("%GoodsFlow");
 
-        // Sample numbers as wide as the real ones will get, so a chip keeps its width as digits change.
-        const string WidestCount = "8,888";
-        string widestRate = strings.Format("ui.hud.per_day", ("value", "888.8"));
+        // Sample numbers as wide as the real ones will get, so a chip keeps its width as digits change. Resident
+        // values carry the workforce, sampled at slice scale ("88 · short 88 / 88 jobs"): big enough to hold a
+        // two-digit short line steady, small enough that both tier chips share the top row with the date and speed
+        // buttons at 1280 × 800 instead of wrapping the bar to three rows.
+        // The top row holds the date, the speeds and the tier chips only; Knowledge and Culture sit at the head of
+        // the goods row, so the bar stays two rows tall at 1280 × 800 with two tiers unlocked.
+        const string WidestResidents = "88 · short 88 / 88 jobs";
+        // Goods stay plain counts, sampled at slice scale ("88"): the names dominate these chips, so the
+        // sample only steadies two-digit stocks; with Knowledge and Culture heading the goods row, a wider
+        // sample would wrap the strip to a third bar row at 1280 × 800. Three-digit stocks widen their chip
+        // past the sample instead of jumping the whole row.
+        const string WidestCount = "88";
+        string widestRate = strings.Format("ui.hud.per_day", ("value", "88.8"));
 
         for (int i = 0; i < viewModel.Residents.Length; i++)
         {
-            var chip = HudChip.Create(withTrend: false, WidestCount);
+            var chip = HudChip.Create(withTrend: false, WidestResidents);
             stats.AddChild(chip);
             _residentChips.Add(chip);
         }
 
         _knowledgeChip = HudChip.Create(withTrend: false, widestRate);
-        stats.AddChild(_knowledgeChip);
+        goods.AddChild(_knowledgeChip);
         _cultureChip = HudChip.Create(withTrend: false, widestRate);
-        stats.AddChild(_cultureChip);
+        goods.AddChild(_cultureChip);
 
         for (int i = 0; i < viewModel.Goods.Length; i++)
         {
@@ -326,6 +359,7 @@ public sealed partial class HudRoot : Control
 
         BuildExplainPopup(host, strings);
         HookGoodChips();
+        BuildWorkforceTipPopup();
 
         OnRefreshed();
     }
@@ -353,6 +387,7 @@ public sealed partial class HudRoot : Control
                 HudStat stat = viewModel.Residents[i];
                 _residentChips[i].Visible = true;
                 _residentChips[i].SetValue(stat.Label, stat.Value, stat.Tooltip);
+                _residentChips[i].SetWarning(stat.IsWarning);
             }
             else
             {
@@ -362,6 +397,7 @@ public sealed partial class HudRoot : Control
 
         _knowledgeChip.SetValue(viewModel.Knowledge.Label, viewModel.Knowledge.Value, viewModel.Knowledge.Tooltip);
         _cultureChip.SetValue(viewModel.Culture.Label, viewModel.Culture.Value, viewModel.Culture.Tooltip);
+        ShowDebugWorkforceTip();
 
         for (int i = 0; i < _goodChips.Count; i++)
         {
@@ -455,6 +491,44 @@ public sealed partial class HudRoot : Control
         {
             _explainPopup.Visible = false;
         }
+    }
+
+    private void BuildWorkforceTipPopup()
+    {
+        _workforceTipPopup = new PanelContainer
+        {
+            Visible = false,
+            CustomMinimumSize = new Vector2(460f, 0f),
+            Position = new Vector2(420f, 140f),
+        };
+        _workforceTipLabel = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        _workforceTipPopup.AddChild(_workforceTipLabel);
+        AddChild(_workforceTipPopup);
+    }
+
+    // Shows the --hud-workforce-tip tier's tooltip text in the popup, refreshed with the HUD so it always
+    // reads the live supply and demand. Nothing when the flag is empty or the tier is hidden (locked, or no jobs
+    // and no residents).
+    private void ShowDebugWorkforceTip()
+    {
+        if (_debugWorkforceTier.Length == 0 || _viewModel is null
+            || _workforceTipPopup is null || _workforceTipLabel is null || _host is not { IsRunning: true } host)
+        {
+            return;
+        }
+
+        string wanted = new UiStrings(host.Locale).TierName(_debugWorkforceTier);
+        foreach (HudStat stat in _viewModel.Residents)
+        {
+            if (string.Equals(stat.Label, wanted, StringComparison.Ordinal))
+            {
+                _workforceTipLabel.Text = stat.Tooltip;
+                _workforceTipPopup.Visible = true;
+                return;
+            }
+        }
+
+        _workforceTipPopup.Visible = false;
     }
 
     /// <summary>Shows the goods tooltip for a named good (debug screenshots only).</summary>

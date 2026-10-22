@@ -15,8 +15,13 @@ public sealed partial class PanelToggles : HBoxContainer
 {
     private SimHost? _host;
     private ContentDb? _builtFor;
+    private Control? _hudBar;
     private Button? _researchButton;
     private Button? _cultureButton;
+
+    /// <summary>Gets or sets the path to the HUD bar, whose bottom edge the buttons sit under.</summary>
+    [Export]
+    public NodePath HudBarPath { get; set; } = new("../Hud/HudRoot/Margin/Bar");
 
     /// <summary>Gets or sets the path to the <see cref="SimHost"/> node, relative to this node.</summary>
     [Export]
@@ -54,6 +59,23 @@ public sealed partial class PanelToggles : HBoxContainer
     /// <inheritdoc />
     public override void _Process(double delta)
     {
+        // The buttons sit just under the HUD bar's actual bottom edge, so a taller bar (more tiers, longer
+        // workforce text) can never cover them. Falls back to the placed offsets while the bar is missing.
+        if (_hudBar is null)
+        {
+            _hudBar = GetNodeOrNull<Control>(HudBarPath);
+        }
+
+        if (_hudBar is not null)
+        {
+            float top = _hudBar.GetGlobalRect().End.Y + 8f;
+            if (Math.Abs(OffsetTop - top) > 0.5f)
+            {
+                OffsetTop = top;
+                OffsetBottom = top + 72f;
+            }
+        }
+
         if (_host is not { IsRunning: true } host)
         {
             return;

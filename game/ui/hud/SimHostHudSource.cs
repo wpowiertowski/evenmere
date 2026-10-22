@@ -41,6 +41,12 @@ public sealed class SimHostHudSource : IHudSource
     public bool IsTierUnlocked(TierId tier) => _host.Query.Progression.IsUnlocked(tier);
 
     /// <inheritdoc />
+    public int WorkforceSupply(TierId tier) => _host.Query.Workforce.Supply(tier);
+
+    /// <inheritdoc />
+    public int WorkforceDemand(TierId tier) => _host.Query.Workforce.Demand(tier);
+
+    /// <inheritdoc />
     public Amount? KnowledgePerDay() => _host.Query.Research.PointsPerDay;
 
     /// <inheritdoc />

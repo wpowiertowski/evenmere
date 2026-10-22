@@ -7,9 +7,14 @@ namespace Evenmere.Game.Ui.Hud;
 /// A rounded chip with a name and a number, and optionally a trend arrow: one good in the strip, or one stat in the top bar.
 /// It is built by <see cref="Create"/> and filled by <see cref="SetValue"/> and <see cref="SetTrend"/>. The number sits in a
 /// right-aligned label as wide as a wide number would be, so chips do not jump around as the digits change.
+/// <see cref="SetWarning"/> tints the number in a calm ochre (the same hue as the build menu's locked line) while a tier
+/// is short of workers: noticeable beside the ink numbers, but never alarming red.
 /// </summary>
 public sealed partial class HudChip : PanelContainer
 {
+    /// <summary>The calm warning tint for a short workforce, shared with the build menu's workforce line.</summary>
+    public static readonly Color WarningTint = new(0.66f, 0.46f, 0.15f);
+
     private Label? _name;
     private Label? _value;
     private TrendArrow? _arrow;
@@ -84,6 +89,25 @@ public sealed partial class HudChip : PanelContainer
         if (_arrow is not null)
         {
             _arrow.Trend = trend;
+        }
+    }
+
+    /// <summary>Sets whether the number shows the warning tint: a tier short of workers.</summary>
+    /// <param name="warning"><see langword="true"/> for the calm ochre tint; <see langword="false"/> for the theme's ink.</param>
+    public void SetWarning(bool warning)
+    {
+        if (_value is null)
+        {
+            return;
+        }
+
+        if (warning)
+        {
+            _value.AddThemeColorOverride("font_color", WarningTint);
+        }
+        else
+        {
+            _value.RemoveThemeColorOverride("font_color");
         }
     }
 }
