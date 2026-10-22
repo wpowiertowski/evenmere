@@ -147,6 +147,38 @@ public sealed class ExplainHouseTests
     }
 
     [Fact]
+    public void ExplainHouse_HeldForWorkforce_NamesTierDemandAndSpare()
+    {
+        FakeSim sim = CreateSim();
+        ExplainService explain = Explain(sim);
+        ContentDb content = sim.Content;
+
+        TierId settlers = content.IdOf<TierId>("settlers");
+        BuildingTypeId houseType = content.IdOf<BuildingTypeId>("settler_house");
+        EntityId house = sim.Services.BuildingRegistry.Add(houseType, 0, 0, Rotation.Deg0, BuildingState.Active);
+
+        sim.Queries.Population.SetHouse(new HouseInfo(
+            house, settlers, 6, 6, 6, 3, 0, false, false, AdvanceBlocker.HeldForWorkforce));
+        sim.Queries.Needs.SetHouseNeeds(new HouseNeedsInfo(
+            house,
+            true,
+            [
+                new NeedStatus(NeedClass.Basic, content.IdOf<GoodId>("fish"), null, true, true, Ratio.FromPerMille(900), NeedUnmetReason.None),
+                new NeedStatus(NeedClass.Basic, content.IdOf<GoodId>("wood"), null, true, true, Ratio.FromPerMille(900), NeedUnmetReason.None),
+                new NeedStatus(NeedClass.Basic, null, ServiceKind.Market, true, true, Ratio.One, NeedUnmetReason.None),
+            ]));
+        sim.Queries.Population.SetResidents(settlers, 10);
+        sim.Queries.Workforce.SetDemand(settlers, 7);
+
+        Explanation explanation = explain.ExplainHouse(house);
+
+        ExplanationLine advance = explanation.Root.Children.Single(c => c.Key == "explain.house.advance");
+        ExplanationLine blocker = advance.Children.Single();
+        blocker.Key.ShouldBe("explain.house.blocker.held_workforce");
+        blocker.Args.ShouldBe([ExplainArg.Of(settlers), ExplainArg.Of(7), ExplainArg.Of(4)]);
+    }
+
+    [Fact]
     public void ExplainHouse_Unknown_ReturnsUnknownLine()
     {
         FakeSim sim = CreateSim();

@@ -31,6 +31,9 @@ namespace Evenmere.Sim.Systems.Population;
 /// <c>declineGraceDays</c> (scaled by the <c>declineGrace</c> modifiers) the house steps down one tier.</item>
 /// </list>
 /// <para>Once a day, at the start of the day, it also tells Workforce how many workers each tier supplies.</para>
+/// <para>It keeps a live per-tier resident total in the state (ADR-0014): rebuilt at day start and adjusted whenever a
+/// house fills, empties, advances, declines or is removed, so each house's advance check sees the houses handled
+/// earlier the same day.</para>
 /// <para>It listens to the building lifecycle: a residence gets its <see cref="HouseRecord"/> when it becomes active (the
 /// lowest tier, one resident) and loses it when the building is removed. M1-13 subscribes it.</para>
 /// </remarks>
@@ -39,7 +42,6 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
     private readonly PopulationState _state;
     private readonly ContentDb _content;
     private readonly TierId?[] _nextTier;
-    private readonly int[] _tierTotals;
 
     /// <summary>Initializes a new instance of the <see cref="PopulationSystem"/> class.</summary>
     /// <param name="state">The population slice of the world state.</param>
@@ -53,7 +55,6 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
 
         _state = state;
         _content = content;
-        _tierTotals = new int[content.Tiers.Count];
         Queries = new PopulationQueries(state);
 
         // A tier's definition names the tier below it. Walking in rank order means the lowest rank wins if two tiers claim the same one.
@@ -121,10 +122,19 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
         };
         house.Capacity = CapacityOf(ctx, building.Id, in house, _content.Get(start));
         _state.Houses.Add(building.Id, house);
+        _state.EnsureTierSlots(_content.Tiers.Count);
+        _state.AddTierResidents(start, 1);
     }
 
     /// <inheritdoc />
-    public void OnRemoved(SimContext ctx, BuildingInfo building) => _state.Houses.Remove(building.Id);
+    public void OnRemoved(SimContext ctx, BuildingInfo building)
+    {
+        if (_state.Houses.TryGet(building.Id, out HouseRecord record))
+        {
+            _state.AddTierResidents(record.Tier, -record.Residents);
+            _state.Houses.Remove(building.Id);
+        }
+    }
 
     /// <inheritdoc />
     public void OnTypeChanged(SimContext ctx, BuildingInfo building, BuildingTypeId previousType)
@@ -143,7 +153,7 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
         }
         else
         {
-            _state.Houses.Remove(building.Id);
+            OnRemoved(ctx, building);
         }
     }
 
@@ -165,15 +175,17 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
 
     private static ModifierContext ContextOf(EntityId id, in HouseRecord house) => new(house.Type, id, house.Tier, null);
 
-    // Tells Workforce how many workers each tier supplies. Workforce keeps the figure until the next call, so an island
-    // that has never had a house has nothing to say, and the call is skipped until the first house exists.
+    // Tells Workforce how many workers each tier supplies, and rebuilds the live per-tier totals from the houses, so a
+    // restored save (whose totals array may be missing or stale) agrees with the houses again. Workforce keeps the
+    // figure until the next call, so an island that has never had a house has nothing to say, and the call is skipped
+    // until the first house exists.
     private void PublishSupply(SimContext ctx)
     {
-        Span<int> totals = _tierTotals;
-        totals.Clear();
+        _state.EnsureTierSlots(_content.Tiers.Count);
+        Array.Clear(_state.TierResidents);
         foreach (IdTable<HouseRecord>.Entry entry in _state.Houses)
         {
-            totals[entry.Value.Tier.Value] += entry.Value.Residents;
+            _state.TierResidents[entry.Value.Tier.Value] += entry.Value.Residents;
         }
 
         if (_state.Houses.Count == 0 && Array.TrueForAll(_state.SuppliedWorkers, static workers => workers == 0))
@@ -181,17 +193,23 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
             return;
         }
 
-        if (_state.SuppliedWorkers.Length != totals.Length)
+        if (_state.SuppliedWorkers.Length != _state.TierResidents.Length)
         {
-            _state.SuppliedWorkers = new int[totals.Length];
+            _state.SuppliedWorkers = new int[_state.TierResidents.Length];
         }
 
-        for (int tier = 0; tier < totals.Length; tier++)
+        for (int tier = 0; tier < _state.TierResidents.Length; tier++)
         {
-            ctx.WorkforceSupply.SetSupply(TierId.From((ushort)tier), totals[tier]);
-            _state.SuppliedWorkers[tier] = totals[tier];
+            ctx.WorkforceSupply.SetSupply(TierId.From((ushort)tier), _state.TierResidents[tier]);
+            _state.SuppliedWorkers[tier] = _state.TierResidents[tier];
         }
     }
+
+    /// <summary>Reads the live resident total of a tier: the sum over its houses including today's changes so far.</summary>
+    /// <param name="tier">The tier.</param>
+    /// <returns>The residents of the tier's houses; 0 when the tier has no slot yet.</returns>
+    internal int LiveTierTotal(TierId tier) =>
+        tier.Value < _state.TierResidents.Length ? _state.TierResidents[tier.Value] : 0;
 
     private void Process(SimContext ctx, EntityId id, ref HouseRecord house)
     {
@@ -208,6 +226,11 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
         house.Capacity = capacity;
         house.TargetResidents = target;
         house.Residents = after;
+        if (after != before)
+        {
+            _state.AddTierResidents(house.Tier, after - before);
+        }
+
         if (after > before)
         {
             ctx.Events.Emit(new ResidentsMovedIn(ctx.Tick, id, after - before));
@@ -289,6 +312,8 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
     private void ChangeTier(SimContext ctx, EntityId id, ref HouseRecord house, TierId tierId)
     {
         TierDef tier = _content.Get(tierId);
+        TierId from = house.Tier;
+        _state.AddTierResidents(from, -house.Residents);
         house.Tier = tierId;
         house.NeedsMetMask = 0;
         house.EverMetMask = 0;
@@ -297,6 +322,7 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
         house.DeclineTimerDays = 0;
         house.Capacity = CapacityOf(ctx, id, in house, tier);
         house.Residents = Math.Clamp(house.Residents, 1, house.Capacity);
+        _state.AddTierResidents(tierId, house.Residents);
         house.TargetResidents = house.Residents;
         house.AdvanceBlocker = BlockerOf(ctx, in house, tier);
     }
@@ -338,6 +364,14 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
             {
                 return AdvanceBlocker.MissingMaterials;
             }
+        }
+
+        // The workforce hold (ADR-0014), checked last: with everything else met, a house of tier T advances only if the
+        // workers left after it leaves still cover tier T's jobs. With no jobs for the tier, nothing is held.
+        int demand = ctx.Queries.Workforce.Demand(house.Tier);
+        if (demand > 0 && LiveTierTotal(house.Tier) - house.Residents < demand)
+        {
+            return AdvanceBlocker.HeldForWorkforce;
         }
 
         return AdvanceBlocker.None;

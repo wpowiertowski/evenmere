@@ -71,6 +71,7 @@
 | M1-28 | Godot smoke v2 and view boundary check | game | M1-13, M1-20, M1-27 | done |
 | M1-29 | GitHub CI and PR flow | infra | M1-28, M1-16 | done |
 | M1-30 | Vertical-slice playtest and gate review | human | M1-29 | todo |
+| M1-33 | Workforce hold on house advancement | sim | M1-10 | done |
 
 ---
 
@@ -1121,6 +1122,31 @@
 **Acceptance:** every gate checkbox is ticked or explicitly waived with a reason.
 
 ---
+
+### M1-33 · Workforce hold on house advancement
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| sim | M1-10 | `src/Evenmere.Sim/Systems/Population/**`, `src/Evenmere.Sim/Queries/Types/HouseInfo.cs` (`HeldForWorkforce = 6` only), `src/Evenmere.Sim/Explain/ExplainService.cs` (held line only), `content/locale/en/explain-workforce-hold.json`, `docs/adr/0014-workforce-hold.md`, golden hashes and slice scripts as needed, `tools/bots/slice.json` if the bot needs more houses |
+
+**Reads:** AGENTS.md; ADR-0011; progression.md (§Population tiers, §How needs work); `PopulationSystem.cs`; `IWorkforceQueries.Demand`.
+
+**Goal:** houses hold their advance while their tier's workers are needed, so the island never runs out of workers as buildings evolve (developer's playtest decision, ADR-0014).
+
+**Steps:**
+
+1. Append `HeldForWorkforce = 6` to `AdvanceBlocker` (ADR-0014 records the contract addition).
+2. Keep live per-tier resident totals in `PopulationState`, rebuilt at day start and adjusted on every fill, advance, decline and removal; check the hold last in `BlockerOf` against `IWorkforceQueries.Demand`.
+3. Explain the held house with typed arguments; keep `HouseCannotAdvance` to materials and locked tiers.
+4. Re-baseline golden hashes, keep all four slice scenarios green, and confirm the balance bot still reaches 100 Villagers.
+
+**Acceptance:**
+
+- A house is held when advancing would drop supply below demand, and advances once a new house of the tier fills.
+- Only the first-evaluated eligible house advances when spare covers exactly one; no hold with zero demand; locks keep priority; decline is unaffected.
+- Live totals always equal the sum over houses, including after a save round trip.
+
+**Out of scope:** content numbers; advisor texts (another task owns them).
 
 ## Gate record
 

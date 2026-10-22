@@ -442,6 +442,8 @@ internal static class RemapPass
         {
             PopulationState state = world.Population;
             state.SuppliedWorkers = Permute(state.SuppliedWorkers, tables.TierMap, tables.Content.Tiers.Count, static () => 0);
+            // M1-33 (ADR-0014): the live per-tier totals move with the tiers like the published supply does.
+            state.TierResidents = Permute(state.TierResidents, tables.TierMap, tables.Content.Tiers.Count, static () => 0);
 
             var dropped = new List<EntityId>();
             foreach (IdTable<HouseRecord>.Entry entry in state.Houses)

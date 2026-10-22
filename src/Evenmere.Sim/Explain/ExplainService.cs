@@ -570,6 +570,7 @@ internal sealed class ExplainService(ContentDb content, Func<ISimQueries> querie
             AdvanceBlocker.NoNextTier => "explain.house.blocker.top",
             AdvanceBlocker.UpgradeLocked => "explain.house.blocker.locked_upgrade",
             AdvanceBlocker.MissingMaterials => "explain.house.blocker.materials",
+            AdvanceBlocker.HeldForWorkforce => "explain.house.blocker.held_workforce",
             _ => "explain.house.blocker.none",
         };
     }
@@ -579,6 +580,14 @@ internal sealed class ExplainService(ContentDb content, Func<ISimQueries> querie
         if (info.AdvanceBlocker == AdvanceBlocker.NextTierLocked && NextTier(info.Tier) is { } next)
         {
             return [ExplainArg.Of(next)];
+        }
+
+        if (info.AdvanceBlocker == AdvanceBlocker.HeldForWorkforce)
+        {
+            ISimQueries q = _queries();
+            int demand = q.Workforce.Demand(info.Tier);
+            int spare = q.Population.Residents(info.Tier) - info.Residents;
+            return [ExplainArg.Of(info.Tier), ExplainArg.Of(demand), ExplainArg.Of(spare)];
         }
 
         return [];

@@ -18,6 +18,7 @@ Each file records one decision: its context, the decision itself and its consequ
 | [0010](0010-progression-gating.md) | Dual era gateways, alternating tier unlocks, decline always on | Accepted |
 | [0011](0011-m1-simulation-contract.md) | The M1 simulation contract | Accepted |
 | [0013](0013-art-direction.md) | Art direction: hand-drawn isometric, through a non-photorealistic pass over low-poly 3D | Accepted |
+| [0014](0014-workforce-hold.md) | Workforce hold on house advancement | Accepted |
 
 ## Template
 
