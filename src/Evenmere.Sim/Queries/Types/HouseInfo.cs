@@ -25,6 +25,9 @@ public enum AdvanceBlocker : byte
 
     /// <summary>The island pool lacks the upgrade materials.</summary>
     MissingMaterials = 5,
+
+    /// <summary>Advancing would leave fewer workers of the tier than its jobs ask for, so the house waits for spare workers (ADR-0014).</summary>
+    HeldForWorkforce = 6,
 }
 
 /// <summary>A copy of one house's state for the view, the explain queries and the advisors.</summary>

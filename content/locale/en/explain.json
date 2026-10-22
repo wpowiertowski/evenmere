@@ -29,7 +29,7 @@
   "explain.fix.none": "Working.",
   "explain.fix.paused": "Unpause the building to restart it.",
   "explain.fix.no_storehouse_reach": "Build a road to a storehouse.",
-  "explain.fix.no_workforce": "Workers come only from houses of that tier: build more of them, or lock some houses so they don't advance.",
+  "explain.fix.no_workforce": "Workers come only from houses of that tier. Build more of them; houses wait to advance while their workers are needed.",
   "explain.fix.missing_input": "Bring in the missing goods.",
   "explain.fix.output_full": "Collect the finished goods.",
   "explain.fix.missing_material": "Bring in the missing materials.",

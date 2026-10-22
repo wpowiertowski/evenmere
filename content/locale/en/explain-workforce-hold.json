@@ -1,0 +1,3 @@
+{
+  "explain.house.blocker.held_workforce": "Held at {0}: {1} {0} jobs need workers, but only {2} could be spared. Build more houses for {0} to let it advance."
+}

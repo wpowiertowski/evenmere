@@ -61,6 +61,7 @@ Goods are in **units per 1,000 residents per day**. Services are buildings withi
 - **Market first.** A house can draw goods only while it is inside a Market's coverage, and that Market must be road-connected to a storehouse.
 - **Occupancy.** Target occupancy = max(1, capacity × basic needs met ÷ basic needs total). Residents move one step per day toward the target.
 - **Advance.** All basic needs met for 3 consecutive days, plus the next tier unlocked, plus upgrade materials in the pool, plus the house not locked by the player → the house advances and the materials are consumed.
+- **Workforce hold (ADR-0014).** Workers of a tier come only from houses of that tier, so a house of tier T, with every other advance condition met, advances only if the tier-T workers left after it leaves still cover tier T's jobs (`residentsOfTier(T) − house.Residents ≥ Demand(T)`). Otherwise the house is held: it keeps its advance streak and advances as soon as there are spare workers. With no jobs for the tier, nothing is held.
 - **Comfort.** Each comfort good that is met adds +25% to the tier's knowledge, culture and coin output from that house. A missing comfort good never hurts.
 - **Fair shares.** Each day a fulfilment ratio per good is computed from pool stock against projected demand, and every house consumes at that ratio.
 - **Decline (always on).** The decline timer runs while a basic need **that the house has had met at its current tier** is below 50%. After a full season (10 days) the house steps down one tier.

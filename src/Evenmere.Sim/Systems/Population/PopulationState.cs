@@ -1,4 +1,5 @@
 using Evenmere.Core.Collections;
+using Evenmere.Core.Ids;
 using Evenmere.Sim.Persistence;
 using Evenmere.Sim.Serialization.Formatters;
 using MessagePack;
@@ -35,4 +36,38 @@ public sealed class PopulationState
     [Key(2)]
     [ContentIndexed(ContentKind.Tier)]
     public int[] SuppliedWorkers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the live resident count of each tier, indexed by <c>TierId.Value</c>. The system keeps it equal to the
+    /// sum of <see cref="HouseRecord.Residents"/> over the houses of the tier: it is rebuilt at day start and adjusted
+    /// whenever a house fills, empties, advances, declines or is removed, so the workforce-hold check (ADR-0014) reads an
+    /// O(1) total that already reflects the houses handled earlier the same day.
+    /// </summary>
+    [Key(3)]
+    [ContentIndexed(ContentKind.Tier)]
+    public int[] TierResidents { get; set; } = [];
+
+    /// <summary>Makes room for every tier in the per-tier arrays, keeping the existing counts.</summary>
+    /// <param name="tiers">The number of tiers.</param>
+    internal void EnsureTierSlots(int tiers)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(tiers);
+        if (TierResidents.Length != tiers)
+        {
+            int[] residents = TierResidents;
+            Array.Resize(ref residents, tiers);
+            TierResidents = residents;
+        }
+    }
+
+    /// <summary>Adds residents of a tier to the live total.</summary>
+    /// <param name="tier">The tier.</param>
+    /// <param name="delta">How many residents moved in (positive) or out (negative).</param>
+    internal void AddTierResidents(TierId tier, int delta)
+    {
+        if (tier.Value < TierResidents.Length)
+        {
+            TierResidents[tier.Value] += delta;
+        }
+    }
 }
