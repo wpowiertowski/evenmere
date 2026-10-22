@@ -72,6 +72,7 @@
 | M1-29 | GitHub CI and PR flow | infra | M1-28, M1-16 | done |
 | M1-30 | Vertical-slice playtest and gate review | human | M1-29 | todo |
 | M1-31 | Workforce supply and demand in the HUD | game | M1-18, M1-23, M1-24 | done |
+| M1-32 | Isometric-style camera yaw | game | M1-17 | done |
 
 ---
 
@@ -1140,6 +1141,24 @@
 3. **Texts:** `explain.fix.no_workforce` and `advisor.no_workforce.body` give the same calm advice: workers come only from houses of that tier.
 
 **Acceptance:** screenshots of the short-staffed HUD, its tooltip, and the build menu's `(none free)` line; game unit tests over a fake `IHudSource` cover the free, short, even and hidden cases.
+
+---
+
+### M1-32 · Isometric-style camera yaw
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| game | M1-17 | `game/rendering/camera/**`, `tests/Evenmere.Game.Tests/**` (new camera tests) |
+
+**Goal:** start the camera at an isometric-style 30° angle while keeping the 90° rotation steps.
+
+**Steps:**
+
+1. Add an exported `YawOffsetDegrees` (default 30) to the camera rig; the rotation target is offset + steps × 90°, and the settle snap keeps the offset.
+2. Put the yaw arithmetic in the Godot-free `CameraMath` and test it: targets for steps 0–3, negative-step wrap, the settle snap, and screen-relative pan at 30°.
+3. Take screenshots at 1280 × 800 (starting view, after one rotation step, and a placement ghost) and log one `--check-pick` line at the new angle.
+
+**Acceptance:** the starting view sits at 30°, Q/E still turn in 90° steps, pan stays screen-relative, picking lands on the hovered tile, and the zoom-dependent pitch is unchanged.
 
 ---
 
