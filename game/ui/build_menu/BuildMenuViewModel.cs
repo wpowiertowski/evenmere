@@ -28,6 +28,7 @@ public sealed class BuildMenuViewModel : ViewModel
     private readonly ContentDb _content;
     private readonly UiStrings _strings;
     private readonly IProgressionQueries _progression;
+    private readonly IWorkforceQueries _workforce;
     private readonly IReadOnlyDictionary<string, BuildingVisualRef> _visuals;
     private readonly UnlockIndex _unlocks;
 
@@ -35,23 +36,27 @@ public sealed class BuildMenuViewModel : ViewModel
     /// <param name="content">The content database.</param>
     /// <param name="strings">The display text.</param>
     /// <param name="progression">The unlock queries.</param>
+    /// <param name="workforce">The workforce supply and demand queries, for each entry's free-workers line.</param>
     /// <param name="visuals">The placeholder icon, shape and colour per content building ID.</param>
     /// <param name="unlocks">The reverse unlock index built from the content.</param>
     public BuildMenuViewModel(
         ContentDb content,
         UiStrings strings,
         IProgressionQueries progression,
+        IWorkforceQueries workforce,
         IReadOnlyDictionary<string, BuildingVisualRef> visuals,
         UnlockIndex unlocks)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(strings);
         ArgumentNullException.ThrowIfNull(progression);
+        ArgumentNullException.ThrowIfNull(workforce);
         ArgumentNullException.ThrowIfNull(visuals);
         ArgumentNullException.ThrowIfNull(unlocks);
         _content = content;
         _strings = strings;
         _progression = progression;
+        _workforce = workforce;
         _visuals = visuals;
         _unlocks = unlocks;
         Tabs = [];
@@ -123,9 +128,18 @@ public sealed class BuildMenuViewModel : ViewModel
         string lockText = locked ? LockTextFor(building.Id) : string.Empty;
         BuildingVisualRef visual = _visuals.TryGetValue(name, out BuildingVisualRef found) ? found : _fallbackVisual;
 
-        string? workforce = building.Workforce is { } staff
-            ? _strings.Format("ui.build.workforce", ("count", NumberFormat.Count(staff.Count)), ("tier", _strings.TierName(_content.NameOf(staff.Tier))))
-            : null;
+        string? workforce = null;
+        bool workforceShort = false;
+        if (building.Workforce is { } staff)
+        {
+            int free = _workforce.Supply(staff.Tier) - _workforce.Demand(staff.Tier);
+            string tierName = _strings.TierName(_content.NameOf(staff.Tier));
+            string countText = NumberFormat.Count(staff.Count);
+            workforce = free > 0
+                ? _strings.Format("ui.build.workforce", ("count", countText), ("tier", tierName), ("free", NumberFormat.Count(free)))
+                : _strings.Format("ui.build.workforce.none", ("count", countText), ("tier", tierName), ("free", NumberFormat.Count(0)));
+            workforceShort = free <= 0;
+        }
 
         return new BuildEntry(
             name,
@@ -136,6 +150,7 @@ public sealed class BuildMenuViewModel : ViewModel
             visual.ColourHex,
             CostTextFor(building),
             workforce,
+            workforceShort,
             DetailTextFor(building),
             DescriptionFor(name),
             locked,
@@ -151,6 +166,7 @@ public sealed class BuildMenuViewModel : ViewModel
         "#8A8A8A",
         _strings.Get("ui.build.free"),
         null,
+        false,
         _strings.Get("ui.build.demolish.tip"),
         _strings.Get("ui.build.demolish.desc"),
         false,
@@ -321,6 +337,7 @@ public sealed class BuildMenuViewModel : ViewModel
     /// <param name="ColourHex">The swatch colour.</param>
     /// <param name="CostText">The cost and build time line.</param>
     /// <param name="WorkforceText">The workforce line, or <see langword="null"/> when it needs no workers.</param>
+    /// <param name="WorkforceShort">Whether no workers are free for this entry's tier, so the line takes the warning tint.</param>
     /// <param name="DetailText">The recipe, storage, service or residence line.</param>
     /// <param name="Description">The short locale description, or empty when there is none.</param>
     /// <param name="Locked">Whether the entry is still locked.</param>
@@ -334,6 +351,7 @@ public sealed class BuildMenuViewModel : ViewModel
         string ColourHex,
         string CostText,
         string? WorkforceText,
+        bool WorkforceShort,
         string DetailText,
         string Description,
         bool Locked,
