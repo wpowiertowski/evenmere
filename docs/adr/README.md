@@ -17,6 +17,7 @@ Each file records one decision: its context, the decision itself and its consequ
 | [0009](0009-economy-staging.md) | Goods-only Era I; coin introduced by Coinage | Accepted |
 | [0010](0010-progression-gating.md) | Dual era gateways, alternating tier unlocks, decline always on | Accepted |
 | [0011](0011-m1-simulation-contract.md) | The M1 simulation contract | Accepted |
+| [0013](0013-art-direction.md) | Art direction: hand-drawn isometric, through a non-photorealistic pass over low-poly 3D | Accepted |
 
 ## Template
 

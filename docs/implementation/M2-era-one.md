@@ -23,7 +23,7 @@ From M2 onward, every task lands through a **PR with green CI**.
 | Wave | Tasks |
 | --- | --- |
 | 0 | M2-00 |
-| A | M2-01, M2-04, M2-05, M2-07, M2-08, M2-09, M2-10, M2-14, M2-15, M2-26 |
+| A | M2-01, M2-04, M2-05, M2-07, M2-08, M2-09, M2-10, M2-14, M2-15, M2-26, M2-29 |
 | B | M2-02, M2-11, M2-12, M2-16, M2-18, M2-19, M2-20, M2-21, M2-22 |
 | C | M2-03, M2-06, M2-13, M2-24, M2-25, M2-27 |
 | D | M2-17, M2-23 |
@@ -62,6 +62,7 @@ From M2 onward, every task lands through a **PR with green CI**.
 | M2-26 | Debug overlay and cheat console | game | M2-00 | todo |
 | M2-27 | Festivals, monuments and happenings UI | game | M2-08, M2-10, M2-12 | todo |
 | M2-28 | Era I playtest and gate review | human | all M2 tasks | todo |
+| M2-29 | Look development: hand-drawn rendering prototype | game | M1 gate | todo |
 
 ---
 
@@ -649,6 +650,38 @@ From M2 onward, every task lands through a **PR with green CI**.
 3. **Happening dialog:** a calm card with an illustration slot, the options with effect previews, and a "decide later" button that keeps it pending.
 
 **Acceptance:** screenshots of each.
+
+---
+
+### M2-29 · Look development: hand-drawn rendering prototype
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| game | M1 gate | `game/rendering/look/**`, `game/rendering/camera/**` (projection and yaw offset), `game/data/visuals/palette.tres` |
+
+**Reads:** [ADR-0013](../adr/0013-art-direction.md); architecture.md (§Rendering); the reference screenshots at [permit.petercai.com](https://permit.petercai.com).
+
+**Goal:** prove the hand-drawn isometric look on the existing placeholder meshes, early, so later rendering work builds toward it.
+
+**Steps:**
+
+1. **Camera:**
+   - Add an orthographic projection mode with zoom mapped to the orthographic size, keeping the 90° steps from the yaw offset.
+   - Check TilePicker, the virtual cursor and the placement tools under the orthographic projection.
+   - Render the same views at 30° and 45° yaw for the developer to choose from.
+2. **Outlines:** a full-screen ink-outline pass from depth and normal edges, with a noise-driven wobble and a line-weight setting. Roads and terrain get softer lines than buildings.
+3. **Shading:** banded (toon) diffuse light, a warm key light with soft long shadows, a cool fill, and paper and watercolour grain with light edge darkening. Use one shared palette resource in a warm, slightly desaturated palette.
+4. **Water:** painterly ripple strokes over the existing distance-field foam, with the cast shadows visible on the surface.
+5. **Toggle:** a setting to switch between the M1 look and the new look, so both can be compared.
+
+**Acceptance:**
+
+- Side-by-side screenshots of the Landing, the overview and a busy street. Show M1 against the new look, and 30° against 45° yaw, next to the reference.
+- The developer picks the yaw and approves the look's direction.
+- The frame time stays within budget on the development Mac and fits the Steam Deck budget at 1280 × 800.
+- Picking and placement work in every projection.
+
+**Out of scope:** real building models (M4-14 onward) and seasonal palettes (M2-24, which must use the shared palette).
 
 ---
 

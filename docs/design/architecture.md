@@ -395,11 +395,12 @@ All game content is data, not code: adding a good, building, tech or tradition m
 
 ## Presentation layer
 
-Godot renders a stylised, low-poly 3D island and hosts all UI. It reads simulation state and sends commands, nothing more.
+Godot renders a stylised, low-poly 3D island and hosts all UI. It reads simulation state and sends commands, nothing more. The target look is a hand-drawn, illustrated isometric city builder ([ADR-0013](../adr/0013-art-direction.md)).
 
 ### Rendering
 
-- **Camera:** tilted perspective with smooth zoom from street level to a whole-island view. It pans by keys, edge scrolling, drag and the gamepad stick, and rotates in 90° steps.
+- **Camera:** smooth zoom from street level to a whole-island view. It pans by keys, edge scrolling, drag and the gamepad stick, and rotates in 90° steps from a fixed yaw offset (an isometric-style starting angle). M1 uses a tilted perspective; the target is an orthographic isometric view (ADR-0013, prototyped in M2-29).
+- **Look:** a non-photorealistic pass over every mesh draws the hand-drawn style: ink outlines from depth and normal edges with a slight wobble, banded lighting with a warm key light and soft long shadows, paper and watercolour grain, and painterly water (ADR-0013).
 - **Terrain:** generated meshes in 32 × 32 tile chunks, a splat shader for biomes, and roads as strip meshes.
 - **Water:** one animated shader plane with shoreline foam from a distance field. Rivers are flat animated strips.
 - **Buildings and trees:** one `MultiMeshInstance3D` per building type per chunk. A chunk rebuilds only when the sim marks it dirty.
