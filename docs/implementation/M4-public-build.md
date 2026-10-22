@@ -298,7 +298,7 @@
 | --- | --- | --- |
 | human + game | M4-00 | `docs/design/art-direction.md`, `game/data/visuals/palette.tres` |
 
-**Goal:** decide the art source and lock the palette and the modelling rules, so real art can replace the placeholders.
+**Goal:** turn the hand-drawn isometric direction ([ADR-0013](../adr/0013-art-direction.md), prototyped in M2-29) into a style guide, decide the art source, and lock the palette and the modelling rules, so real art can replace the placeholders.
 
 **Steps:**
 
