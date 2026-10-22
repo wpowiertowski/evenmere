@@ -23,7 +23,7 @@ From M2 onward, every task lands through a **PR with green CI**.
 | Wave | Tasks |
 | --- | --- |
 | 0 | M2-00 |
-| A | M2-01, M2-04, M2-05, M2-07, M2-08, M2-09, M2-10, M2-14, M2-15, M2-26, M2-29 |
+| A | M2-01, M2-04, M2-05, M2-07, M2-08, M2-09, M2-10, M2-14, M2-15, M2-26, M2-29, M2-30 |
 | B | M2-02, M2-11, M2-12, M2-16, M2-18, M2-19, M2-20, M2-21, M2-22 |
 | C | M2-03, M2-06, M2-13, M2-24, M2-25, M2-27 |
 | D | M2-17, M2-23 |
@@ -46,7 +46,7 @@ From M2 onward, every task lands through a **PR with green CI**.
 | M2-10 | Monuments: multi-stage construction | sim | M2-00 | todo |
 | M2-11 | Era advancement and gateways | sim | M2-09 | todo |
 | M2-12 | Happenings | sim | M2-09 | todo |
-| M2-13 | Era I full content | content | M2-06, M2-07, M2-08, M2-10, M2-11, M2-12, M2-14 | todo |
+| M2-13 | Era I full content | content | M2-06, M2-07, M2-08, M2-10, M2-11, M2-12, M2-14, M2-30 | todo |
 | M2-14 | Lint rule EVL010: lower-tier staffing | content-infra | M2-00 | todo |
 | M2-15 | Save versioning, migrations and autosave rotation | sim | M2-00 | todo |
 | M2-16 | Replay and performance harness, reference saves | tools | M2-15 | todo |
@@ -63,6 +63,7 @@ From M2 onward, every task lands through a **PR with green CI**.
 | M2-27 | Festivals, monuments and happenings UI | game | M2-08, M2-10, M2-12 | todo |
 | M2-28 | Era I playtest and gate review | human | all M2 tasks | todo |
 | M2-29 | Look development: hand-drawn rendering prototype | game | M1 gate | todo |
+| M2-30 | Upgrade lines: design pass, crew stat and Era I upgrades | human + content | M2-00 | todo |
 
 ---
 
@@ -368,7 +369,7 @@ From M2 onward, every task lands through a **PR with green CI**.
 
 | Lane | Depends on | Owns |
 | --- | --- | --- |
-| content | M2-06, M2-07, M2-08, M2-10, M2-11, M2-12, M2-14 | `content/**` (Era I files, `content/eras/township.json`, `content/locale/en/era1-*.json`, `content/locale/en/names.json`), `game/data/visuals/era1-*.json` |
+| content | M2-06, M2-07, M2-08, M2-10, M2-11, M2-12, M2-14, M2-30 | `content/**` (Era I files, `content/eras/township.json`, `content/locale/en/era1-*.json`, `content/locale/en/names.json`), `game/data/visuals/era1-*.json` |
 
 **Reads:** progression.md (Era I); tech-tree.md (Era I); culture-tree.md (Era I, traditions, festivals); architecture.md (§Content shapes).
 
@@ -682,6 +683,36 @@ From M2 onward, every task lands through a **PR with green CI**.
 - Picking and placement work in every projection.
 
 **Out of scope:** real building models (M4-14 onward) and seasonal palettes (M2-24, which must use the shared palette).
+
+---
+
+### M2-30 · Upgrade lines: design pass, crew stat and Era I upgrades
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| human + content | M2-00 | `docs/design/progression.md` (§Upgrade lines), `docs/design/tech-tree.md` and `docs/design/culture-tree.md` (unlock entries for upgrades), `content/buildings/*` (Era I upgrade variants), `content/locale/en/era1-upgrades.json`, `src/Evenmere.Sim/Systems/Workforce/**` (`crew` stat), `docs/adr/0015-crew-stat.md` |
+
+**Reads:** progression.md (§Upgrade lines, §Buildings); tech-tree.md; culture-tree.md; architecture.md (§Workforce, effects vocabulary); the EVL010 rule (M2-14).
+
+**Goal:** buildings modernise as the trees advance. Techs and civics unlock upgraded versions with their own staffing, so jobs move up the tiers over time. This is the developer's idea from the M1 playtest.
+
+**Steps:**
+
+1. **Design pass, with the developer:**
+   - Map an upgrade line for every production and service building across Eras I–IV. For each, give the base, the unlocking tech or civic, the upgrade, its staffing (tier × count), the output change and the upgrade cost.
+   - Keep it historically grounded and aligned with the trees.
+   - Check every row against EVL010.
+   - Record it in progression.md §Upgrade lines and add the unlocks to tech-tree.md and culture-tree.md.
+2. **Crew stat (ADR-0015):** a `crew` modifier stat lowers the required workers of matching buildings by a percentage (rounded, never below 1). Workforce demand reads the effective crew, and explanations show the source.
+3. **Era I content:** the Era I upgrade variants (`upgradeOf`, staffing, cost, locale), using the existing in-place upgrade (`UpgradeBuilding`, `BuildingUpgraded`). The upgrade button in the inspector shows the staffing change.
+4. **Later eras:** M3-05/M3-06 (Era II), M5-03 (Era III) and M5-08 (Era IV) build their eras' rows from this table.
+
+**Acceptance:**
+
+- The developer approves the mapping table.
+- Era I upgrades pass lint, including EVL010.
+- A scenario upgrades a building and shows the workforce demand moving to the new tier.
+- The `crew` stat has unit tests.
 
 ---
 

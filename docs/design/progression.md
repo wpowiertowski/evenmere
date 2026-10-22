@@ -365,6 +365,33 @@ The Great Library's books stage needs the Printing Press, and the Star Tower's s
 | Grand Opera | `grand_opera` | 5×5 | — | Wonder in 4 stages · 4 Music slots · +30 culture | 40 bricks / 20 steel / 20 glass / 20 wine + 20 candles | Concert Life |
 | Crystal Pavilion | `crystal_pavilion` | 6×6 | — | Wonder in 4 stages · 8 slots of any type · visitors +50% · +40 culture | 40 glass / 30 steel / 40 glass / 30 steel + 20 tools | Great Exhibitions |
 
+## Upgrade lines
+
+Production and service buildings modernise as the trees advance. A tech or civic unlocks an **upgraded version** of a building. The player upgrades each building in place, when they choose, by paying its upgrade cost. The upgraded version has **its own staffing**: usually fewer workers, often of a higher tier, and sometimes better output. Upgrades move jobs up the tiers over time, so lower tiers aren't needed forever, which is the long-term counterpart of the workforce hold.
+
+**Rules:**
+
+- **Unlocks:**
+  - An upgrade is a building whose content declares `upgradeOf` the building it replaces.
+  - It is unlocked by one tech or civic (`unlockBuilding`), placed so the change feels historically grounded (water power, guild organisation, crop rotation, steam).
+- **The upgrade itself:**
+  - Upgrading happens in place: the footprint, roads and position are kept, and the building turns into a construction site for its upgrade cost.
+  - The inspector and the build menu show the change plainly, for example "Upgrade to Water Sawmill: 2 Townsfolk instead of 3 Settlers".
+- **Staffing:**
+  - An upgrade may change the staffing tier and the crew size, but it must still satisfy EVL010: a tier's basic goods and services are made and staffed only by lower tiers. That rule prevents self-staffing deadlocks.
+  - Small, same-tier crew reductions can also come from tech and civic modifiers on the `crew` stat, for example "Saw Frames: sawpits need one worker fewer", without any rebuilding.
+- **The steam variants** in Era IV (`steam_*`) are the last step of these lines.
+
+**Illustrative lines.** These aren't final; M2-30's design pass maps every production and service building:
+
+| Base building (era, staffing) | Unlocked by | Upgrade | Staffing |
+| --- | --- | --- | --- |
+| Sawpit (I, 3 Settlers) | Water Mills (II) | Water-powered sawmill | 2 Townsfolk |
+| Grain farm (I, 4 Settlers) | Crop Rotation | Rotation farm | 3 Villagers, more grain |
+| Weaver's cottage (I, Settlers) | Guilds (civic, II) | Guild weaving shop | fewer Artisans |
+| Windmill (I) | Engineering | Tower mill | fewer workers, higher throughput |
+| Sawmill, mills and looms (II–III) | Steam Mills (IV) | Steam variants | fewer workers, coal fuel |
+
 ## Knowledge and culture sources
 
 | Source | Knowledge per day | Culture per day |

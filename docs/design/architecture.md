@@ -238,7 +238,8 @@ Each system is one folder in `Evenmere.Sim` with its own tests. The numbers here
 
 - Each tier supplies a workforce pool equal to its residents. Every building needs workers of one tier.
 - Allocation runs daily. Player-prioritised buildings fill first; everything else gets the same fill ratio, with deterministic remainder distribution by building ID.
-- As in Anno, advancing houses removes lower-tier workers, so keeping a balance of tiers is part of the puzzle.
+- As in Anno, advancing houses moves workers up a tier. A house is **held** at its tier while advancing would leave that tier's jobs unstaffed (the workforce hold, M1-33), so automatic upgrades never strand a workforce.
+- **Upgrade lines** move jobs up the tiers over time. Techs and civics unlock upgraded versions of buildings with their own staffing, and the player upgrades each building in place ([progression](progression.md#upgrade-lines)).
 
 ### Population and needs
 
@@ -361,7 +362,7 @@ All game content is data, not code: adding a good, building, tech or tradition m
 - Unlocks: `unlockBuilding`, `unlockRecipe`, `unlockTier`, `unlockTradition`, `unlockFestival`, `unlockTerrainAccess` (`narrow_rivers`, `wide_rivers`, `hill_farming`, `marsh_drainage`, `highlands`, `deep_water`, `reefs`), `unlockFeature` (`expeditions`, `coin`, `visitors`, `great_works:<type>`)
 - `traditionSlot` (`hearth`, `craft`, `heritage`, `wild`)
 - `modifier`:
-  - A `stat`: `productivity`, `consumption`, `constructionSpeed`, `capacity`, `workforce`, `output.knowledge`, `output.culture`, `output.coin`, `attractiveness`, `visitors`, `cartSpeed`, `materialCost`, `declineGrace`, `expeditionSpeed`, `comfortBonus`, `festivalCost`, `festivalDuration` or `settlerArrival`.
+  - A `stat`: `productivity`, `consumption`, `constructionSpeed`, `capacity`, `workforce`, `output.knowledge`, `output.culture`, `output.coin`, `attractiveness`, `visitors`, `cartSpeed`, `materialCost`, `declineGrace`, `expeditionSpeed`, `comfortBonus`, `festivalCost`, `festivalDuration`, `settlerArrival` or `crew` (the workers a matching building needs, as a percentage, rounded, never below 1; added with M2-30).
   - A `target` selector: `building`, `tag`, `category`, `tier`, `good` or `discovery` (`natural_wonder`, `ruin`, `shipwreck`), or none for island-wide.
   - An integer `percent`, and an optional `when` condition.
 - One-off actions: `grantGoods`, `grantPoints`, `revealCoastline` (value `true`), and `requestFestival` (`{ "festival", "discountPercent" }`, for happenings).
