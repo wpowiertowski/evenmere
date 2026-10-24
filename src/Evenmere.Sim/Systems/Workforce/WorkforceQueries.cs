@@ -42,6 +42,51 @@ internal sealed class WorkforceQueries(WorkforceState state, ContentDb content, 
     }
 
     /// <inheritdoc />
+    public int PlannedDemand(TierId tier)
+    {
+        int total = 0;
+        foreach (BuildingInfo building in _queries().Map.Buildings)
+        {
+            // New buildings are sites in the registry with their target type; their workforce asks only once they are
+            // finished, so they are planned rather than current demand. An in-place upgrade keeps working as its old
+            // type, so its old tier's Demand still covers it and its site counts for nothing here.
+            if (building.State != BuildingState.Site)
+            {
+                continue;
+            }
+
+            if (_content.Get(building.Type).Workforce is { } spec && spec.Tier == tier)
+            {
+                total += spec.Count;
+            }
+        }
+
+        return total;
+    }
+
+    /// <inheritdoc />
+    public int WorkingBelowTier(TierId tier) =>
+        tier.Value < _state.WorkingBelow.Length ? _state.WorkingBelow[tier.Value] : 0;
+
+    /// <inheritdoc />
+    public int FilledFromAbove(TierId tier) =>
+        tier.Value < _state.FilledFromAbove.Length ? _state.FilledFromAbove[tier.Value] : 0;
+
+    /// <inheritdoc />
+    public int AllocatedWorkers(EntityId building) =>
+        _state.Workplaces.TryGet(building, out WorkplaceRecord? record) ? record.Allocated : 0;
+
+    /// <inheritdoc />
+    public int SubstitutedWorkers(EntityId building) =>
+        _state.Workplaces.TryGet(building, out WorkplaceRecord? record) ? record.Substituted : 0;
+
+    /// <inheritdoc />
+    public TierId SubstituteSourceTier(EntityId building) =>
+        _state.Workplaces.TryGet(building, out WorkplaceRecord? record) && record.SubstituteTier >= 0
+            ? TierId.From(checked((ushort)record.SubstituteTier))
+            : default;
+
+    /// <inheritdoc />
     public Ratio FillOf(EntityId building)
     {
         if (!_queries().Map.TryGetBuilding(building, out BuildingInfo info))

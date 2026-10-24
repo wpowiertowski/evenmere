@@ -320,6 +320,7 @@ internal static class DefReaders
         int advanceStreakDays = o.ReqInt("advanceStreakDays", 1, 3650);
         var inspirationDiscount = Ratio.FromPerMille(o.ReqInt("inspirationDiscountPerMille", 0, 1000));
         bool marketGating = o.ReqBool("marketGating");
+        int workforceReservePercent = o.OptInt("workforceReservePercent", 20, 0, 100);
 
         var seasons = new List<SeasonCurve>();
         using (ObjectView? curves = o.OptObject("seasons"))
@@ -331,7 +332,7 @@ internal static class DefReaders
         }
 
         seasons.Sort(static (a, b) => string.CompareOrdinal(a.Tag, b.Tag));
-        return new RulesDef(cartTicksPerTile, outputBuffer, cartLoad, declineGraceDays, advanceStreakDays, inspirationDiscount, marketGating, [.. seasons]);
+        return new RulesDef(cartTicksPerTile, outputBuffer, cartLoad, declineGraceDays, advanceStreakDays, inspirationDiscount, marketGating, [.. seasons], workforceReservePercent);
     }
 
     private static void ReadSeasonCurves(ObjectView curves, List<SeasonCurve> seasons)

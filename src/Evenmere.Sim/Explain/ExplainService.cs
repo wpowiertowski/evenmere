@@ -79,6 +79,11 @@ internal sealed class ExplainService(ContentDb content, Func<ISimQueries> querie
 
         children.Add(OccupancyLine(in info, in needs));
         children.Add(AdvanceLine(house, in info));
+        if (MoraleLine(in info) is { } morale)
+        {
+            children.Add(morale);
+        }
+
         children.Add(DeclineLine(in info, in needs));
 
         ExplanationLine root = new(
@@ -274,6 +279,11 @@ internal sealed class ExplainService(ContentDb content, Func<ISimQueries> querie
             ProductivityLine(building, in info, in production),
         };
 
+        if (SubstitutionLine(building, in info) is { } substitution)
+        {
+            children.Add(substitution);
+        }
+
         if (production.Stall != StallReason.None)
         {
             children.Add(new ExplanationLine(
@@ -309,6 +319,77 @@ internal sealed class ExplainService(ContentDb content, Func<ISimQueries> querie
             [ExplainArg.Of(info.Type), ExplainArg.Of(production.Stall), ExplainArg.Of(production.Productivity)],
             [SubjectLink.ForBuilding(building), SubjectLink.ForBuildingType(info.Type)],
             [.. children]);
+    }
+
+    // A workplace filled partly from above names its own-tier workers and its substitutes, with the source tier.
+    // Shown only when higher-tier workers stepped down here; otherwise the workforce factor line says enough.
+    private ExplanationLine? SubstitutionLine(EntityId building, in BuildingInfo info)
+    {
+        ISimQueries q = _queries();
+        int substituted = q.Workforce.SubstitutedWorkers(building);
+        if (substituted <= 0)
+        {
+            return null;
+        }
+
+        if (_content.Get(info.Type).Workforce is not { } spec)
+        {
+            return null;
+        }
+
+        int own = Math.Max(0, q.Workforce.AllocatedWorkers(building) - substituted);
+        TierId source = q.Workforce.SubstituteSourceTier(building);
+        return new ExplanationLine(
+            "explain.building.workforce.substituted",
+            [ExplainArg.Of(spec.Tier), ExplainArg.Of(own), ExplainArg.Of(source), ExplainArg.Of(substituted)],
+            [SubjectLink.ForTier(spec.Tier), SubjectLink.ForTier(source)],
+            []);
+    }
+
+    // A house with residents working below their tier shows its morale: the percent, the count, and the lower tier
+    // whose worker shortage keeps them there. Shown only while morale is below 1000 and some other blocker does not
+    // already say it (the Underemployed blocker reuses this key, so the advance section covers it then).
+    private ExplanationLine? MoraleLine(in HouseInfo info)
+    {
+        if (info.MoralePerMille >= 1000 || info.AdvanceBlocker == AdvanceBlocker.Underemployed)
+        {
+            return null;
+        }
+
+        return new ExplanationLine(
+            "explain.house.morale",
+            MoraleArgs(in info),
+            MoraleSubjects(in info),
+            []);
+    }
+
+    // The underemployed count inverts the morale exactly: morale is 1000 × (residents − under) ÷ residents floored,
+    // so under = residents × (1000 − morale) ÷ 1000 floored recovers it whenever residents are at most 1000, which
+    // every house is. The tier below always exists here: underemployment needs lower-tier jobs to fill.
+    private ImmutableArray<ExplainArg> MoraleArgs(in HouseInfo info)
+    {
+        int percent = info.MoralePerMille / 10;
+        int underemployed = (int)((long)info.Residents * (1000 - info.MoralePerMille) / 1000);
+        return [ExplainArg.Of(percent), ExplainArg.Of(underemployed), ExplainArg.Of(TierBelow(info.Tier))];
+    }
+
+    private ImmutableArray<SubjectLink> MoraleSubjects(in HouseInfo info) =>
+        [SubjectLink.ForTier(TierBelow(info.Tier))];
+
+    // The tier below in rank order (tier IDs are in string order, so value − 1 is not the tier below). Only the
+    // lowest rank has none; it can never be underemployed, so falling back to itself is only defensive.
+    private TierId TierBelow(TierId tier)
+    {
+        ImmutableArray<TierId> order = _content.TiersByOrder;
+        for (int i = 1; i < order.Length; i++)
+        {
+            if (order[i] == tier)
+            {
+                return order[i - 1];
+            }
+        }
+
+        return tier;
     }
 
     private ExplanationLine ProductivityLine(EntityId building, in BuildingInfo info, in ProductionInfo production)
@@ -571,6 +652,7 @@ internal sealed class ExplainService(ContentDb content, Func<ISimQueries> querie
             AdvanceBlocker.UpgradeLocked => "explain.house.blocker.locked_upgrade",
             AdvanceBlocker.MissingMaterials => "explain.house.blocker.materials",
             AdvanceBlocker.HeldForWorkforce => "explain.house.blocker.held_workforce",
+            AdvanceBlocker.Underemployed => "explain.house.morale",
             _ => "explain.house.blocker.none",
         };
     }
@@ -588,6 +670,11 @@ internal sealed class ExplainService(ContentDb content, Func<ISimQueries> querie
             int demand = q.Workforce.Demand(info.Tier);
             int spare = q.Population.Residents(info.Tier) - info.Residents;
             return [ExplainArg.Of(info.Tier), ExplainArg.Of(demand), ExplainArg.Of(spare)];
+        }
+
+        if (info.AdvanceBlocker == AdvanceBlocker.Underemployed)
+        {
+            return MoraleArgs(in info);
         }
 
         return [];

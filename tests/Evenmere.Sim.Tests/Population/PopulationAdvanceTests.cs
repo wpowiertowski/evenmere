@@ -24,12 +24,12 @@ public sealed class PopulationAdvanceTests
     }
 
     [Fact]
-    public void Advance_AllNeedsMetForThreeDays_ConsumesCostAndChangesTier()
+    public void Advance_AllNeedsMetForSixDays_ConsumesCostAndChangesTier()
     {
         (NeedsHarness h, EntityId house) = ReadyHarness();
 
-        // Two days are not enough: the streak is still growing.
-        h.RunDays(2);
+        // Five days are not enough: the streak is still growing.
+        h.RunDays(5);
         h.House(house).Tier.ShouldBe(h.Tier("settlers"));
 
         h.RunDays(1);
@@ -38,7 +38,7 @@ public sealed class PopulationAdvanceTests
         info.Tier.ShouldBe(h.Tier("villagers"));
         info.AdvanceStreakDays.ShouldBe(0);
         info.DeclineTimerDays.ShouldBe(0);
-        info.Residents.ShouldBe(4);
+        info.Residents.ShouldBe(6);
         info.Capacity.ShouldBe(10);
         h.Sim.Queries.Storage.Stock(h.Good("timber")).ShouldBe(Amount.Zero);
 
@@ -81,7 +81,7 @@ public sealed class PopulationAdvanceTests
         h.House(house).AdvanceBlocker.ShouldBe(AdvanceBlocker.MissingMaterials);
 
         h.Stock("timber", Amount.FromUnits(2));
-        h.RunDays(1);
+        h.RunDays(2);
         h.House(house).Tier.ShouldBe(h.Tier("villagers"));
         h.Sim.Queries.Storage.Stock(h.Good("timber")).ShouldBe(Amount.Zero);
     }
@@ -111,7 +111,7 @@ public sealed class PopulationAdvanceTests
         (NeedsHarness h, EntityId house) = ReadyHarness();
 
         // Advance to villagers first: its needs are met for three more days.
-        h.RunDays(3);
+        h.RunDays(6);
         h.House(house).Tier.ShouldBe(h.Tier("villagers"));
         h.Cover(house, ServiceKind.Shrine);
         h.Stock("homespun", Amount.FromUnits(100)).Stock("bread", Amount.FromUnits(100));

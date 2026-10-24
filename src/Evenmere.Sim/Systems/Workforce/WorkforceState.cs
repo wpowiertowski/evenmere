@@ -25,19 +25,41 @@ public sealed class WorkforceState
     [MessagePackFormatter(typeof(IdTableFormatter<WorkplaceRecord>))]
     public IdTable<WorkplaceRecord> Workplaces { get; set; } = new();
 
-    /// <summary>Grows the supply array to the loaded content's tier count, keeping any values a loaded state already holds.</summary>
+    /// <summary>Gets or sets the workers of each tier the last daily allocation placed in lower-tier jobs, indexed by <c>TierId.Value</c> (ADR-0016).</summary>
+    [Key(2)]
+    [ContentIndexed(ContentKind.Tier)]
+    public int[] WorkingBelow { get; set; } = [];
+
+    /// <summary>Gets or sets the jobs of each tier the last daily allocation filled with higher-tier workers, indexed by <c>TierId.Value</c> (ADR-0016).</summary>
+    [Key(3)]
+    [ContentIndexed(ContentKind.Tier)]
+    public int[] FilledFromAbove { get; set; } = [];
+
+    /// <summary>Grows the per-tier arrays to the loaded content's tier count, keeping any values a loaded state already holds.</summary>
     /// <param name="tierCount">The number of tiers in the content.</param>
     internal void EnsureTierSlots(int tierCount)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(tierCount);
-        if (RawSupply.Length >= tierCount)
+        if (RawSupply.Length < tierCount)
         {
-            return;
+            int[] grown = new int[tierCount];
+            Array.Copy(RawSupply, grown, RawSupply.Length);
+            RawSupply = grown;
         }
 
-        int[] grown = new int[tierCount];
-        Array.Copy(RawSupply, grown, RawSupply.Length);
-        RawSupply = grown;
+        if (WorkingBelow.Length != tierCount)
+        {
+            int[] grown = new int[tierCount];
+            Array.Copy(WorkingBelow, grown, Math.Min(WorkingBelow.Length, tierCount));
+            WorkingBelow = grown;
+        }
+
+        if (FilledFromAbove.Length != tierCount)
+        {
+            int[] grown = new int[tierCount];
+            Array.Copy(FilledFromAbove, grown, Math.Min(FilledFromAbove.Length, tierCount));
+            FilledFromAbove = grown;
+        }
     }
 }
 
@@ -56,4 +78,12 @@ public sealed class WorkplaceRecord
     /// <summary>Gets or sets a value indicating whether the player marked this workplace as high priority with <c>SetWorkforcePriority</c>.</summary>
     [Key(1)]
     public bool HighPriority { get; set; }
+
+    /// <summary>Gets or sets how many of the assigned workers came from higher tiers in the last daily allocation (ADR-0016).</summary>
+    [Key(2)]
+    public int Substituted { get; set; }
+
+    /// <summary>Gets or sets the nearest higher tier that placed workers here in the last daily allocation, as a <c>TierId.Value</c>; -1 when nobody stepped down here (ADR-0016).</summary>
+    [Key(3)]
+    public int SubstituteTier { get; set; } = -1;
 }

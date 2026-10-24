@@ -444,6 +444,9 @@ internal static class RemapPass
             state.SuppliedWorkers = Permute(state.SuppliedWorkers, tables.TierMap, tables.Content.Tiers.Count, static () => 0);
             // M1-33 (ADR-0014): the live per-tier totals move with the tiers like the published supply does.
             state.TierResidents = Permute(state.TierResidents, tables.TierMap, tables.Content.Tiers.Count, static () => 0);
+            // M1-36 (ADR-0016): the stepping-down totals are tier-indexed too, so they move the same way.
+            world.Workforce.WorkingBelow = Permute(world.Workforce.WorkingBelow, tables.TierMap, tables.Content.Tiers.Count, static () => 0);
+            world.Workforce.FilledFromAbove = Permute(world.Workforce.FilledFromAbove, tables.TierMap, tables.Content.Tiers.Count, static () => 0);
 
             var dropped = new List<EntityId>();
             foreach (IdTable<HouseRecord>.Entry entry in state.Houses)

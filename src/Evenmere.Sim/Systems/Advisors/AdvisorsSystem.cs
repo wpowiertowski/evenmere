@@ -251,14 +251,17 @@ internal sealed class AdvisorsSystem : ISimSystem
         return EntityId.None;
     }
 
-    // A tier is short of workers for the day when its demand exceeds its supply, two days in a row.
+    // A tier is short of workers for the day when its jobs stay unfilled after stepping down: demand past supply that
+    // even the substitutes from higher tiers do not cover, two days in a row (ADR-0016). Workers placed from above
+    // fill the gap between supply and demand, so only the remainder counts.
     private void EvaluateTiers(SimContext ctx)
     {
         int tiers = _content.Tiers.Count;
         for (int t = 0; t < tiers; t++)
         {
             var tier = TierId.From(checked((ushort)t));
-            bool shortToday = ctx.Queries.Workforce.Demand(tier) > ctx.Queries.Workforce.Supply(tier);
+            bool shortToday = ctx.Queries.Workforce.Demand(tier)
+                > ctx.Queries.Workforce.Supply(tier) + ctx.Queries.Workforce.FilledFromAbove(tier);
             _state.TierStreak[t] = shortToday ? Math.Min(_state.TierStreak[t] + 1, StreakNeeded) : 0;
             if (shortToday && _state.TierStreak[t] >= StreakNeeded)
             {

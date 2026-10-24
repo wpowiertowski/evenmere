@@ -28,6 +28,9 @@ public enum AdvanceBlocker : byte
 
     /// <summary>Advancing would leave fewer workers of the tier than its jobs ask for, so the house waits for spare workers (ADR-0014).</summary>
     HeldForWorkforce = 6,
+
+    /// <summary>Some residents are working jobs of a lower tier, so the house waits for enough workers of that tier (ADR-0016). Morale does not affect occupancy, needs or decline; it only blocks advancement.</summary>
+    Underemployed = 7,
 }
 
 /// <summary>A copy of one house's state for the view, the explain queries and the advisors.</summary>
@@ -41,6 +44,7 @@ public enum AdvanceBlocker : byte
 /// <param name="UpgradeLocked">Whether the player has locked the house against advancing.</param>
 /// <param name="DeclinePaused">Whether a festival is pausing the decline timer (always false in M1).</param>
 /// <param name="AdvanceBlocker">What currently stops the house from advancing.</param>
+/// <param name="MoralePerMille">The share of residents working at their own tier, in per-mille: 1000 when nobody works below the tier, and 1000 for an empty house (ADR-0016).</param>
 public readonly record struct HouseInfo(
     EntityId Id,
     TierId Tier,
@@ -51,7 +55,8 @@ public readonly record struct HouseInfo(
     int DeclineTimerDays,
     bool UpgradeLocked,
     bool DeclinePaused,
-    AdvanceBlocker AdvanceBlocker);
+    AdvanceBlocker AdvanceBlocker,
+    int MoralePerMille);
 
 /// <summary>Whether a need decides a house's growth (basic) or only raises the tier's output (comfort).</summary>
 public enum NeedClass : byte

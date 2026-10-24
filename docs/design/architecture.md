@@ -237,15 +237,15 @@ Each system is one folder in `Evenmere.Sim` with its own tests. The numbers here
 ### Workforce
 
 - Each tier supplies a workforce pool equal to its residents. Every building needs workers of one tier.
-- Allocation runs daily. Player-prioritised buildings fill first; everything else gets the same fill ratio, with deterministic remainder distribution by building ID.
-- As in Anno, advancing houses moves workers up a tier. A house is **held** at its tier while advancing would leave that tier's jobs unstaffed (the workforce hold, M1-33), so automatic upgrades never strand a workforce.
+- Allocation runs daily. Each tier staffs its own workplaces first (player-prioritised buildings first; everything else gets the same fill ratio, with deterministic remainder distribution by building ID); then unfilled jobs draw idle workers from higher tiers, nearest first (stepping down, M1-36).
+- As in Anno, advancing houses moves workers up a tier. A house is **held** at its tier while advancing would leave that tier's jobs unstaffed (the workforce hold, M1-33, stricter in M1-36: it also counts construction sites and a 20% reserve), and a house whose residents work below their tier waits on **morale** instead of advancing, so automatic upgrades never strand a workforce.
 - **Upgrade lines** move jobs up the tiers over time. Techs and civics unlock upgraded versions of buildings with their own staffing, and the player upgrades each building in place ([progression](progression.md#upgrade-lines)).
 
 ### Population and needs
 
 - Residences belong to one of six tiers: **Settlers → Villagers → Townsfolk → Artisans → Scholars → Patrons** ([progression](progression.md)).
 - **Basic needs** are goods (consumed per 1,000 residents per day) and services (a building within road range: Market, Shrine, Tavern, School, Theatre, Concert Hall). Each met basic need raises the house's target occupancy.
-  - When all basic needs are met for 3 consecutive days, the house advances, provided the next tier is unlocked, the upgrade materials are in the pool and the player hasn't locked the house.
+  - When all basic needs are met for 6 consecutive days, the house advances, provided the next tier is unlocked, the upgrade materials are in the pool and the player hasn't locked the house.
 - **Comfort needs** are goods only. Each met comfort need adds +25% to the tier's knowledge, culture and coin output. A missing comfort good never causes decline.
 - **Fair shares.** At each day boundary, the system computes a fulfilment ratio per good from pool stock against projected demand, and every house consumes at that ratio. No house is starved because of its ID.
 - **Decline (always on):** if a basic need that the house has had met at its current tier stays below 50% for a full season (10 days), the house steps down one tier. Residents above the lower tier's capacity move out.

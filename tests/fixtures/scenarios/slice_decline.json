@@ -573,7 +573,7 @@
     }
   ],
   "expect": {
-    "hash": "b2176b9d30da9fad",
+    "hash": "232e0efd4da3f531",
     "events": [
       {
         "type": "HouseTierAdvanced",

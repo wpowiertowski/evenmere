@@ -50,9 +50,14 @@ internal sealed class WorkforceHarness
 
     /// <summary>Creates a harness and starts the system.</summary>
     /// <returns>The harness, before any allocation.</returns>
-    public static WorkforceHarness Create()
+    public static WorkforceHarness Create() => Create(ExtraContent.Db);
+
+    /// <summary>Creates a harness on the given content and starts the system.</summary>
+    /// <param name="content">The content, which must define the <c>test_workshop</c> building the tests arrange with.</param>
+    /// <returns>The harness, before any allocation.</returns>
+    public static WorkforceHarness Create(ContentDb content)
     {
-        var harness = new WorkforceHarness(FakeSim.Create(ExtraContent.Db));
+        var harness = new WorkforceHarness(FakeSim.Create(content));
         harness.Start();
         return harness;
     }

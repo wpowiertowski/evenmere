@@ -76,6 +76,7 @@
 | M1-33 | Workforce hold on house advancement | sim | M1-10 | done |
 | M1-34 | Lower camera pitch | game | M1-32 | done |
 | M1-35 | Window: resizable, maximized start and fullscreen toggle | game | M1-18 | done |
+| M1-36 | Workforce stepping down, morale, a stricter hold and slower advancing | sim | M1-33 | done |
 
 ---
 
@@ -1237,6 +1238,34 @@
 - A maximized screenshot at the development Mac's resolution is attached for review (not committed).
 
 **Out of scope:** stretch-mode changes (report back if the maximized UI looks too large instead); editor Game-tab embedding (outside our control).
+
+---
+
+### M1-36 · Workforce stepping down, morale, a stricter hold and slower advancing
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| sim | M1-33 | `src/Evenmere.Sim/Systems/Workforce/**`, `src/Evenmere.Sim/Systems/Population/**`, and their tests under `tests/Evenmere.Sim.Tests/`; `src/Evenmere.Sim/Queries/IWorkforceQueries.cs` (add members only); `src/Evenmere.Sim/Queries/Types/HouseInfo.cs` (append an `AdvanceBlocker` member and add a morale field); `docs/adr/0016-workforce-stepping-down-and-morale.md`; `content/rules/core.json` (`advanceStreakDays` 6, the new `workforceReservePercent` 20), the rules schema, and `RulesDef`; `src/Evenmere.Sim/Explain/ExplainService.cs` (the new house and building lines only) with a new `content/locale/en/explain-workforce-morale.json`; `src/Evenmere.Sim/Persistence/RemapPass.cs` (permute new content-indexed arrays only); golden hash lines, `tests/fixtures/saves/*.evsave`, `tests/fixtures/smoke/*`, `tests/fixtures/saves/state-keys.json`, slice scenario scripts as needed, `tools/bots/slice.json`, and the design docs |
+
+**Reads:** AGENTS.md; ADR-0011, ADR-0014, ADR-0007; the Workforce and Population systems; `IWorkforceQueries`; `ExplainHouse` and `ExplainBuilding` workforce lines.
+
+**Goal:** idle workers of a higher tier fill unfilled lower-tier jobs (the playtest: 45 Settlers against 51 jobs while Villagers sit idle); underemployed houses wait on morale instead of advancing; the hold counts construction sites and a 20% reserve; advancing takes six days (developer's decision, ADR-0016).
+
+**Steps:**
+
+1. Stepping-down allocation (rank order, same-tier first, nearest higher tier first, priority kept), recording per-tier `WorkingBelow`/`FilledFromAbove` and per-workplace substitutes; new `IWorkforceQueries` members as default members.
+2. Morale distribution in ascending house ID, `MoralePerMille` on `HouseInfo`, `Underemployed = 7` checked after materials and before the hold.
+3. Stricter hold with planned demand and `ceil(reservePercent × need / 100)`; `NoWorkforce` only for unfilled-after-stepping-down; `advanceStreakDays` 6.
+4. Re-baseline golden hashes, state keys and fixtures with the reason stated; keep all four slice scenarios green; confirm the balance bot still reaches 100 Villagers within 45 minutes.
+
+**Acceptance:**
+
+- Unfilled lower-tier jobs fill from the nearest higher tier, same-tier workers first, high priority kept; counts reconcile.
+- Morale assigns in ascending ID, blocks with `Underemployed`, returns to 1000; the hold counts planned jobs and the reserve; no hold with no jobs.
+- Advisors stay silent when substitutes cover the gap; explain shows the substitution and the morale.
+- Save round trip preserves the new state; remap coverage passes.
+
+**Out of scope:** `game/**` (M1-37 updates the HUD and the inspector); content numbers beyond the two rule values.
 
 ## Gate record
 

@@ -56,7 +56,7 @@ public sealed class PopulationWorkforceHoldTests
         (NeedsHarness h, EntityId house) = ReadyHarnessWithHouse();
         h.Sim.Queries.Workforce.SetDemand(h.Tier("settlers"), 6);
 
-        h.RunDays(5);
+        h.RunDays(6);
 
         // Six residents, alone: leaving would drop the tier to zero workers against six jobs.
         HouseInfo info = h.House(house);
@@ -76,16 +76,17 @@ public sealed class PopulationWorkforceHoldTests
 
         // Both houses grow to six residents while a prohibitive demand holds them.
         h.Sim.Queries.Workforce.SetDemand(h.Tier("settlers"), 100);
-        h.RunDays(5);
+        h.RunDays(6);
         h.House(first).Residents.ShouldBe(6);
         h.House(second).Residents.ShouldBe(6);
         h.House(first).AdvanceBlocker.ShouldBe(AdvanceBlocker.HeldForWorkforce);
         h.House(second).AdvanceBlocker.ShouldBe(AdvanceBlocker.HeldForWorkforce);
 
-        // Spare covers exactly one house: the first evaluated advances, the other stays held with its streak kept.
+        // Spare covers exactly one house: five jobs plus a reserve of one still leave 12 − 6 = 6 workers behind.
+        // The first evaluated advances, the other stays held with its streak kept.
         // Buckets run in ascending (id % 120), so with consecutive IDs the lowest ID is evaluated first.
         (first.Value % 120).ShouldBeLessThan(second.Value % 120);
-        h.Sim.Queries.Workforce.SetDemand(h.Tier("settlers"), 6);
+        h.Sim.Queries.Workforce.SetDemand(h.Tier("settlers"), 5);
         h.RunDays(1);
 
         h.House(first).Tier.ShouldBe(h.Tier("villagers"));
@@ -102,9 +103,10 @@ public sealed class PopulationWorkforceHoldTests
         EntityId second = h.AddHouse();
         h.Cover(second, ServiceKind.Market);
         h.Sim.Queries.Workforce.SetDemand(h.Tier("settlers"), 100);
-        h.RunDays(5);
+        h.RunDays(6);
 
-        h.Sim.Queries.Workforce.SetDemand(h.Tier("settlers"), 6);
+        // Five jobs plus a reserve of one: 12 − 6 = 6 workers left behind still cover them.
+        h.Sim.Queries.Workforce.SetDemand(h.Tier("settlers"), 5);
         h.RunDays(1);
         h.House(first).Tier.ShouldBe(h.Tier("villagers"));
         h.House(second).AdvanceBlocker.ShouldBe(AdvanceBlocker.HeldForWorkforce);
@@ -114,11 +116,11 @@ public sealed class PopulationWorkforceHoldTests
         EntityId third = h.AddHouse();
         h.Cover(third, ServiceKind.Market);
         h.Sim.Queries.Workforce.SetDemand(h.Tier("settlers"), 100);
-        h.RunDays(5);
+        h.RunDays(6);
         h.House(second).Tier.ShouldBe(h.Tier("settlers"));
         h.House(third).Residents.ShouldBe(6);
         TotalsShouldMatchHouses(h, [first, second, third]);
-        h.Sim.Queries.Workforce.SetDemand(h.Tier("settlers"), 6);
+        h.Sim.Queries.Workforce.SetDemand(h.Tier("settlers"), 5);
         h.RunDays(1);
 
         h.House(second).Tier.ShouldBe(h.Tier("villagers"));
@@ -133,7 +135,7 @@ public sealed class PopulationWorkforceHoldTests
         (NeedsHarness h, EntityId house) = ReadyHarnessWithHouse();
         h.Sim.Queries.Workforce.SetDemand(h.Tier("settlers"), 0);
 
-        h.RunDays(3);
+        h.RunDays(6);
 
         // Demand is zero, so the house advances even though it leaves no workers behind.
         h.House(house).Tier.ShouldBe(h.Tier("villagers"));
@@ -170,7 +172,7 @@ public sealed class PopulationWorkforceHoldTests
         h.Stock("homespun", Amount.FromUnits(1000)).Stock("bread", Amount.FromUnits(1000));
 
         // Settle the house as a Villager first, with no demand so nothing is held.
-        h.RunDays(3);
+        h.RunDays(6);
         h.House(house).Tier.ShouldBe(h.Tier("villagers"));
 
         // Villager needs are met for three days, so fish counts as ever met at this tier.
@@ -198,7 +200,7 @@ public sealed class PopulationWorkforceHoldTests
         h.Sim.Queries.Roads.GrantRoadAccess(house);
         h.AddReachedStorehouse(house, 8, 8);
         TierId settlers = h.Tier("settlers");
-        h.Sim.Queries.Population.SetHouse(new HouseInfo(house, settlers, 6, 6, 6, 3, 0, false, false, AdvanceBlocker.HeldForWorkforce));
+        h.Sim.Queries.Population.SetHouse(new HouseInfo(house, settlers, 6, 6, 6, 3, 0, false, false, AdvanceBlocker.HeldForWorkforce, 1000));
 
         h.Run();
 
@@ -206,7 +208,7 @@ public sealed class PopulationWorkforceHoldTests
         h.Events().ShouldBeEmpty();
 
         // The same house blocked on materials does raise, proving the harness sees it.
-        h.Sim.Queries.Population.SetHouse(new HouseInfo(house, settlers, 6, 6, 6, 3, 0, false, false, AdvanceBlocker.MissingMaterials));
+        h.Sim.Queries.Population.SetHouse(new HouseInfo(house, settlers, 6, 6, 6, 3, 0, false, false, AdvanceBlocker.MissingMaterials, 1000));
         h.AdvanceDays(1);
         h.Active().ShouldHaveSingleItem().Kind.ShouldBe(AdviceKind.HouseCannotAdvance);
     }
