@@ -1096,7 +1096,7 @@
   - PR #1 showed both `verify` checks green. The Godot smoke hash was identical on Linux x64 and macOS arm64 (`7c383b1f0a148158`), which also confirms cross-platform determinism.
   - Draft PR #2, with a deliberately failing test, went red on both checks and was closed unmerged.
   - PRs #3 and #4 landed M1-22 and M1-23 through the new flow.
-- **Branch protection is not applied.** The repository is private on the free plan, and GitHub answers the protection API with "Upgrade to GitHub Pro or make this repository public". Until the developer chooses an option (GitHub Pro, a public repository, or keeping the PR rule as a convention only), "every change lands through a green PR" is a rule in AGENTS.md, not enforced by GitHub. When protection becomes available, require a PR, require `verify (ubuntu-latest)` and `verify (macos-latest)`, block force pushes, and allow squash merges only.
+- **Branch protection is applied.** The developer made the repository public and added the ruleset "Default" on `main`. It requires a pull request (0 approvals; squash or rebase merges only), the `verify (ubuntu-latest)` and `verify (macos-latest)` checks, and an up-to-date branch. It also requires linear history and blocks force pushes and deletion, with no bypass actors. Public visibility also makes the macOS runners free, so the ADR-0008 matrix runs on every PR. Several PRs in flight are stacked and land atomically (CLAUDE.md, dispatch protocol step 8).
 
 **Out of scope:** release and export pipelines (M4-09, M4-10).
 
