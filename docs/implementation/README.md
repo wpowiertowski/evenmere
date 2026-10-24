@@ -67,7 +67,8 @@ The orchestrator is a Claude Code session, or the developer, working through one
 7. **Feedback loop:** if the review or the verification finds anything, send specific, actionable feedback to the **same** subagent (SendMessage) and repeat steps 5–6. Don't fix it yourself, and don't start a fresh agent. Push the branch and open the PR (step 8) before or during this loop, so CI verifies every round of fixes; only a PR whose CI is green may be merged.
 8. **Commit and merge** once the change is approved:
    - Before M1-29: commit in the worktree as `<ID>: <title>`, `git merge --no-ff` into `main`, update the task's status to `done` in the milestone index, then push.
-   - From M1-29 onward: commit, push the branch, open a PR titled `<ID>: <title>`, wait for green CI, and squash-merge.
+   - From M1-29 onward: commit as one commit per task, push the branch, open a PR titled `<ID>: <title>`, wait for green CI, and merge. `main` is protected by a ruleset requiring a PR, both `verify` checks, an up-to-date branch and linear history.
+   - **Several tasks in flight form a stack.** Each task branch is based on the one below it, and its PR targets that branch, so its CI covers the whole stack. Lower changes are rebased upward and force-pushed, never merged. The stack lands atomically: fast-forward the bottom branch to the top commit, then rebase-merge the bottom PR, and close the upper PRs as landed (see CLAUDE.md).
 9. **Handle blockers.** If an agent reports a blocker or an interface or ADR proposal, decide it, writing an ADR if a contract changes, then merge that decision before re-dispatching.
 10. **Close the milestone.** When every task is done, run the gate checks, record the results in the milestone file's **Gate record**, and update the design docs and ADRs with what was learned.
 
