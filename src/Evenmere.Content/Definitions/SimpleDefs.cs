@@ -238,6 +238,7 @@ public sealed record SeasonCurve(string Tag, Ratio Spring, Ratio Summer, Ratio A
 /// <param name="InspirationDiscount">The share of a node's full cost an inspiration removes.</param>
 /// <param name="MarketGating">Whether a house can draw goods only inside a market's coverage.</param>
 /// <param name="Seasons">Season curves per building tag, sorted by tag; empty when seasons are not configured.</param>
+/// <param name="WorkforceReservePercent">The spare-worker reserve the workforce hold keeps per tier, in percent: a house advances only if the tier's remaining workers still cover demand, planned demand and this share of both (ADR-0016).</param>
 public sealed record RulesDef(
     int CartTicksPerTile,
     Amount OutputBuffer,
@@ -246,4 +247,5 @@ public sealed record RulesDef(
     int AdvanceStreakDays,
     Ratio InspirationDiscount,
     bool MarketGating,
-    ImmutableArray<SeasonCurve> Seasons);
+    ImmutableArray<SeasonCurve> Seasons,
+    int WorkforceReservePercent = 20);

@@ -20,9 +20,9 @@ public sealed class ComfortNeedsTests
 
         h.Stock("timber", Amount.FromUnits(2));
         h.UnlockTier("villagers");
-        h.RunDays(3);
+        h.RunDays(6);
         h.House(house).Tier.ShouldBe(h.Tier("villagers"));
-        h.House(house).Residents.ShouldBe(4);
+        h.House(house).Residents.ShouldBe(6);
         return (h, house);
     }
 
@@ -31,15 +31,16 @@ public sealed class ComfortNeedsTests
     {
         (NeedsHarness h, EntityId house) = PreparedHarness(withWool: true);
 
-        // Fish and the market are met, nothing else basic: the target holds at 10 × 2 ÷ 5 = 4 residents.
-        // Wool is met as comfort, so four residents credit 10 × 4 × 1.25 = 50 milli-units of knowledge.
+        // Fish and the market are met, nothing else basic: the target falls to 10 × 2 ÷ 5 = 4 residents, so six
+        // step down to five. Wool is met as comfort, so five residents credit 10 × 5 × 1.25 = 62 milli-units of
+        // knowledge (the half milli-unit floors away).
         h.HouseNeeds(house).Needs.Count(n => n.Class == NeedClass.Comfort).ShouldBe(1);
         h.Sim.Services.PointsLedger.TakeToday(PointKind.Knowledge);
         h.RunDays(1);
 
-        h.House(house).Residents.ShouldBe(4);
+        h.House(house).Residents.ShouldBe(5);
         h.HouseNeeds(house).Needs.Single(n => n.Class == NeedClass.Comfort).Met.ShouldBeTrue();
-        h.Sim.Services.PointsLedger.TakeToday(PointKind.Knowledge).ShouldBe(Amount.FromMilli(50));
+        h.Sim.Services.PointsLedger.TakeToday(PointKind.Knowledge).ShouldBe(Amount.FromMilli(62));
     }
 
     [Fact]
@@ -51,7 +52,7 @@ public sealed class ComfortNeedsTests
         h.RunDays(1);
 
         h.HouseNeeds(house).Needs.Single(n => n.Class == NeedClass.Comfort).Met.ShouldBeFalse();
-        h.Sim.Services.PointsLedger.TakeToday(PointKind.Knowledge).ShouldBe(Amount.FromMilli(40));
+        h.Sim.Services.PointsLedger.TakeToday(PointKind.Knowledge).ShouldBe(Amount.FromMilli(50));
     }
 
     [Fact]

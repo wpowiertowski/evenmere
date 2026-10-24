@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Evenmere.Content;
 using Evenmere.Content.Definitions;
 using Evenmere.Core.Collections;
@@ -27,6 +28,13 @@ namespace Evenmere.Sim.Systems.Workforce;
 /// shared across the other workplaces at an equal per-mille fill, floored; leftover single workers go one each to the
 /// lowest IDs. The per-building assigned workers are stored in the state, so <see cref="IWorkforceQueries.FillOf"/>
 /// answers between allocations too.
+/// </para>
+/// <para>
+/// Afterwards, idle workers step down (ADR-0016): for tiers from lowest to highest, a tier's unfilled jobs draw idle
+/// workers from the next higher tier, then the one above, and so on. The same priority and fair-share rules apply
+/// within the tier being filled, so high-priority buildings fill first. The per-tier <c>WorkingBelow</c> and
+/// <c>FilledFromAbove</c> totals, and each workplace's substitutes, are stored in the state for the morale, advisor,
+/// hold and explain queries.
 /// </para>
 /// <para>
 /// The system listens to the building lifecycle (<see cref="IBuildingLifecycleListener"/>): a record is dropped when its
@@ -138,19 +146,42 @@ internal sealed class WorkforceSystem : ISimSystem, IBuildingLifecycleListener
         foreach (IdTable<WorkplaceRecord>.Entry entry in _state.Workplaces)
         {
             entry.Value.Allocated = 0;
+            entry.Value.Substituted = 0;
+            entry.Value.SubstituteTier = -1;
         }
 
+        Array.Clear(_state.WorkingBelow);
+        Array.Clear(_state.FilledFromAbove);
+
+        // Phase one: every tier staffs its own workplaces first, so same-tier workers are always used before substitutes.
+        int[] used = new int[tierCount];
         for (int tier = 0; tier < tierCount; tier++)
         {
-            AllocateTier(ctx, tier, demand);
+            used[tier] = AllocateTier(ctx, tier, demand);
+        }
+
+        // Phase two: stepping down, lowest rank first. A tier's unfilled jobs draw idle workers from the next higher
+        // tier in rank order (TiersByOrder, because tier IDs are in string order), then the one above, so the nearest
+        // higher tier goes first. Used counts the tier's own placements plus what it already gave to lower tiers, so
+        // each idle worker is spent once.
+        ImmutableArray<TierId> order = _content.TiersByOrder;
+        for (int rank = 0; rank < order.Length; rank++)
+        {
+            FillFromAbove(ctx, order, rank, demand, used);
         }
     }
 
-    private void AllocateTier(SimContext ctx, int tier, List<WorkplaceDemand> demand)
+    /// <summary>Computes a tier's effective supply: the published raw supply scaled by the workforce modifiers.</summary>
+    /// <param name="ctx">The simulation context, for the modifier queries.</param>
+    /// <param name="tier">The tier's index.</param>
+    /// <returns>The workers the tier can place.</returns>
+    private int EffectiveSupplyOf(SimContext ctx, int tier) => WorkforceMath.EffectiveSupply(
+        tier < _state.RawSupply.Length ? _state.RawSupply[tier] : 0,
+        ctx.Queries.Progression.BonusPercent(Stat.Workforce, ModifierContext.ForTier(TierId.From(checked((ushort)tier)))));
+
+    private int AllocateTier(SimContext ctx, int tier, List<WorkplaceDemand> demand)
     {
-        int remaining = WorkforceMath.EffectiveSupply(
-            tier < _state.RawSupply.Length ? _state.RawSupply[tier] : 0,
-            ctx.Queries.Progression.BonusPercent(Stat.Workforce, ModifierContext.ForTier(TierId.From(checked((ushort)tier)))));
+        int remaining = EffectiveSupplyOf(ctx, tier);
 
         // High-priority workplaces fill first, in ascending ID order, each up to its full count.
         foreach (WorkplaceDemand demander in demand)
@@ -178,7 +209,7 @@ internal sealed class WorkforceSystem : ISimSystem, IBuildingLifecycleListener
 
         if (normalCount == 0)
         {
-            return;
+            return PlacedOf(tier, demand);
         }
 
         if (remaining >= totalDemand)
@@ -191,7 +222,7 @@ internal sealed class WorkforceSystem : ISimSystem, IBuildingLifecycleListener
                 }
             }
 
-            return;
+            return PlacedOf(tier, demand);
         }
 
         int fill = WorkforceMath.SharedFill(remaining, totalDemand);
@@ -239,7 +270,221 @@ internal sealed class WorkforceSystem : ISimSystem, IBuildingLifecycleListener
                 break;
             }
         }
+
+        return PlacedOf(tier, demand);
     }
+
+    /// <summary>Fills a tier's jobs left unfilled by its own workers with idle workers from higher tiers, nearest first.</summary>
+    /// <param name="ctx">The simulation context, for the modifier queries.</param>
+    /// <param name="order">The tiers from the lowest to the highest rank.</param>
+    /// <param name="rank">The rank of the tier being filled.</param>
+    /// <param name="demand">Every active workplace's ask, in ascending ID order.</param>
+    /// <param name="used">Per tier, the workers placed so far: the tier's own placements plus what it already gave to lower tiers.</param>
+    private void FillFromAbove(SimContext ctx, ImmutableArray<TierId> order, int rank, List<WorkplaceDemand> demand, int[] used)
+    {
+        int tier = order[rank].Value;
+        int unfilledHigh = 0;
+        int unfilledNormal = 0;
+        int normalCount = 0;
+        foreach (WorkplaceDemand demander in demand)
+        {
+            if (demander.Tier != tier)
+            {
+                continue;
+            }
+
+            int shortfall = demander.Count - AllocatedOf(demander.Id);
+            if (shortfall <= 0)
+            {
+                continue;
+            }
+
+            if (IsHighPriority(demander.Id))
+            {
+                unfilledHigh += shortfall;
+            }
+            else
+            {
+                unfilledNormal += shortfall;
+                normalCount++;
+            }
+        }
+
+        if (unfilledHigh == 0 && (unfilledNormal == 0 || normalCount == 0))
+        {
+            return;
+        }
+
+        for (int above = rank + 1; above < order.Length && (unfilledHigh > 0 || unfilledNormal > 0); above++)
+        {
+            int source = order[above].Value;
+            int idle = EffectiveSupplyOf(ctx, source) - used[source];
+            if (idle <= 0)
+            {
+                continue;
+            }
+
+            // High-priority workplaces fill first, in ascending ID order, each up to its shortfall.
+            foreach (WorkplaceDemand demander in demand)
+            {
+                if (idle == 0 || unfilledHigh == 0)
+                {
+                    break;
+                }
+
+                if (demander.Tier != tier || !IsHighPriority(demander.Id))
+                {
+                    continue;
+                }
+
+                int shortfall = demander.Count - AllocatedOf(demander.Id);
+                if (shortfall <= 0)
+                {
+                    continue;
+                }
+
+                int give = Math.Min(shortfall, idle);
+                GiveFromAbove(tier, source, demander.Id, give);
+                idle -= give;
+                used[source] += give;
+                unfilledHigh -= give;
+            }
+
+            if (idle == 0 || unfilledNormal == 0 || normalCount == 0)
+            {
+                continue;
+            }
+
+            if (idle >= unfilledNormal)
+            {
+                foreach (WorkplaceDemand demander in demand)
+                {
+                    if (demander.Tier != tier || IsHighPriority(demander.Id))
+                    {
+                        continue;
+                    }
+
+                    int shortfall = demander.Count - AllocatedOf(demander.Id);
+                    if (shortfall > 0)
+                    {
+                        GiveFromAbove(tier, source, demander.Id, shortfall);
+                        idle -= shortfall;
+                        used[source] += shortfall;
+                        unfilledNormal -= shortfall;
+                    }
+                }
+
+                continue;
+            }
+
+            // The same shared fill as within a tier, over the shortfalls: an equal per-mille share, floored, then
+            // leftover single workers one each to the lowest IDs, never past a full count.
+            int fill = WorkforceMath.SharedFill(idle, unfilledNormal);
+            int assigned = 0;
+            foreach (WorkplaceDemand demander in demand)
+            {
+                if (demander.Tier != tier || IsHighPriority(demander.Id))
+                {
+                    continue;
+                }
+
+                int shortfall = demander.Count - AllocatedOf(demander.Id);
+                if (shortfall <= 0)
+                {
+                    continue;
+                }
+
+                int share = (int)((long)shortfall * fill / 1000);
+                GiveFromAbove(tier, source, demander.Id, share);
+                idle -= share;
+                used[source] += share;
+                assigned += share;
+                unfilledNormal -= share;
+            }
+
+            int leftover = idle;
+            while (leftover > 0)
+            {
+                bool placed = false;
+                foreach (WorkplaceDemand demander in demand)
+                {
+                    if (leftover == 0)
+                    {
+                        break;
+                    }
+
+                    if (demander.Tier != tier || IsHighPriority(demander.Id))
+                    {
+                        continue;
+                    }
+
+                    if (AllocatedOf(demander.Id) < demander.Count)
+                    {
+                        GiveFromAbove(tier, source, demander.Id, 1);
+                        leftover--;
+                        used[source]++;
+                        unfilledNormal--;
+                        placed = true;
+                    }
+                }
+
+                if (!placed)
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    /// <summary>Gives idle workers of a higher tier to a lower tier's workplace and records the substitution.</summary>
+    /// <param name="tier">The tier being filled.</param>
+    /// <param name="source">The higher tier the workers come from.</param>
+    /// <param name="id">The workplace.</param>
+    /// <param name="give">How many workers step down.</param>
+    private void GiveFromAbove(int tier, int source, EntityId id, int give)
+    {
+        if (give == 0)
+        {
+            return;
+        }
+
+        if (!_state.Workplaces.TryGet(id, out WorkplaceRecord? record))
+        {
+            record = new WorkplaceRecord();
+            _state.Workplaces.Add(id, record);
+        }
+
+        record.Allocated += give;
+        record.Substituted += give;
+        if (record.SubstituteTier < 0)
+        {
+            record.SubstituteTier = source;
+        }
+
+        _state.WorkingBelow[source] += give;
+        _state.FilledFromAbove[tier] += give;
+    }
+
+    /// <summary>Sums what the allocation placed at a tier's workplaces so far.</summary>
+    /// <param name="tier">The tier.</param>
+    /// <param name="demand">Every active workplace's ask.</param>
+    /// <returns>The placed workers.</returns>
+    private int PlacedOf(int tier, List<WorkplaceDemand> demand)
+    {
+        int placed = 0;
+        foreach (WorkplaceDemand demander in demand)
+        {
+            if (demander.Tier == tier)
+            {
+                placed += AllocatedOf(demander.Id);
+            }
+        }
+
+        return placed;
+    }
+
+    private int AllocatedOf(EntityId id) =>
+        _state.Workplaces.TryGet(id, out WorkplaceRecord? record) ? record.Allocated : 0;
 
     private bool IsHighPriority(EntityId id) =>
         _state.Workplaces.TryGet(id, out WorkplaceRecord? record) && record.HighPriority;

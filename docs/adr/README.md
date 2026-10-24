@@ -19,6 +19,8 @@ Each file records one decision: its context, the decision itself and its consequ
 | [0011](0011-m1-simulation-contract.md) | The M1 simulation contract | Accepted |
 | [0013](0013-art-direction.md) | Art direction: hand-drawn isometric, through a non-photorealistic pass over low-poly 3D | Accepted |
 | [0014](0014-workforce-hold.md) | Workforce hold on house advancement | Accepted |
+| 0015 | Reserved for M2-30 | — |
+| [0016](0016-workforce-stepping-down-and-morale.md) | Workforce stepping down, morale, a stricter hold and slower advancing | Accepted |
 
 ## Template
 

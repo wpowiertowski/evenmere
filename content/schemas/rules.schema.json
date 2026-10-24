@@ -31,6 +31,12 @@
       "minimum": 1,
       "maximum": 3650
     },
+    "workforceReservePercent": {
+      "description": "Spare-worker reserve the workforce hold keeps per tier, in percent.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
     "inspirationDiscountPerMille": {
       "description": "The share of a node's full cost an inspiration removes, in per-mille.",
       "type": "integer",

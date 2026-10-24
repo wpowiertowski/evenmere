@@ -67,6 +67,18 @@ public sealed class BuildMenuWorkforceTests
 
         public int Demand(TierId tier) => demand.TryGetValue(tier, out int count) ? count : 0;
 
+        public int PlannedDemand(TierId tier) => 0;
+
+        public int WorkingBelowTier(TierId tier) => 0;
+
+        public int FilledFromAbove(TierId tier) => 0;
+
+        public int AllocatedWorkers(EntityId building) => 0;
+
+        public int SubstitutedWorkers(EntityId building) => 0;
+
+        public TierId SubstituteSourceTier(EntityId building) => default;
+
         public Ratio FillOf(EntityId building) => Ratio.One;
 
         public bool IsHighPriority(EntityId building) => false;

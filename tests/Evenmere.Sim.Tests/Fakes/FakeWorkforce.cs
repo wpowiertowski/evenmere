@@ -12,6 +12,12 @@ internal sealed class FakeWorkforceQueries : IWorkforceQueries
     private readonly Dictionary<TierId, int> _demand = [];
     private readonly Dictionary<EntityId, Ratio> _fill = [];
     private readonly HashSet<EntityId> _highPriority = [];
+    private readonly Dictionary<TierId, int> _planned = [];
+    private readonly Dictionary<TierId, int> _workingBelow = [];
+    private readonly Dictionary<TierId, int> _filledFromAbove = [];
+    private readonly Dictionary<EntityId, int> _allocated = [];
+    private readonly Dictionary<EntityId, int> _substituted = [];
+    private readonly Dictionary<EntityId, TierId> _substituteSource = [];
 
     /// <summary>Gets or sets the fill that buildings without their own report; the default is fully staffed.</summary>
     public Ratio DefaultFill { get; set; } = Ratio.One;
@@ -33,6 +39,58 @@ internal sealed class FakeWorkforceQueries : IWorkforceQueries
     public FakeWorkforceQueries SetDemand(TierId tier, int workers)
     {
         _demand[tier] = workers;
+        return this;
+    }
+
+    /// <summary>Sets a tier's planned demand at construction sites.</summary>
+    /// <param name="tier">The tier.</param>
+    /// <param name="workers">The number of workers wanted.</param>
+    /// <returns>This fake.</returns>
+    public FakeWorkforceQueries SetPlannedDemand(TierId tier, int workers)
+    {
+        _planned[tier] = workers;
+        return this;
+    }
+
+    /// <summary>Sets how many workers of a tier work below it.</summary>
+    /// <param name="tier">The tier.</param>
+    /// <param name="workers">The number of workers.</param>
+    /// <returns>This fake.</returns>
+    public FakeWorkforceQueries SetWorkingBelow(TierId tier, int workers)
+    {
+        _workingBelow[tier] = workers;
+        return this;
+    }
+
+    /// <summary>Sets how many jobs of a tier are filled from above.</summary>
+    /// <param name="tier">The tier.</param>
+    /// <param name="jobs">The number of jobs.</param>
+    /// <returns>This fake.</returns>
+    public FakeWorkforceQueries SetFilledFromAbove(TierId tier, int jobs)
+    {
+        _filledFromAbove[tier] = jobs;
+        return this;
+    }
+
+    /// <summary>Sets a building's assigned workers.</summary>
+    /// <param name="building">The building.</param>
+    /// <param name="workers">The number of workers.</param>
+    /// <returns>This fake.</returns>
+    public FakeWorkforceQueries SetAllocated(EntityId building, int workers)
+    {
+        _allocated[building] = workers;
+        return this;
+    }
+
+    /// <summary>Sets a building's substitutes from a higher tier.</summary>
+    /// <param name="building">The building.</param>
+    /// <param name="workers">The number of substitutes.</param>
+    /// <param name="source">The tier they come from.</param>
+    /// <returns>This fake.</returns>
+    public FakeWorkforceQueries SetSubstituted(EntityId building, int workers, TierId source)
+    {
+        _substituted[building] = workers;
+        _substituteSource[building] = source;
         return this;
     }
 
@@ -72,6 +130,24 @@ internal sealed class FakeWorkforceQueries : IWorkforceQueries
 
     /// <inheritdoc />
     public int Demand(TierId tier) => _demand.GetValueOrDefault(tier);
+
+    /// <inheritdoc />
+    public int PlannedDemand(TierId tier) => _planned.GetValueOrDefault(tier);
+
+    /// <inheritdoc />
+    public int WorkingBelowTier(TierId tier) => _workingBelow.GetValueOrDefault(tier);
+
+    /// <inheritdoc />
+    public int FilledFromAbove(TierId tier) => _filledFromAbove.GetValueOrDefault(tier);
+
+    /// <inheritdoc />
+    public int AllocatedWorkers(EntityId building) => _allocated.GetValueOrDefault(building);
+
+    /// <inheritdoc />
+    public int SubstitutedWorkers(EntityId building) => _substituted.GetValueOrDefault(building);
+
+    /// <inheritdoc />
+    public TierId SubstituteSourceTier(EntityId building) => _substituteSource.GetValueOrDefault(building);
 
     /// <inheritdoc />
     public Ratio FillOf(EntityId building) => _fill.TryGetValue(building, out Ratio fill) ? fill : DefaultFill;

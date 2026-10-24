@@ -469,6 +469,10 @@
         "Member": "property AdvanceBlocker",
         "Type": "Evenmere.Sim.Queries.Types.AdvanceBlocker"
       },
+      "13": {
+        "Member": "property Underemployed",
+        "Type": "System.Int32"
+      },
       "2": {
         "Member": "property Residents",
         "Type": "System.Int32"
@@ -513,6 +517,10 @@
       },
       "2": {
         "Member": "property SuppliedWorkers",
+        "Type": "System.Int32[]"
+      },
+      "3": {
+        "Member": "property TierResidents",
         "Type": "System.Int32[]"
       }
     },
@@ -752,6 +760,14 @@
       "1": {
         "Member": "property Workplaces",
         "Type": "Evenmere.Core.Collections.IdTable\u00601\u003CEvenmere.Sim.Systems.Workforce.WorkplaceRecord\u003E"
+      },
+      "2": {
+        "Member": "property WorkingBelow",
+        "Type": "System.Int32[]"
+      },
+      "3": {
+        "Member": "property FilledFromAbove",
+        "Type": "System.Int32[]"
       }
     },
     "Evenmere.Sim.Systems.Workforce.WorkplaceRecord": {
@@ -762,6 +778,14 @@
       "1": {
         "Member": "property HighPriority",
         "Type": "System.Boolean"
+      },
+      "2": {
+        "Member": "property Substituted",
+        "Type": "System.Int32"
+      },
+      "3": {
+        "Member": "property SubstituteTier",
+        "Type": "System.Int32"
       }
     }
   }

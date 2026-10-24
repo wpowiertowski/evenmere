@@ -72,4 +72,8 @@ public struct HouseRecord
     /// <summary>Gets or sets what stops the house from advancing.</summary>
     [Key(12)]
     public AdvanceBlocker AdvanceBlocker { get; set; }
+
+    /// <summary>Gets or sets how many residents the last day-start pass assigned to lower-tier jobs (ADR-0016). The first houses of the tier carry the underemployment; morale and the advance block derive from this.</summary>
+    [Key(13)]
+    public int Underemployed { get; set; }
 }

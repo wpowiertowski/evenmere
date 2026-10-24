@@ -39,7 +39,7 @@ public sealed class ExplainHouseTests
             0,
             false,
             false,
-            AdvanceBlocker.NeedsUnmet));
+            AdvanceBlocker.NeedsUnmet, 1000));
 
         NeedStatus[] needs = marketCovered
             ? new NeedStatus[]
@@ -117,7 +117,7 @@ public sealed class ExplainHouseTests
         EntityId house = sim.Services.BuildingRegistry.Add(houseType, 0, 0, Rotation.Deg0, BuildingState.Active);
 
         sim.Queries.Population.SetHouse(new HouseInfo(
-            house, settlers, 4, 4, 6, 2, 7, false, false, AdvanceBlocker.MissingMaterials));
+            house, settlers, 4, 4, 6, 2, 7, false, false, AdvanceBlocker.MissingMaterials, 1000));
         sim.Queries.Needs.SetHouseNeeds(new HouseNeedsInfo(
             house,
             true,
@@ -158,7 +158,7 @@ public sealed class ExplainHouseTests
         EntityId house = sim.Services.BuildingRegistry.Add(houseType, 0, 0, Rotation.Deg0, BuildingState.Active);
 
         sim.Queries.Population.SetHouse(new HouseInfo(
-            house, settlers, 6, 6, 6, 3, 0, false, false, AdvanceBlocker.HeldForWorkforce));
+            house, settlers, 6, 6, 6, 3, 0, false, false, AdvanceBlocker.HeldForWorkforce, 1000));
         sim.Queries.Needs.SetHouseNeeds(new HouseNeedsInfo(
             house,
             true,

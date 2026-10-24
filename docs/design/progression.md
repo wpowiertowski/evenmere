@@ -30,7 +30,7 @@ The balance bot measures these at 1× speed. They are the gates for M2, M3 and M
 
 ## Population tiers
 
-Houses are 2 × 2 and upgrade in place. Workers of a tier come only from houses of that tier.
+Houses are 2 × 2 and upgrade in place. Workers of a tier come from houses of that tier, but idle workers step down: when a tier's jobs go unfilled, the next higher tier covers them, nearest first (see How needs work). A Villager working a Settler job keeps the production running, but their house cannot advance while they do.
 
 | # | Tier | Era | Unlocked by | Capacity | Upgrade cost | Output per 1,000 residents per day |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -60,8 +60,10 @@ Goods are in **units per 1,000 residents per day**. Services are buildings withi
 
 - **Market first.** A house can draw goods only while it is inside a Market's coverage, and that Market must be road-connected to a storehouse.
 - **Occupancy.** Target occupancy = max(1, capacity × basic needs met ÷ basic needs total). Residents move one step per day toward the target.
-- **Advance.** All basic needs met for 3 consecutive days, plus the next tier unlocked, plus upgrade materials in the pool, plus the house not locked by the player → the house advances and the materials are consumed.
-- **Workforce hold (ADR-0014).** Workers of a tier come only from houses of that tier, so a house of tier T, with every other advance condition met, advances only if the tier-T workers left after it leaves still cover tier T's jobs (`residentsOfTier(T) − house.Residents ≥ Demand(T)`). Otherwise the house is held: it keeps its advance streak and advances as soon as there are spare workers. With no jobs for the tier, nothing is held.
+- **Advance.** All basic needs met for 6 consecutive days, plus the next tier unlocked, plus upgrade materials in the pool, plus the house not locked by the player → the house advances and the materials are consumed.
+- **Stepping down (ADR-0016).** Each tier staffs its own workplaces first; then, from the lowest tier up, unfilled jobs draw idle workers from the next higher tier, then the one above. Same-tier workers are always used first, the nearest higher tier goes first, and high-priority buildings still fill first.
+- **Morale (ADR-0016).** Higher-tier workers doing lower-tier jobs are not satisfied by that work: their houses carry the underemployment (the first houses most) and show a morale below 100%. A house with morale below 100% may not advance, which also keeps the post-Villager tiers from unlocking while Villagers are still covering Settler jobs. Morale never causes decline; it only blocks advancement, and the view shows it.
+- **Workforce hold (ADR-0014, stricter in ADR-0016).** A house of tier T, with every other advance condition met, advances only if the tier-T workers left after it leaves still cover tier T's current jobs, the jobs at its construction sites (planned demand), and a 20% reserve over both: `residentsOfTier(T) − house.Residents ≥ Demand(T) + planned + reserve`. Otherwise the house is held: it keeps its advance streak and advances as soon as there are spare workers. With no jobs for the tier, nothing is held.
 - **Comfort.** Each comfort good that is met adds +25% to the tier's knowledge, culture and coin output from that house. A missing comfort good never hurts.
 - **Fair shares.** Each day a fulfilment ratio per good is computed from pool stock against projected demand, and every house consumes at that ratio.
 - **Decline (always on).** The decline timer runs while a basic need **that the house has had met at its current tier** is below 50%. After a full season (10 days) the house steps down one tier.

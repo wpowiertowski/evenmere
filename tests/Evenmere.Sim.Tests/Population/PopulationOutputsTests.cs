@@ -12,18 +12,26 @@ public sealed class PopulationOutputsTests
     [Fact]
     public void Outputs_LedgerCredit_MatchesPer1000Rates()
     {
-        (NeedsHarness h, EntityId house) = AdvanceHarness();
-        h.Cover(house, ServiceKind.Shrine);
+        // The villager goods and the shrine are arranged from day zero, so the day-start shares after the
+        // advance already know the house wants them: the next evaluation meets every need.
+        var h = NeedsHarness.Create();
+        EntityId house = h.AddHouse();
+        h.Cover(house, ServiceKind.Market).Cover(house, ServiceKind.Shrine);
+        h.Stock("fish", Amount.FromUnits(100)).Stock("wood", Amount.FromUnits(100));
         h.Stock("homespun", Amount.FromUnits(100)).Stock("bread", Amount.FromUnits(100));
+        h.Stock("timber", Amount.FromUnits(2));
+        h.UnlockTier("villagers");
+        h.RunDays(6);
+        h.House(house).Tier.ShouldBe(h.Tier("villagers"));
 
-        // Four residents at a villagers output of 10 knowledge per 1,000: the next day credits
-        // 10 × 5 = 50 milli-units, and the slice defines no culture output for the tier.
+        // Six residents at a villagers output of 10 knowledge per 1,000: the next day credits
+        // 10 × 7 = 70 milli-units, and the slice defines no culture output for the tier.
         // (The credit does not depend on which needs are met, only on comfort for its multiplier.)
         h.Sim.Services.PointsLedger.TakeToday(PointKind.Knowledge);
         h.RunDays(1);
 
-        h.House(house).Residents.ShouldBe(5);
-        h.Sim.Services.PointsLedger.TakeToday(PointKind.Knowledge).ShouldBe(Amount.FromMilli(50));
+        h.House(house).Residents.ShouldBe(7);
+        h.Sim.Services.PointsLedger.TakeToday(PointKind.Knowledge).ShouldBe(Amount.FromMilli(70));
         h.Sim.Services.PointsLedger.TakeToday(PointKind.Culture).ShouldBe(Amount.Zero);
     }
 
@@ -32,11 +40,11 @@ public sealed class PopulationOutputsTests
     {
         (NeedsHarness h, EntityId house) = AdvanceHarness();
 
-        // Nothing but fish and the market is met, yet the house still produces knowledge from its four residents.
+        // Nothing but fish and the market is met, yet the house still produces knowledge from its five residents.
         h.Sim.Services.PointsLedger.TakeToday(PointKind.Knowledge);
         h.RunDays(1);
 
-        h.Sim.Services.PointsLedger.TakeToday(PointKind.Knowledge).ShouldBe(Amount.FromMilli(40));
+        h.Sim.Services.PointsLedger.TakeToday(PointKind.Knowledge).ShouldBe(Amount.FromMilli(50));
     }
 
     [Fact]
@@ -90,9 +98,9 @@ public sealed class PopulationOutputsTests
         h.Stock("fish", Amount.FromUnits(100)).Stock("wood", Amount.FromUnits(100));
         h.Stock("timber", Amount.FromUnits(2));
         h.UnlockTier("villagers");
-        h.RunDays(3);
+        h.RunDays(6);
         h.House(house).Tier.ShouldBe(h.Tier("villagers"));
-        h.House(house).Residents.ShouldBe(4);
+        h.House(house).Residents.ShouldBe(6);
         return (h, house);
     }
 }

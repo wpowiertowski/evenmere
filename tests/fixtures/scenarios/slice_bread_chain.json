@@ -37,7 +37,7 @@
     { "tick": 5000, "type": "PlaceBuilding", "args": { "type": "bakery", "x": 36, "y": 93, "rotation": 0 } }
   ],
   "expect": {
-    "hash": "d2ed42ab69965ba0",
+    "hash": "2cf1d518af60a9da",
     "stock": { "bread": ">= 10" },
     "events": [
       { "type": "TechResearched", "exactly": 2 },

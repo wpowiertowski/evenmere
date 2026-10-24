@@ -203,6 +203,34 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
             ctx.WorkforceSupply.SetSupply(TierId.From((ushort)tier), _state.TierResidents[tier]);
             _state.SuppliedWorkers[tier] = _state.TierResidents[tier];
         }
+
+        AssignUnderemployment(ctx);
+    }
+
+    // Morale (ADR-0016): WorkingBelowTier[T] counts the tier-T residents doing lower-tier jobs. Assign them to houses of
+    // tier T in ascending house ID, filling each house's residents, so the first houses carry the underemployment. The
+    // allocation ran earlier the same tick (pipeline step 3 before step 8), so the counts are today's.
+    private void AssignUnderemployment(SimContext ctx)
+    {
+        int tiers = _state.TierResidents.Length;
+        int[] remaining = new int[tiers];
+        for (int tier = 0; tier < tiers; tier++)
+        {
+            remaining[tier] = ctx.Queries.Workforce.WorkingBelowTier(TierId.From(checked((ushort)tier)));
+        }
+
+        foreach (IdTable<HouseRecord>.Entry entry in _state.Houses)
+        {
+            ref HouseRecord house = ref entry.Value;
+            int take = 0;
+            if ((uint)house.Tier.Value < (uint)remaining.Length)
+            {
+                take = Math.Min(remaining[house.Tier.Value], house.Residents);
+                remaining[house.Tier.Value] -= take;
+            }
+
+            house.Underemployed = take;
+        }
     }
 
     /// <summary>Reads the live resident total of a tier: the sum over its houses including today's changes so far.</summary>
@@ -229,6 +257,12 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
         if (after != before)
         {
             _state.AddTierResidents(house.Tier, after - before);
+        }
+
+        // Underemployment never exceeds the residents: a house that empties mid-day keeps only what still fits.
+        if (house.Underemployed > house.Residents)
+        {
+            house.Underemployed = house.Residents;
         }
 
         if (after > before)
@@ -320,6 +354,7 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
         house.ComfortMetMask = 0;
         house.AdvanceStreakDays = 0;
         house.DeclineTimerDays = 0;
+        house.Underemployed = 0;
         house.Capacity = CapacityOf(ctx, id, in house, tier);
         house.Residents = Math.Clamp(house.Residents, 1, house.Capacity);
         _state.AddTierResidents(tierId, house.Residents);
@@ -366,12 +401,28 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
             }
         }
 
-        // The workforce hold (ADR-0014), checked last: with everything else met, a house of tier T advances only if the
-        // workers left after it leaves still cover tier T's jobs. With no jobs for the tier, nothing is held.
-        int demand = ctx.Queries.Workforce.Demand(house.Tier);
-        if (demand > 0 && LiveTierTotal(house.Tier) - house.Residents < demand)
+        // Morale (ADR-0016), checked after the materials: a house with residents working below their tier may not
+        // advance. It waits for enough workers of the lower tier instead, which also keeps the post-Villager tiers
+        // from unlocking while Villagers are still covering Settler jobs.
+        if (house.Underemployed > 0)
         {
-            return AdvanceBlocker.HeldForWorkforce;
+            return AdvanceBlocker.Underemployed;
+        }
+
+        // The workforce hold (ADR-0014, stricter in ADR-0016), checked last: with everything else met, a house of tier T
+        // advances only if the workers left after it leaves still cover tier T's current jobs, the jobs at its
+        // construction sites (planned demand), and a reserve of reservePercent over both, rounded up. With no jobs for
+        // the tier, nothing is held.
+        int demand = ctx.Queries.Workforce.Demand(house.Tier);
+        int planned = ctx.Queries.Workforce.PlannedDemand(house.Tier);
+        int need = demand + planned;
+        if (need > 0)
+        {
+            long reserve = ((long)_content.Rules.WorkforceReservePercent * need + 99) / 100;
+            if ((long)LiveTierTotal(house.Tier) - house.Residents < need + reserve)
+            {
+                return AdvanceBlocker.HeldForWorkforce;
+            }
         }
 
         return AdvanceBlocker.None;

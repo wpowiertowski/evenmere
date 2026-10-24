@@ -18,7 +18,7 @@ public sealed class PopulationDeclineTests
         h.Stock("fish", Amount.FromUnits(100)).Stock("wood", Amount.FromUnits(100));
         h.Stock("timber", Amount.FromUnits(2));
         h.UnlockTier("villagers");
-        h.RunDays(3);
+        h.RunDays(6);
         h.House(house).Tier.ShouldBe(h.Tier("villagers"));
         return (h, house);
     }
@@ -36,7 +36,7 @@ public sealed class PopulationDeclineTests
         h.Stock("homespun", Amount.FromUnits(100)).Stock("bread", Amount.FromUnits(100));
         h.Stock("timber", Amount.FromUnits(2));
         h.UnlockTier("villagers");
-        h.RunDays(4);
+        h.RunDays(7);
         h.House(house).Tier.ShouldBe(h.Tier("villagers"));
         h.HouseNeeds(house).Needs.Single(n => n.Good == h.Good("bread")).EverMet.ShouldBeTrue();
         return (h, house);

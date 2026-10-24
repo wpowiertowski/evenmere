@@ -1,0 +1,4 @@
+{
+  "explain.building.workforce.substituted": "{1} {0} + {3} {2} working ({2} are filling {0} jobs).",
+  "explain.house.morale": "Morale {0}%: {1} residents are working below their tier; they can't advance until there are enough {2} workers."
+}

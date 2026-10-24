@@ -61,7 +61,22 @@ internal sealed class PopulationQueries(PopulationState state) : IPopulationQuer
             record.DeclineTimerDays,
             record.UpgradeLocked,
             state.FestivalActive,
-            record.AdvanceBlocker);
+            record.AdvanceBlocker,
+            MoraleOf(in record));
         return true;
+    }
+
+    /// <summary>Computes a house's morale from its underemployment: 1000 when nobody works below the tier, and 1000 for an empty house.</summary>
+    /// <param name="house">The house record.</param>
+    /// <returns>The morale in per-mille.</returns>
+    private static int MoraleOf(in HouseRecord house)
+    {
+        if (house.Residents <= 0)
+        {
+            return 1000;
+        }
+
+        int underemployed = Math.Clamp(house.Underemployed, 0, house.Residents);
+        return 1000 * (house.Residents - underemployed) / house.Residents;
     }
 }

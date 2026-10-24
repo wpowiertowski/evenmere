@@ -151,7 +151,7 @@ public sealed class AdvisorsRuleTests
         h.Sim.Queries.Roads.GrantRoadAccess(house);
         h.AddReachedStorehouse(house, 8, 8);
         TierId settlers = h.Tier("settlers");
-        h.Sim.Queries.Population.SetHouse(new HouseInfo(house, settlers, 6, 6, 6, 3, 0, false, false, AdvanceBlocker.MissingMaterials));
+        h.Sim.Queries.Population.SetHouse(new HouseInfo(house, settlers, 6, 6, 6, 3, 0, false, false, AdvanceBlocker.MissingMaterials, 1000));
 
         h.Run();
 
@@ -162,7 +162,7 @@ public sealed class AdvisorsRuleTests
         h.Events().ShouldBe([new AdviceRaised(0, active[0])]);
 
         // Once nothing blocks it, the note clears.
-        h.Sim.Queries.Population.SetHouse(new HouseInfo(house, settlers, 6, 6, 6, 3, 0, false, false, AdvanceBlocker.None));
+        h.Sim.Queries.Population.SetHouse(new HouseInfo(house, settlers, 6, 6, 6, 3, 0, false, false, AdvanceBlocker.None, 1000));
         h.AdvanceDays(1);
         h.Active().ShouldBeEmpty();
         h.Events().ShouldBe([new AdviceCleared(120, active[0].Id, AdviceKind.HouseCannotAdvance)]);
@@ -175,7 +175,7 @@ public sealed class AdvisorsRuleTests
         EntityId house = h.Add("settler_house", 0, 0);
         h.Sim.Queries.Roads.GrantRoadAccess(house);
         h.AddReachedStorehouse(house, 8, 8);
-        h.Sim.Queries.Population.SetHouse(new HouseInfo(house, h.Tier("settlers"), 6, 6, 6, 3, 0, false, false, AdvanceBlocker.NextTierLocked));
+        h.Sim.Queries.Population.SetHouse(new HouseInfo(house, h.Tier("settlers"), 6, 6, 6, 3, 0, false, false, AdvanceBlocker.NextTierLocked, 1000));
 
         h.Run();
 
@@ -402,5 +402,5 @@ public sealed class AdvisorsRuleTests
     }
 
     private static HouseInfo Blocked(EntityId house, TierId tier, AdvanceBlocker blocker) =>
-        new(house, tier, 6, 6, 6, 3, 0, false, false, blocker);
+        new(house, tier, 6, 6, 6, 3, 0, false, false, blocker, 1000);
 }
