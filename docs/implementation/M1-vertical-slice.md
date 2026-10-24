@@ -74,6 +74,7 @@
 | M1-31 | Workforce supply and demand in the HUD | game | M1-18, M1-23, M1-24 | done |
 | M1-32 | Isometric-style camera yaw | game | M1-17 | done |
 | M1-33 | Workforce hold on house advancement | sim | M1-10 | done |
+| M1-34 | Lower camera pitch | game | M1-32 | done |
 
 ---
 
@@ -1189,6 +1190,25 @@
 - Live totals always equal the sum over houses, including after a save round trip.
 
 **Out of scope:** content numbers; advisor texts (another task owns them).
+
+---
+
+### M1-34 · Lower camera pitch
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| game | M1-32 | `game/rendering/camera/CameraRig.cs` (the pitch defaults, plus anything the lower angle breaks) and `game/rendering/camera/CameraRig.tscn` (if the scene overrides the pitch values); `game/rendering/camera/CameraMath.cs`, only if a fix is needed; `tests/Evenmere.Game.Tests/**` (camera tests); this file (the M1-34 row and card only) |
+
+**Goal:** lower the camera from the near-top-down 55/70° blend to an isometric-style 30/50° blend, so the starting view sits near 43° and the terrain and buildings read with presence.
+
+**Steps:**
+
+1. Change the pitch defaults to `StreetPitchDegrees = 30` and `IslandPitchDegrees = 50`; check the scene does not override them.
+2. Check what the lower angle can break, and fix it inside the camera code: pan bounds and `MapBounds` clamping (focus must still reach every edge), zoom limits (fully zoomed out must still show the whole island), `TilePicker` and the virtual cursor on hills, with edge scrolling, rotation steps and the 30° yaw offset unchanged.
+3. Update or add `CameraMath` pitch tests for MinZoom, MaxZoom and InitialZoom with the new defaults.
+4. Take comparison screenshots at 1280 × 800 of the Landing at the default zoom with `--demo-buildings` (old 55/70, new 30/50, lower 25/40 option), plus the new defaults fully zoomed out and fully zoomed in, and log one `--check-pick` line at the new default.
+
+**Acceptance:** the starting view sits near 43°, zooming out still frames the whole island without a MaxZoom change, picking lands on the hovered tile (centre-screen pick returns the focus tile), and the pitch unit tests pass.
 
 ## Gate record
 

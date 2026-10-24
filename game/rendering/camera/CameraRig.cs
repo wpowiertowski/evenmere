@@ -73,11 +73,11 @@ public sealed partial class CameraRig : Node3D
 
     /// <summary>Gets or sets the camera pitch at street level, in degrees below the horizon.</summary>
     [Export(PropertyHint.Range, "10,89,0.5,suffix:°")]
-    public float StreetPitchDegrees { get; set; } = 55f;
+    public float StreetPitchDegrees { get; set; } = 30f;
 
     /// <summary>Gets or sets the camera pitch at island view, in degrees below the horizon.</summary>
     [Export(PropertyHint.Range, "10,89,0.5,suffix:°")]
-    public float IslandPitchDegrees { get; set; } = 70f;
+    public float IslandPitchDegrees { get; set; } = 50f;
 
     /// <summary>Gets or sets the isometric-style starting angle, in degrees. Rotation still turns in 90° steps from it.</summary>
     [Export(PropertyHint.Range, "0,90,0.5,suffix:°")]
