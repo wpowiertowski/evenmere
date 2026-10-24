@@ -6,6 +6,7 @@ using Evenmere.Game.Host;
 using Evenmere.Game.Rendering.Camera;
 using Evenmere.Game.Ui.Common;
 using Evenmere.Game.Ui.Explain;
+using Evenmere.Game.Ui.Hud;
 using Evenmere.Game.Ui.Progress;
 using Evenmere.Game.Ui.Tools;
 using Evenmere.Sim;
@@ -22,8 +23,8 @@ namespace Evenmere.Game.Ui.Inspector;
 /// The building and house inspector: a docked panel on the right, opened from
 /// <c>ToolController.BuildingClicked</c> while idle. It shows the name, state and
 /// productivity breakdown (<see cref="IExplainQueries.ExplainBuilding"/>), buffers,
-/// workforce fill and storehouse reach, plus pause and priority toggles and
-/// demolish and upgrade buttons. Houses show tier, residents, needs, advance and
+/// workforce fill (naming substitutes from above) and storehouse reach, plus pause and priority toggles and
+/// demolish and upgrade buttons. Houses show tier, residents, morale, needs, advance and
 /// decline (<see cref="IExplainQueries.ExplainHouse"/>). It refreshes at most
 /// four times a second and closes on <c>tool_cancel</c> or its Close button.
 /// </summary>
@@ -33,6 +34,13 @@ public sealed partial class InspectorPanel : PanelContainer
     private const float PanelTop = 150f;
     private const float PanelMargin = 16f;
 
+    // The pause menu's Menu button sits bottom-right (124 by 48 at a 16 margin); the panel ends above it with the
+    // same margin, so the inspector's own buttons stay fully visible and clickable at every window size.
+    private const float MenuReserve = 64f + PanelMargin;
+
+    // Debug screenshots only: --inspector-open=<entity id> opens the inspector on that building once the world is
+    // running (M1-37 evidence), so a workplace or house can be captured without clicking it.
+    private int _debugOpenEntity;
     private SimHost? _host;
     private CameraRig? _rig;
     private ContentDb? _builtFor;
@@ -45,6 +53,7 @@ public sealed partial class InspectorPanel : PanelContainer
     private Label? _title;
     private Label? _stateLabel;
     private Label? _workforceLabel;
+    private Label? _moraleLabel;
     private ExplanationView? _explain;
     private Button? _closeButton;
     private Button? _pauseButton;
@@ -90,6 +99,18 @@ public sealed partial class InspectorPanel : PanelContainer
             return;
         }
 
+        if (OS.IsDebugBuild())
+        {
+            foreach (string arg in OS.GetCmdlineUserArgs())
+            {
+                if (arg.StartsWith("--inspector-open=", StringComparison.Ordinal)
+                    && int.TryParse(arg["--inspector-open=".Length..], out int id))
+                {
+                    _debugOpenEntity = id;
+                }
+            }
+        }
+
         BuildChrome();
         if (GetNodeOrNull<ToolController>(ToolsPath) is { } tools)
         {
@@ -125,6 +146,16 @@ public sealed partial class InspectorPanel : PanelContainer
         if (!ReferenceEquals(_builtFor, host.Content))
         {
             RebuildFor(host);
+        }
+
+        if (_debugOpenEntity > 0)
+        {
+            var target = new EntityId(_debugOpenEntity);
+            if (host.Query.Map.TryGetBuilding(target, out _))
+            {
+                Open(target);
+                _debugOpenEntity = 0;
+            }
         }
 
         // A research or civics panel opened elsewhere hides this one, so at most one
@@ -201,7 +232,7 @@ public sealed partial class InspectorPanel : PanelContainer
         OffsetLeft = -PanelWidth;
         OffsetRight = -PanelMargin;
         OffsetTop = PanelTop;
-        OffsetBottom = -PanelMargin;
+        OffsetBottom = -MenuReserve;
         MouseFilter = Control.MouseFilterEnum.Stop;
     }
 
@@ -243,6 +274,9 @@ public sealed partial class InspectorPanel : PanelContainer
 
         _workforceLabel = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
         top.AddChild(_workforceLabel);
+
+        _moraleLabel = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        top.AddChild(_moraleLabel);
 
         _explain = new ExplanationView { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
         _explain.BuildingLinkActivated += OnLinkBuilding;
@@ -392,13 +426,34 @@ public sealed partial class InspectorPanel : PanelContainer
                     ("capacity", NumberFormat.Count(house.Capacity)),
                     ("target", NumberFormat.Count(house.TargetResidents)));
                 _workforceLabel.TooltipText = strings.Format("ui.inspector.house.tier", ("tier", tierName));
+                ShowMorale(strings, house);
             }
             else
             {
                 Evenmere.Core.Numerics.Ratio fill = host.Query.Workforce.FillOf(_target);
-                _workforceLabel.Text = strings.Format(
-                    "ui.inspector.workforce",
-                    ("fill", ExplainFormat.FormatPercent(fill)));
+                string fillText = ExplainFormat.FormatPercent(fill);
+                int substituted = host.Query.Workforce.SubstitutedWorkers(_target);
+                if (substituted > 0)
+                {
+                    // Higher-tier workers stepped down here (ADR-0016): name the nearest source tier.
+                    string sourceName = strings.TierName(content.NameOf(host.Query.Workforce.SubstituteSourceTier(_target)));
+                    _workforceLabel.Text = strings.Format(
+                        "ui.inspector.workforce.substituted",
+                        ("fill", fillText),
+                        ("count", NumberFormat.Count(substituted)),
+                        ("tier", sourceName));
+                }
+                else
+                {
+                    _workforceLabel.Text = strings.Format(
+                        "ui.inspector.workforce",
+                        ("fill", fillText));
+                }
+
+                if (_moraleLabel is not null)
+                {
+                    _moraleLabel.Visible = false;
+                }
             }
         }
 
@@ -410,6 +465,43 @@ public sealed partial class InspectorPanel : PanelContainer
 
         UpdateButtons(host, strings, content, building, isHouse, house);
         GD.Print($"[Evenmere] Inspector: refreshed {_target.Value} ({content.NameOf(building.Type)}) state={building.State}.");
+    }
+
+    // The morale line for an occupied house: "Morale 100%" in the normal colour at full morale, and the
+    // underemployed count in the warning tint below that, derived from morale the way ExplainService does.
+    // Hidden for an empty house; workplaces never show it.
+    private void ShowMorale(UiStrings strings, HouseInfo house)
+    {
+        if (_moraleLabel is null)
+        {
+            return;
+        }
+
+        if (house.Residents <= 0)
+        {
+            _moraleLabel.Visible = false;
+            return;
+        }
+
+        _moraleLabel.Visible = true;
+        string percent = NumberFormat.Count(house.MoralePerMille / 10);
+        if (house.MoralePerMille >= 1000)
+        {
+            _moraleLabel.Text = strings.Format("ui.inspector.house.morale", ("percent", percent));
+            _moraleLabel.RemoveThemeColorOverride("font_color");
+            _moraleLabel.TooltipText = string.Empty;
+        }
+        else
+        {
+            int underemployed = WorkforceSummary.UnderemployedCount(house.Residents, house.MoralePerMille);
+            string key = underemployed == 1 ? "ui.inspector.house.morale.below.one" : "ui.inspector.house.morale.below.other";
+            _moraleLabel.Text = strings.Format(
+                key,
+                ("percent", percent),
+                ("count", NumberFormat.Count(underemployed)));
+            _moraleLabel.AddThemeColorOverride("font_color", HudChip.WarningTint);
+            _moraleLabel.TooltipText = strings.Get("ui.inspector.house.morale.tip");
+        }
     }
 
     private void UpdateButtons(SimHost host, UiStrings strings, ContentDb content, BuildingInfo building, bool isHouse, HouseInfo house)

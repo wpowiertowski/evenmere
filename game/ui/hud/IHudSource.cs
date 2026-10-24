@@ -46,6 +46,16 @@ public interface IHudSource
     /// <returns>The workers wanted.</returns>
     int WorkforceDemand(TierId tier);
 
+    /// <summary>Gets how many workers of a tier the last daily allocation placed in lower-tier jobs (ADR-0016).</summary>
+    /// <param name="tier">The tier.</param>
+    /// <returns>The workers of the tier working below it; 0 when nobody steps down.</returns>
+    int WorkingBelowTier(TierId tier);
+
+    /// <summary>Gets how many jobs of a tier the last daily allocation filled with higher-tier workers (ADR-0016).</summary>
+    /// <param name="tier">The tier.</param>
+    /// <returns>The jobs of the tier filled from above; 0 when the tier staffs itself.</returns>
+    int FilledFromAbove(TierId tier);
+
     /// <summary>Gets the knowledge the island gains per game day.</summary>
     /// <returns>The rate, or <see langword="null"/> while no simulation is running.</returns>
     Amount? KnowledgePerDay();

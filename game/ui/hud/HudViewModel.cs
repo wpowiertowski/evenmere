@@ -162,6 +162,7 @@ public sealed class HudViewModel : ViewModel
         string countText = count is { } known ? NumberFormat.Count(known) : _dash;
         int supply = _source.WorkforceSupply(tier);
         int demand = _source.WorkforceDemand(tier);
+        var summary = WorkforceSummary.From(supply, demand, _source.WorkingBelowTier(tier), _source.FilledFromAbove(tier));
 
         // A tier with no jobs and no residents shows only its count: there is nothing to staff and nothing to explain.
         if (demand <= 0 && (count ?? 0) <= 0)
@@ -170,18 +171,66 @@ public sealed class HudViewModel : ViewModel
         }
 
         // Residents but no jobs: the tier's workers sit idle, so the jobs part is dropped ("12 · 12 free").
+        // A real shortage shows "short"; jobs filled from above name the cover instead. Workers in lower-tier
+        // jobs append the same "in lower-tier jobs" suffix to whichever form applies.
         string workforce = demand <= 0
-            ? _strings.Format("ui.hud.workforce.idle", ("free", NumberFormat.Count(supply)))
-            : demand > supply
-            ? _strings.Format("ui.hud.workforce.short", ("short", NumberFormat.Count(demand - supply)), ("jobs", NumberFormat.Count(demand)))
-            : _strings.Format("ui.hud.workforce.free", ("free", NumberFormat.Count(supply - demand)), ("jobs", NumberFormat.Count(demand)));
+            ? _strings.Format("ui.hud.workforce.idle", ("free", NumberFormat.Count(summary.Free)))
+            : summary.Shortfall > 0
+            ? _strings.Format("ui.hud.workforce.short", ("short", NumberFormat.Count(summary.Shortfall)), ("jobs", NumberFormat.Count(demand)))
+            : summary.Covered > 0
+            ? _strings.Format("ui.hud.workforce.covered", ("jobs", NumberFormat.Count(demand)), ("covered", NumberFormat.Count(summary.Covered)))
+            : _strings.Format("ui.hud.workforce.free", ("free", NumberFormat.Count(summary.Free)), ("jobs", NumberFormat.Count(demand)));
+        if (summary.Below > 0)
+        {
+            workforce += " " + _strings.Format("ui.hud.workforce.below", ("below", NumberFormat.Count(summary.Below)));
+        }
+
         string value = _strings.Format("ui.hud.residents.value", ("count", countText), ("workforce", workforce));
-        string tooltip = _strings.Format(
-            "ui.hud.workforce.tip",
-            ("supply", NumberFormat.Count(supply)),
-            ("tier", tierName),
-            ("demand", NumberFormat.Count(demand)));
-        return new HudStat(tierName, value, tooltip, demand > supply);
+        string tooltip = WorkforceTooltip(tierName, supply, demand, summary);
+        return new HudStat(tierName, value, tooltip, summary.Shortfall > 0);
+    }
+
+    private string WorkforceTooltip(string tierName, int supply, int demand, WorkforceSummary summary)
+    {
+        string tooltip = supply == 1
+            ? _strings.Format("ui.hud.workforce.tip.one", ("tier", tierName), ("demand", NumberFormat.Count(demand)))
+            : _strings.Format(
+                "ui.hud.workforce.tip.other",
+                ("supply", NumberFormat.Count(supply)),
+                ("tier", tierName),
+                ("demand", NumberFormat.Count(demand)));
+        if (summary.Covered > 0)
+        {
+            string key = summary.Covered == 1 ? "ui.hud.workforce.tip.covered.one" : "ui.hud.workforce.tip.covered.other";
+            tooltip += " " + _strings.Format(key, ("covered", NumberFormat.Count(summary.Covered)));
+        }
+
+        if (summary.Below > 0)
+        {
+            string key = summary.Below == 1 ? "ui.hud.workforce.tip.below.one" : "ui.hud.workforce.tip.below.other";
+            tooltip += " " + _strings.Format(
+                key,
+                ("below", NumberFormat.Count(summary.Below)),
+                ("tier", tierName));
+        }
+
+        if (demand > 0)
+        {
+            tooltip += " " + _strings.Format("ui.hud.workforce.tip.hold", ("tier", tierName));
+        }
+
+        // What to do about it: a real shortage needs more houses, and so does a covered gap, so the higher-tier
+        // workers can go back to their own work.
+        if (summary.Shortfall > 0)
+        {
+            tooltip += " " + _strings.Format("ui.hud.workforce.tip.build", ("tier", tierName));
+        }
+        else if (summary.Covered > 0)
+        {
+            tooltip += " " + _strings.Format("ui.hud.workforce.tip.relieve", ("tier", tierName));
+        }
+
+        return tooltip;
     }
 
     private static string TrendKey(Trend trend) => trend switch

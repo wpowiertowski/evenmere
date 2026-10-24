@@ -4,6 +4,7 @@ using Evenmere.Content.Definitions;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Game.Ui.Common;
+using Evenmere.Game.Ui.Hud;
 using Evenmere.Sim.Queries;
 
 namespace Evenmere.Game.Ui.BuildMenu;
@@ -132,13 +133,31 @@ public sealed class BuildMenuViewModel : ViewModel
         bool workforceShort = false;
         if (building.Workforce is { } staff)
         {
-            int free = _workforce.Supply(staff.Tier) - _workforce.Demand(staff.Tier);
+            var summary = WorkforceSummary.From(
+                _workforce.Supply(staff.Tier),
+                _workforce.Demand(staff.Tier),
+                _workforce.WorkingBelowTier(staff.Tier),
+                _workforce.FilledFromAbove(staff.Tier));
             string tierName = _strings.TierName(_content.NameOf(staff.Tier));
             string countText = NumberFormat.Count(staff.Count);
-            workforce = free > 0
-                ? _strings.Format("ui.build.workforce", ("count", countText), ("tier", tierName), ("free", NumberFormat.Count(free)))
-                : _strings.Format("ui.build.workforce.none", ("count", countText), ("tier", tierName), ("free", NumberFormat.Count(0)));
-            workforceShort = free <= 0;
+            if (summary.Free > 0)
+            {
+                workforce = _strings.Format("ui.build.workforce", ("count", countText), ("tier", tierName), ("free", NumberFormat.Count(summary.Free)));
+                workforceShort = false;
+            }
+            else if (FindHelperTier(staff.Tier) is { } helper)
+            {
+                // No workers of its own tier are free, but an unlocked higher tier has idle workers who would
+                // step down: name the nearest such tier, with no warning tint.
+                string helperName = _strings.TierName(_content.NameOf(helper));
+                workforce = _strings.Format("ui.build.workforce.fill", ("count", countText), ("tier", tierName), ("helper", helperName));
+                workforceShort = false;
+            }
+            else
+            {
+                workforce = _strings.Format("ui.build.workforce.none", ("count", countText), ("tier", tierName), ("free", NumberFormat.Count(0)));
+                workforceShort = true;
+            }
         }
 
         return new BuildEntry(
@@ -155,6 +174,39 @@ public sealed class BuildMenuViewModel : ViewModel
             DescriptionFor(name),
             locked,
             lockText);
+    }
+
+    // The nearest higher tier (in rank order) that is unlocked and has idle workers of its own, who would step
+    // down into this tier's jobs (ADR-0016). Null when no higher tier can fill in.
+    private TierId? FindHelperTier(TierId tier)
+    {
+        ImmutableArray<TierId> order = _content.TiersByOrder;
+        int rank = order.IndexOf(tier);
+        if (rank < 0)
+        {
+            return null;
+        }
+
+        for (int i = rank + 1; i < order.Length; i++)
+        {
+            TierId higher = order[i];
+            if (!_progression.IsUnlocked(higher))
+            {
+                continue;
+            }
+
+            var summary = WorkforceSummary.From(
+                _workforce.Supply(higher),
+                _workforce.Demand(higher),
+                _workforce.WorkingBelowTier(higher),
+                _workforce.FilledFromAbove(higher));
+            if (summary.Free > 0)
+            {
+                return higher;
+            }
+        }
+
+        return null;
     }
 
     private BuildEntry MakeDemolishEntry() => new(
