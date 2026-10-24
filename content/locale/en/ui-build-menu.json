@@ -14,6 +14,7 @@
   "ui.build.pick.tip": "Select to place. Keys 1-9 pick from this tab while the menu is open.",
   "ui.build.workforce": "{count} {tier} ({free} free)",
   "ui.build.workforce.none": "{count} {tier} (none free)",
+  "ui.build.workforce.fill": "{count} {tier} (none free; {helper} can fill in)",
   "ui.build.recipe": "{inputs} → {outputs}",
   "ui.build.recipe.rate": "{recipe} - {rate}/day",
   "ui.build.storage": "Storage: reach {reach}, {carts} carts",

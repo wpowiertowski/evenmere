@@ -324,12 +324,13 @@ public sealed partial class HudRoot : Control
         HFlowContainer goods = GetNode<HFlowContainer>("%GoodsFlow");
 
         // Sample numbers as wide as the real ones will get, so a chip keeps its width as digits change. Resident
-        // values carry the workforce, sampled at slice scale ("88 · short 88 / 88 jobs"): big enough to hold a
-        // two-digit short line steady, small enough that both tier chips share the top row with the date and speed
-        // buttons at 1280 × 800 instead of wrapping the bar to three rows.
+        // values carry the workforce, sampled at slice scale ("88 · 88 free / 88 jobs · 88 in lower-tier jobs"):
+        // big enough to hold the longest new form (a free line with workers below) steady, small enough that both
+        // tier chips share the top row with the date and speed buttons at 1280 × 800 instead of wrapping the bar
+        // to three rows. Shorter forms (short, covered, idle) leave spare room inside the same width.
         // The top row holds the date, the speeds and the tier chips only; Knowledge and Culture sit at the head of
         // the goods row, so the bar stays two rows tall at 1280 × 800 with two tiers unlocked.
-        const string WidestResidents = "88 · short 88 / 88 jobs";
+        const string WidestResidents = "88 · 88 free / 88 jobs · 88 in lower-tier jobs";
         // Goods stay plain counts, sampled at slice scale ("88"): the names dominate these chips, so the
         // sample only steadies two-digit stocks; with Knowledge and Culture heading the goods row, a wider
         // sample would wrap the strip to a third bar row at 1280 × 800. Three-digit stocks widen their chip

@@ -47,6 +47,12 @@ public sealed class SimHostHudSource : IHudSource
     public int WorkforceDemand(TierId tier) => _host.Query.Workforce.Demand(tier);
 
     /// <inheritdoc />
+    public int WorkingBelowTier(TierId tier) => _host.Query.Workforce.WorkingBelowTier(tier);
+
+    /// <inheritdoc />
+    public int FilledFromAbove(TierId tier) => _host.Query.Workforce.FilledFromAbove(tier);
+
+    /// <inheritdoc />
     public Amount? KnowledgePerDay() => _host.Query.Research.PointsPerDay;
 
     /// <inheritdoc />

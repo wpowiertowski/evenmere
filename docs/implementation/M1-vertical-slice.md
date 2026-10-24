@@ -77,6 +77,7 @@
 | M1-34 | Lower camera pitch | game | M1-32 | done |
 | M1-35 | Window: resizable, maximized start and fullscreen toggle | game | M1-18 | done |
 | M1-36 | Workforce stepping down, morale, a stricter hold and slower advancing | sim | M1-33 | done |
+| M1-37 | Show stepping down and morale in the HUD, the build menu and the inspector | game | M1-31, M1-36 | done |
 
 ---
 
@@ -1266,6 +1267,31 @@
 - Save round trip preserves the new state; remap coverage passes.
 
 **Out of scope:** `game/**` (M1-37 updates the HUD and the inspector); content numbers beyond the two rule values.
+
+### M1-37 · Show stepping down and morale in the HUD, the build menu and the inspector
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| game | M1-31, M1-36 | `game/ui/hud/**`, `game/ui/build_menu/BuildMenuViewModel.cs` and `game/ui/inspector/InspectorPanel.cs`; `content/locale/en/ui-hud.json`, `ui-build-menu.json`, `ui-inspector.json` and `explain-workforce-morale.json` (the workforce and morale keys only); `tests/Evenmere.Game.Tests/**`; this file (the M1-37 row and card only) |
+
+**Reads:** AGENTS.md; ADR-0016; `IWorkforceQueries` and `HouseInfo`; `game/ui/hud/` (the view-model, the source and the chip sizing), `BuildMenuViewModel` and `InspectorPanel`; the M1-31 tests.
+
+**Goal:** the view shows what M1-36 decided: idle higher-tier workers fill lower-tier jobs, underemployed houses wait on morale, and the hold counts sites and a reserve. One shared summary keeps the HUD, the build menu and the tests in agreement.
+
+**Steps:**
+
+1. A pure `WorkforceSummary` helper (own-filled, covered, real shortfall, own free, below) shared by the HUD and the build menu; the HUD source gains the two substitution counts.
+2. HUD tier lines for covered jobs and workers below, the warning tint only on a real shortage, a rewritten workforce tooltip with the cover, below and hold sentences, and the chip sample widened to the longest new form.
+3. Build-menu lines naming the nearest higher tier that can fill in (no tint), and inspector lines for substitutes and morale (warning tint below 100%).
+4. Game tests for the summary, the HUD lines and tooltips, and the build-menu lines; screenshots from a save where Villagers fill Settler jobs.
+
+**Acceptance:**
+
+- The playtest numbers read 45 · 51 jobs, 6 filled from above (no warning) and 303 · 274 free / 23 jobs · 6 in lower-tier jobs; a real shortage still warns.
+- The build menu names the helping tier without the tint, and warns only when nobody can fill in; the inspector names substitutes and shows morale with the count.
+- `scripts/verify.sh` passes and the smoke hash is unchanged (the sim is untouched).
+
+**Out of scope:** `src/**`, other content, and other game folders.
 
 ## Gate record
 

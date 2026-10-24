@@ -10,7 +10,8 @@ using Evenmere.Sim.Queries.Types;
 
 namespace Evenmere.Game.Tests;
 
-/// <summary>M1-31: each build-menu entry's workforce line names the free workers of its tier, or "none free" in the warning tint when the tier is fully staffed.</summary>
+/// <summary>M1-31 and M1-37: each build-menu entry's workforce line names the free workers of its tier; when the tier
+/// itself has none, it names the nearest higher tier that can fill in, and only warns when nobody can.</summary>
 public sealed class BuildMenuWorkforceTests
 {
     [Fact]
@@ -24,9 +25,35 @@ public sealed class BuildMenuWorkforceTests
     [Fact]
     public void NoFreeWorkers_ShowNoneFreeWithWarning()
     {
+        // Neither the Settlers nor the Villagers have a free worker, so the tint stays.
         BuildMenuViewModel.BuildEntry entry = EntryFor(supply: 0, demand: 3);
         entry.WorkforceText.ShouldBe("3 Settlers (none free)");
         entry.WorkforceShort.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void HigherTierFree_NamesHelperWithoutWarning()
+    {
+        BuildMenuViewModel.BuildEntry entry = EntryFor(supply: 0, demand: 3, higherSupply: 10, higherDemand: 2);
+        entry.WorkforceText.ShouldBe("3 Settlers (none free; Villagers can fill in)");
+        entry.WorkforceShort.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void HigherTierBusy_NoHelperWithWarning()
+    {
+        BuildMenuViewModel.BuildEntry entry = EntryFor(supply: 0, demand: 3, higherSupply: 4, higherDemand: 4);
+        entry.WorkforceText.ShouldBe("3 Settlers (none free)");
+        entry.WorkforceShort.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void OwnFree_IgnoresHigherTier()
+    {
+        // The tier has a free worker of its own: the line counts it even though Villagers are idle too.
+        BuildMenuViewModel.BuildEntry entry = EntryFor(supply: 9, demand: 3, higherSupply: 10, higherDemand: 2);
+        entry.WorkforceText.ShouldBe("3 Settlers (6 free)");
+        entry.WorkforceShort.ShouldBeFalse();
     }
 
     [Fact]
@@ -40,19 +67,23 @@ public sealed class BuildMenuWorkforceTests
         house.WorkforceShort.ShouldBeFalse();
     }
 
-    private static BuildMenuViewModel.BuildEntry EntryFor(int supply, int demand) => ModelFor(supply, demand).Tabs
-        .SelectMany(static tab => tab.Entries)
-        .First(static entry => entry.Key == "woodcutters_hut");
+    private static BuildMenuViewModel.BuildEntry EntryFor(int supply, int demand, int higherSupply = 0, int higherDemand = 0) =>
+        ModelFor(supply, demand, higherSupply, higherDemand).Tabs
+            .SelectMany(static tab => tab.Entries)
+            .First(static entry => entry.Key == "woodcutters_hut");
 
-    private static BuildMenuViewModel ModelFor(int supply, int demand)
+    private static BuildMenuViewModel ModelFor(int supply, int demand, int higherSupply = 0, int higherDemand = 0)
     {
         ContentDb content = TestContent.Db;
         TierId settlers = content.TiersByOrder[0];
+        TierId villagers = content.TiersByOrder[1];
         var model = new BuildMenuViewModel(
             content,
             new UiStrings(TestLocales.Table()),
             new AllUnlockedProgression(),
-            new FakeWorkforce(new Dictionary<TierId, int> { [settlers] = supply }, new Dictionary<TierId, int> { [settlers] = demand }),
+            new FakeWorkforce(
+                new Dictionary<TierId, int> { [settlers] = supply, [villagers] = higherSupply },
+                new Dictionary<TierId, int> { [settlers] = demand, [villagers] = higherDemand }),
             new Dictionary<string, BuildMenuViewModel.BuildingVisualRef>(),
             UnlockIndex.Build(content));
         model.Advance(10.0);

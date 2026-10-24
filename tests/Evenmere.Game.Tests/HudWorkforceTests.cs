@@ -8,7 +8,9 @@ using Evenmere.Game.Ui.Hud;
 
 namespace Evenmere.Game.Tests;
 
-/// <summary>M1-31: the HUD shows each unlocked tier's workforce as "workers free / jobs", with a calm warning tint only when demand outstrips supply.</summary>
+/// <summary>M1-31 and M1-37: the HUD shows each unlocked tier's workforce as "workers free / jobs", with a calm
+/// warning tint only for a real shortage after stepping down. Covered jobs name the fill from above, and tiers
+/// with workers in lower-tier jobs say so.</summary>
 public sealed class HudWorkforceTests
 {
     [Fact]
@@ -20,8 +22,8 @@ public sealed class HudWorkforceTests
         stat.Value.ShouldBe("24 · 6 free / 24 jobs");
         stat.IsWarning.ShouldBeFalse();
         stat.Tooltip.ShouldContain("30 Settlers can work; buildings ask for 24");
-        stat.Tooltip.ShouldContain("houses at the Settlers tier");
-        stat.Tooltip.ShouldContain("wait to advance while their workers are needed");
+        stat.Tooltip.ShouldContain("Houses of the Settlers wait to advance while their workers are needed, counting jobs at construction sites and a reserve.");
+        stat.Tooltip.ShouldNotContain("Build more houses");
     }
 
     [Fact]
@@ -32,6 +34,8 @@ public sealed class HudWorkforceTests
         stat.Value.ShouldBe("12 · short 6 / 18 jobs");
         stat.IsWarning.ShouldBeTrue();
         stat.Tooltip.ShouldContain("12 Settlers can work; buildings ask for 18");
+        stat.Tooltip.ShouldNotContain("filled by idle workers from higher tiers");
+        stat.Tooltip.ShouldContain("Build more houses for Settlers to fill the jobs.");
     }
 
     [Fact]
@@ -62,6 +66,92 @@ public sealed class HudWorkforceTests
         stat.Value.ShouldBe("24 · 24 free");
         stat.Value.ShouldNotContain("jobs");
         stat.IsWarning.ShouldBeFalse();
+        stat.Tooltip.ShouldNotContain("wait to advance");
+    }
+
+    [Fact]
+    public void CoveredJobs_ShowCoveredLineWithoutWarning()
+    {
+        // The M1-36 playtest: 45 Settlers against 51 jobs, with 6 filled from above.
+        HudViewModel model = ModelFor(settlers => settlers with { Residents = 45, Supply = 45, Demand = 51, Covered = 6 });
+        HudStat stat = model.Residents[0];
+        stat.Value.ShouldBe("45 · 51 jobs, 6 filled from above");
+        stat.IsWarning.ShouldBeFalse();
+        stat.Tooltip.ShouldContain("45 Settlers can work; buildings ask for 51.");
+        stat.Tooltip.ShouldContain("6 of these jobs are filled by idle workers from higher tiers.");
+        stat.Tooltip.ShouldContain("wait to advance while their workers are needed");
+        stat.Tooltip.ShouldContain("Build more houses for Settlers so the higher-tier workers can go back to their own work.");
+        stat.Tooltip.ShouldNotContain("to fill the jobs.");
+    }
+
+    [Fact]
+    public void WorkingBelow_ShowBelowSuffixWithoutWarning()
+    {
+        // The higher tier of the same playtest: 303 Villagers, 23 of their own jobs, 6 in lower-tier jobs.
+        HudViewModel model = ModelForBoth(
+            settlers: new TierCase(45, 45, 51),
+            villagers: new TierCase(303, 303, 23) with { Below = 6 });
+        HudStat stat = model.Residents[1];
+        stat.Label.ShouldBe("Villagers");
+        stat.Value.ShouldBe("303 · 274 free / 23 jobs · 6 in lower-tier jobs");
+        stat.IsWarning.ShouldBeFalse();
+        stat.Tooltip.ShouldContain("6 Villagers are working in lower-tier jobs. Their houses can't advance until there are enough workers below them.");
+    }
+
+    [Fact]
+    public void PartialCover_RealShortageWarns()
+    {
+        HudViewModel model = ModelFor(settlers => settlers with { Residents = 12, Supply = 12, Demand = 20, Covered = 2 });
+        HudStat stat = model.Residents[0];
+        stat.Value.ShouldBe("12 · short 6 / 20 jobs");
+        stat.IsWarning.ShouldBeTrue();
+        stat.Tooltip.ShouldContain("2 of these jobs are filled by idle workers from higher tiers.");
+        stat.Tooltip.ShouldContain("Build more houses for Settlers to fill the jobs.");
+        stat.Tooltip.ShouldNotContain("go back to their own work");
+    }
+
+    [Fact]
+    public void SingleWorker_SingularForms()
+    {
+        HudViewModel model = ModelFor(settlers => settlers with { Residents = 1, Supply = 1, Demand = 2 });
+        HudStat stat = model.Residents[0];
+        stat.Value.ShouldBe("1 · short 1 / 2 jobs");
+        stat.IsWarning.ShouldBeTrue();
+        stat.Tooltip.ShouldContain("1 worker of the Settlers can work; buildings ask for 2.");
+        stat.Tooltip.ShouldContain("Build more houses for Settlers to fill the jobs.");
+    }
+
+    [Fact]
+    public void SingleCoveredJob_SingularCoveredSentence()
+    {
+        HudViewModel model = ModelFor(settlers => settlers with { Residents = 5, Supply = 5, Demand = 6, Covered = 1 });
+        HudStat stat = model.Residents[0];
+        stat.Value.ShouldBe("5 · 6 jobs, 1 filled from above");
+        stat.IsWarning.ShouldBeFalse();
+        stat.Tooltip.ShouldContain("1 of these jobs is filled by an idle worker from a higher tier.");
+    }
+
+    [Fact]
+    public void SingleWorkerBelow_SingularBelowSentence()
+    {
+        HudViewModel model = ModelForBoth(
+            settlers: new TierCase(45, 45, 51) with { Covered = 6 },
+            villagers: new TierCase(10, 10, 2) with { Below = 1 });
+        HudStat stat = model.Residents[1];
+        stat.Value.ShouldBe("10 · 7 free / 2 jobs · 1 in lower-tier jobs");
+        stat.IsWarning.ShouldBeFalse();
+        stat.Tooltip.ShouldContain("1 worker of the Villagers is working in a lower-tier job. Their house can't advance until there are enough workers below them.");
+    }
+
+    [Fact]
+    public void IdleWithBelow_ShowFreeAndBelow()
+    {
+        HudViewModel model = ModelForBoth(
+            settlers: new TierCase(45, 45, 51) with { Covered = 6 },
+            villagers: new TierCase(303, 303, 0) with { Below = 6 });
+        HudStat stat = model.Residents[1];
+        stat.Value.ShouldBe("303 · 297 free · 6 in lower-tier jobs");
+        stat.IsWarning.ShouldBeFalse();
     }
 
     [Fact]
@@ -76,29 +166,32 @@ public sealed class HudWorkforceTests
     private static HudViewModel ModelFor(Func<TierCase, TierCase> adjust, UiStrings? strings = null)
     {
         ContentDb content = TestContent.Db;
-        TierId settlers = content.TiersByOrder[0];
-        TierId villagers = content.TiersByOrder[1];
         TierCase applied = adjust(new TierCase(0, 0, 0));
+        return ModelForBoth(applied, new TierCase(0, 0, 0), strings);
+    }
+
+    private static HudViewModel ModelForBoth(TierCase settlers, TierCase villagers, UiStrings? strings = null)
+    {
+        ContentDb content = TestContent.Db;
+        TierId settlersId = content.TiersByOrder[0];
+        TierId villagersId = content.TiersByOrder[1];
 
         var source = new FakeHudSource();
-        source.Unlocked.Add(settlers);
-        source.Unlocked.Add(villagers);
-        source.ResidentsByTier[settlers] = applied.Residents;
-        source.SupplyByTier[settlers] = applied.Supply;
-        source.DemandByTier[settlers] = applied.Demand;
+        source.Unlocked.Add(settlersId);
+        source.Unlocked.Add(villagersId);
+        source.CaseByTier[settlersId] = settlers;
+        source.CaseByTier[villagersId] = villagers;
 
         var model = new HudViewModel(source, content, strings ?? new UiStrings(TestLocales.Table()));
         model.Advance(10.0);
         return model;
     }
 
-    private sealed record TierCase(long Residents, int Supply, int Demand);
+    private sealed record TierCase(long Residents, int Supply, int Demand, int Below = 0, int Covered = 0);
 
     private sealed class FakeHudSource : IHudSource
     {
-        public readonly Dictionary<TierId, long> ResidentsByTier = new();
-        public readonly Dictionary<TierId, int> SupplyByTier = new();
-        public readonly Dictionary<TierId, int> DemandByTier = new();
+        public readonly Dictionary<TierId, TierCase> CaseByTier = new();
         public readonly HashSet<TierId> Unlocked = [];
 
         public bool IsRunning => true;
@@ -109,13 +202,17 @@ public sealed class HudWorkforceTests
 
         public Amount Stock(GoodId good) => Amount.Zero;
 
-        public long? Residents(TierId tier) => ResidentsByTier.TryGetValue(tier, out long count) ? count : 0;
+        public long? Residents(TierId tier) => CaseByTier.TryGetValue(tier, out TierCase? kase) ? kase.Residents : 0;
 
         public bool IsTierUnlocked(TierId tier) => Unlocked.Contains(tier);
 
-        public int WorkforceSupply(TierId tier) => SupplyByTier.TryGetValue(tier, out int count) ? count : 0;
+        public int WorkforceSupply(TierId tier) => CaseByTier.TryGetValue(tier, out TierCase? kase) ? kase.Supply : 0;
 
-        public int WorkforceDemand(TierId tier) => DemandByTier.TryGetValue(tier, out int count) ? count : 0;
+        public int WorkforceDemand(TierId tier) => CaseByTier.TryGetValue(tier, out TierCase? kase) ? kase.Demand : 0;
+
+        public int WorkingBelowTier(TierId tier) => CaseByTier.TryGetValue(tier, out TierCase? kase) ? kase.Below : 0;
+
+        public int FilledFromAbove(TierId tier) => CaseByTier.TryGetValue(tier, out TierCase? kase) ? kase.Covered : 0;
 
         public Amount? KnowledgePerDay() => Amount.Zero;
 
