@@ -98,4 +98,7 @@ public static class InputActions
 
     /// <summary>Show or hide the terrain tile-grid overlay (keyboard G only; gamepad access will come from a view or settings menu).</summary>
     public static readonly StringName ViewGridToggle = "view_grid_toggle";
+
+    /// <summary>Switch between fullscreen and the windowed mode (keyboard F11, or Ctrl+Cmd+F on macOS; gamepad players use a HUD or pause-menu button). No gamepad binding: the d-pad, sticks, A and B are reserved for focus navigation.</summary>
+    public static readonly StringName ToggleFullscreen = "toggle_fullscreen";
 }
