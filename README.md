@@ -1,8 +1,16 @@
 # Evenmere
 
+[![CI](https://github.com/wpowiertowski/evenmere/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/wpowiertowski/evenmere/actions/workflows/ci.yml)
+[![Nightly balance](https://github.com/wpowiertowski/evenmere/actions/workflows/nightly.yml/badge.svg?branch=main)](https://github.com/wpowiertowski/evenmere/actions/workflows/nightly.yml)
+[![Top language](https://img.shields.io/github/languages/top/wpowiertowski/evenmere)](https://github.com/wpowiertowski/evenmere/search?l=c%23)
+[![Languages](https://img.shields.io/github/languages/count/wpowiertowski/evenmere)](https://github.com/wpowiertowski/evenmere)
+[![Godot 4.7 .NET](https://img.shields.io/badge/Godot-4.7%20.NET-478cbf?logo=godotengine&logoColor=white)](https://godotengine.org)
+[![.NET 10](https://img.shields.io/badge/.NET-10-512bd4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com)
+[![License: MIT](https://img.shields.io/github/license/wpowiertowski/evenmere)](LICENSE)
+
 A calm, single-player island city builder. You grow a settlement through Anno-style production chains, a Civilization-style technology tree and a parallel culture tree. There is no combat, no rivals and no fail state; you set the pace.
 
-> **Status: pre-production.** The architecture, the progression design and a task-by-task implementation plan are complete. Next up is **M0 Foundations**. There is no playable build yet.
+> **Status: M1 vertical slice playable.** The starter island runs end to end: production chains, Settlers and Villagers, research and civics, save and load, and the full UI, on a deterministic simulation that CI checks on Linux and macOS. The M1 playtest is in progress; see the [implementation plan](docs/implementation/README.md).
 
 ## The game
 
