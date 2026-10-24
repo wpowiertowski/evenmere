@@ -75,6 +75,7 @@
 | M1-32 | Isometric-style camera yaw | game | M1-17 | done |
 | M1-33 | Workforce hold on house advancement | sim | M1-10 | done |
 | M1-34 | Lower camera pitch | game | M1-32 | done |
+| M1-35 | Window: resizable, maximized start and fullscreen toggle | game | M1-18 | done |
 
 ---
 
@@ -1209,6 +1210,33 @@
 4. Take comparison screenshots at 1280 × 800 of the Landing at the default zoom with `--demo-buildings` (old 55/70, new 30/50, lower 25/40 option), plus the new defaults fully zoomed out and fully zoomed in, and log one `--check-pick` line at the new default.
 
 **Acceptance:** the starting view sits near 43°, zooming out still frames the whole island without a MaxZoom change, picking lands on the hovered tile (centre-screen pick returns the focus tile), and the pitch unit tests pass.
+
+---
+
+### M1-35 · Window: resizable, maximized start and fullscreen toggle
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| game | M1-18 | `game/project.godot` (the `[display]` section, plus one new input action `toggle_fullscreen`), `game/controls/InputActions.cs` (the new action's constant and doc comment), `game/host/Main.cs` (the window setup only, plus the new `game/host/WindowSetup.cs` it calls), `tests/Evenmere.Game.Tests/**`, this file (the M1-35 row and card only) |
+
+**Reads:** AGENTS.md (§Godot conventions: input); `game/host/LaunchOptions.cs`; `game/host/Debug/DebugLaunchOptions.cs` (the screenshot and bench flags); `game/ui/common/UiScale.cs` (the UI scale setting).
+
+**Goal:** the window starts maximized on a normal launch so the island uses the whole display, while the fixed-size runs (headless smoke, screenshots, bench) keep exactly 1280 × 800, and F11 toggles fullscreen.
+
+**Steps:**
+
+1. Set `window/size/resizable=true` explicitly in `project.godot` and keep the 1280 × 800 minimum in `Main`.
+2. Maximize in code at startup after reading the launch options (not through `window/size/mode`, so the smoke, screenshot and bench flags can opt out), and skip maximizing on a headless display.
+3. New `toggle_fullscreen` action: F11 plus Ctrl+Cmd+F on macOS, no gamepad binding; handled in `_UnhandledInput` in the host so text fields never trigger it; leaving fullscreen restores the maximized state a normal launch started in.
+4. Pure `WindowSetup.ShouldMaximize` policy covered by game unit tests; check the HUD and panels maximized at 2560 × 1600 and at the 1280 × 800 minimum.
+
+**Acceptance:**
+
+- `REQUIRE_GODOT=1 scripts/verify.sh` passes with the headless smoke hashes agreeing.
+- Log lines show the maximized start, the F11 toggle both ways, and the screenshot and bench flags keeping 1280 × 800.
+- A maximized screenshot at the development Mac's resolution is attached for review (not committed).
+
+**Out of scope:** stretch-mode changes (report back if the maximized UI looks too large instead); editor Game-tab embedding (outside our control).
 
 ## Gate record
 

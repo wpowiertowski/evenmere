@@ -1,3 +1,4 @@
+using Evenmere.Game.Controls;
 using Evenmere.Game.Host.Debug;
 using Evenmere.Game.Host.Persistence;
 using Evenmere.Game.Host.Smoke;
@@ -27,6 +28,8 @@ public sealed partial class Main : Node3D
 {
     private static readonly Vector2I _minimumWindowSize = new(1280, 800);
 
+    private bool _startedMaximized;
+
     /// <summary>The menu scene instantiated for menu mode.</summary>
     private const string MenuScenePath = "res://scenes/MainMenu.tscn";
 
@@ -39,12 +42,10 @@ public sealed partial class Main : Node3D
     /// <inheritdoc />
     public override void _Ready()
     {
-        // Godot has no project setting for the minimum window size.
-        GetWindow().MinSize = _minimumWindowSize;
-
         SimHost host = GetNode<SimHost>("SimHost");
         PauseMenu? pause = GetNodeOrNull<PauseMenu>("PauseMenu/Root");
         string[] args = OS.GetCmdlineUserArgs();
+        ApplyWindowMode(args);
 
         // Every enqueued command lands in the active slot's log with the tick it is applied on; with no active slot
         // (a new game before its first save) the recorder stays quiet.
@@ -90,6 +91,60 @@ public sealed partial class Main : Node3D
 
         pause?.SetMenuMode(true);
         ShowMenu(host, pause);
+    }
+
+    /// <inheritdoc />
+    public override void _UnhandledInput(InputEvent @event)
+    {
+        // Unhandled only, so typing in a text field never toggles the window.
+        if (@event.IsActionPressed(InputActions.ToggleFullscreen))
+        {
+            ToggleFullscreen();
+            GetViewport().SetInputAsHandled();
+        }
+    }
+
+    /// <summary>
+    /// Applies the window contract (M1-35): every run keeps the 1280 × 800 minimum, a normal launch starts
+    /// maximized, and the fixed-size runs (the headless smoke, screenshots and the frame bench) keep the exact
+    /// launch size. Maximizing happens here in code, rather than through <c>window/size/mode</c> in project.godot,
+    /// because the choice depends on the launch options: a project setting could not exempt the fixed-size runs.
+    /// </summary>
+    /// <param name="args">The user arguments, as <c>OS.GetCmdlineUserArgs()</c> returns them.</param>
+    private void ApplyWindowMode(string[] args)
+    {
+        Window window = GetWindow();
+
+        // Godot has no project setting for the minimum window size.
+        window.MinSize = _minimumWindowSize;
+
+        if (!WindowSetup.ShouldMaximize(args))
+        {
+            GD.Print($"[Evenmere] window: keeping the launch size {window.Size.X}x{window.Size.Y} (minimum 1280x800) for a fixed-size {WindowSetup.FixedSizeReason(args)} run; F11 toggles fullscreen.");
+            return;
+        }
+
+        if (DisplayServer.GetName() == "headless")
+        {
+            GD.Print($"[Evenmere] window: keeping the launch size {window.Size.X}x{window.Size.Y} on a headless display; a desktop run would start maximized. F11 toggles fullscreen.");
+            return;
+        }
+
+        window.Mode = Window.ModeEnum.Maximized;
+        _startedMaximized = true;
+        GD.Print("[Evenmere] window: starting maximized (minimum 1280x800); F11 toggles fullscreen.");
+    }
+
+    /// <summary>
+    /// Switches between fullscreen and the windowed mode, restoring the maximized state a normal launch started in.
+    /// </summary>
+    private void ToggleFullscreen()
+    {
+        Window window = GetWindow();
+        window.Mode = window.Mode == Window.ModeEnum.Fullscreen
+            ? (_startedMaximized ? Window.ModeEnum.Maximized : Window.ModeEnum.Windowed)
+            : Window.ModeEnum.Fullscreen;
+        GD.Print($"[Evenmere] window: fullscreen toggle, mode is now {window.Mode}.");
     }
 
     /// <inheritdoc />
