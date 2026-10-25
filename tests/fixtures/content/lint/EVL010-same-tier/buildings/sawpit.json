@@ -1,0 +1,15 @@
+{
+  "id": "sawpit",
+  "category": "production",
+  "era": 1,
+  "footprint": [2, 2],
+  "placement": {
+    "terrain": ["plains", "forest"]
+  },
+  "cost": { "timber": 3 },
+  "buildDays": 1,
+  "workforce": { "tier": "settlers", "count": 3 },
+  "recipe": "saw_timber",
+  "start": true,
+  "tags": ["processing"]
+}

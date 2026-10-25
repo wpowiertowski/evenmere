@@ -1,0 +1,15 @@
+{
+  "id": "cider_press",
+  "category": "production",
+  "era": 1,
+  "footprint": [2, 2],
+  "placement": {
+    "terrain": ["plains", "forest"]
+  },
+  "cost": { "timber": 4 },
+  "buildDays": 2,
+  "workforce": { "tier": "villagers", "count": 2 },
+  "recipe": "press_cider",
+  "start": true,
+  "tags": ["processing"]
+}
