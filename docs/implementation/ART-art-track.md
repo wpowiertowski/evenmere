@@ -7,11 +7,14 @@ The art track runs in parallel with M2–M4 and has no gate of its own. Every ta
 **Ground rules:**
 
 - **Data, not code.** Assets replace the placeholders only through `game/data/visuals/` (AGENTS.md, §Godot conventions). No code path may branch on a content ID.
-- **Agent-made assets.**
-  - The implementing agent is multimodal and generates images from precise requirements: concept art, painted icons and textures. Every image follows the art bible and is reviewed visually.
-  - Icons are painted PNGs or hand-authored SVGs; Godot imports both natively.
-  - Buildings come from code-built meshes, generated from a per-building spec and optionally textured from a painted palette atlas.
+- **Agent-made assets, drawn in code (developer's decision, 2026-10-25).**
+  - The implementing agent can view images but has no image-generation tool, so every image is drawn in code by a deterministic generator script with a fixed seed.
+  - The hand-drawn look itself comes from M2-29's shader pass (ink outlines, banded light, paper grain) over code-built meshes, as ADR-0013 plans.
+  - Painted art (commissioned, an asset pack or an image-generation tool) is revisited at M4-14.
+  - Generator scripts for game assets live in `tools/art/`, with pinned Python dependencies in `tools/art/requirements.txt`, run from a virtual environment. Their outputs are committed, and CI doesn't run them.
+  - Icons are PNG masters (ART-01's icon brief). Buildings come from code-built meshes, generated from a per-building spec and optionally textured from a palette atlas.
   - The development Mac has no Blender, Inkscape or ImageMagick. A task that needs an external tool stops and reports it.
+  - Every image is reviewed visually before it lands.
 - **Image budgets.**
   - Concept images in `docs/art/concepts/` are PNG, at most 1 MB each and 12 in all.
   - Game textures are PNG, power-of-two, at most 1024 × 1024 each. Tileable ones tile seamlessly. Their import settings (`.import` files) are committed.
@@ -25,7 +28,7 @@ The art track runs in parallel with M2–M4 and has no gate of its own. Every ta
 
 | ID | Title | Lane | Depends on | Status |
 | --- | --- | --- | --- | --- |
-| ART-01 | Art bible: style guide, palette and asset briefs | art (docs) | ADR-0013 | todo |
+| ART-01 | Art bible: style guide, palette and asset briefs | art (docs) | ADR-0013 | done |
 | ART-02 | Icon set: goods, buildings, tiers and UI | art | ART-01 | todo |
 | ART-03 | Building kit: stylized Era I buildings | art | ART-01 | todo |
 | ART-04 | Textures for the hand-drawn look | art | ART-01 | todo |
@@ -95,7 +98,7 @@ Later cards (Era II buildings, terrain and water textures, a UI theme skin, prop
 
 | Lane | Depends on | Owns |
 | --- | --- | --- |
-| art | ART-01 | `game/assets/icons/**` (new painted PNGs or SVGs: `goods/<id>`, `buildings/<id>`, `tiers/<id>`, `ui/<name>`); `game/ui/common/IconLibrary.cs` (new); the icon-drawing lines of the build-menu entries and the HUD goods chips; `tests/Evenmere.Game.Tests/**` (icon resolution tests); this file (the ART-02 row only) |
+| art | ART-01 | `game/assets/icons/**` (new 256 × 256 PNG masters: `goods/<id>.png`, `buildings/<id>.png`, `tiers/<id>.png`, `ui/<name>.png`); `tools/art/icons/**` and `tools/art/requirements.txt` (the generator, new); `game/ui/common/IconLibrary.cs` (new); the icon-drawing lines of the build-menu entries and the HUD goods chips; `tests/Evenmere.Game.Tests/**` (icon resolution tests); this file (the ART-02 row only) |
 
 **Reads:** ART-01 (the icon brief and palette); `game/data/visuals/BuildingVisuals.cs` (today's icon glyphs); the build-menu and HUD view code.
 
@@ -103,14 +106,14 @@ Later cards (Era II buildings, terrain and water textures, a UI theme skin, prop
 
 **Steps:**
 
-1. **Make the icons** from ART-01's icon brief and icon style sheet. Use painted PNGs (a 256 × 256 master with a transparent background) or SVGs, whichever the brief chooses, consistently across the set:
+1. **Draw the icons in code** from ART-01's icon brief and icon style sheet: 256 × 256 PNG masters on a transparent background, with the 64-unit grid and an 8 px ink stroke. Every fill samples to a palette token. Cover:
    - every Era I good, building and tier;
    - the build-menu categories;
    - knowledge and culture.
 
    Keep one stroke weight, one light direction and the palette across the whole set.
-2. **`IconLibrary`.** It resolves a content ID and a kind to a texture from `game/assets/icons/` by convention (PNG or SVG), falling back to the visuals glyph, so a missing icon never breaks a menu.
-   - The imports stay crisp at HiDPI (M2-31's content scale): mipmaps for PNGs, an import scale for SVGs.
+2. **`IconLibrary`.** It resolves a content ID and a kind to a texture from `game/assets/icons/` by convention, falling back to the visuals glyph, so a missing icon never breaks a menu.
+   - The PNG imports use mipmaps, so they stay crisp at HiDPI (M2-31's content scale).
 3. **Wire the icons** into the build-menu cards and the HUD goods chips. Other surfaces adopt `IconLibrary` in their own cards.
 
 **Acceptance:**
@@ -166,7 +169,7 @@ Later cards (Era II buildings, terrain and water textures, a UI theme skin, prop
 
 | Lane | Depends on | Owns |
 | --- | --- | --- |
-| art | ART-01 | `game/assets/textures/**` (new PNGs and their `.import` files); `docs/art/briefs/textures.md` (new); `tests/Evenmere.Game.Tests/**` (texture budget tests); this file (the ART-04 row only) |
+| art | ART-01 | `game/assets/textures/**` (new PNGs and their `.import` files); `tools/art/textures/**` (the generator, new); `docs/art/briefs/textures.md` (new); `tests/Evenmere.Game.Tests/**` (texture budget tests); this file (the ART-04 row only) |
 
 **Reads:** ART-01 (the style guide, palette, terrain brief and concept images); the M2-29 card (which shaders consume which texture); `game/rendering/terrain/` and `game/rendering/water/`.
 
@@ -175,7 +178,7 @@ Later cards (Era II buildings, terrain and water textures, a UI theme skin, prop
 **Steps:**
 
 1. **Texture brief** (`docs/art/briefs/textures.md`): for each texture, its consumer, size, channel use, tiling, and the palette tokens it may carry.
-2. **Generate the textures:**
+2. **Draw the textures in code** (procedural noise and stroke drawing, deterministic from a seed):
    - **Surface grain:** a tileable paper grain and a watercolour wash, greyscale, so the shader tints them from the palette.
    - **Water:** hand-drawn ripple strokes, tileable, for the painterly water and the river banks.
    - **Terrain:** one tileable hand-painted texture per biome in the terrain brief, low in contrast, so the banded light and the outlines carry the shape.
