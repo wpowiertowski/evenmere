@@ -7,8 +7,8 @@ namespace Evenmere.Sim.Persistence;
 /// </summary>
 public static class SaveFormat
 {
-    /// <summary>Gets the current format version, the only version this code writes.</summary>
-    public const ushort CurrentVersion = 1;
+    /// <summary>Gets the current format version, the only version this code writes: 2 since M2-15.</summary>
+    public const ushort CurrentVersion = 2;
 
     /// <summary>Gets the file magic, the ASCII bytes <c>EVMR</c>.</summary>
     public static ReadOnlySpan<byte> Magic => "EVMR"u8;

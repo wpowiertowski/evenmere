@@ -80,7 +80,7 @@ file per card as listed; never edit another card's file.
 | M2-13a | Era I production content | content | M2-04, M2-05, M2-14, M2-30 | todo |
 | M2-13b | Era I trees, monuments, happenings and era content | content | M2-06, M2-07, M2-08, M2-10, M2-11, M2-12, M2-13a, M2-14 | todo |
 | M2-14 | Lint rule EVL010: lower-tier staffing | content-infra | M2-00 | done |
-| M2-15 | Save versioning, migrations and autosave rotation | sim | M2-00 | todo |
+| M2-15 | Save versioning, migrations and autosave rotation | sim | M2-00 | done |
 | M2-16 | Replay and performance harness, reference saves | tools | M2-15 | todo |
 | M2-17a | Balance bot v2: the Era I island bot | tools | M2-04, M2-13b, M2-16 | todo |
 | M2-17b | Multi-seed balance runs and pacing sign-off | tools | M2-17a + pacing-window confirmation (human) | todo |

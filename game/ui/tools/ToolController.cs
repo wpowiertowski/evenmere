@@ -4,10 +4,12 @@ using Evenmere.Core.Ids;
 using Evenmere.Game.Controls;
 using Evenmere.Game.Data.Visuals;
 using Evenmere.Game.Host;
+using Evenmere.Game.Host.Persistence;
 using Evenmere.Game.Rendering.Buildings;
 using Evenmere.Game.Rendering.Camera;
 using Evenmere.Game.Rendering.Roads;
 using Evenmere.Game.Ui.Common;
+using Evenmere.Game.Ui.Menus;
 using Evenmere.Game.Ui.Progress;
 using Evenmere.Sim;
 using Evenmere.Sim.Queries.Types;
@@ -170,6 +172,9 @@ public sealed partial class ToolController : Node
     /// <summary>Gets or sets the path to the <see cref="CameraRig"/> node, relative to this node.</summary>
     [Export]
     public NodePath RigPath { get; set; } = new("../CameraRig");
+
+    /// <summary>Gets or sets the command-log recorder the safety autosaves rebind. It is set by the scene root.</summary>
+    public CommandLogRecorder? Recorder { get; set; }
 
     /// <summary>
     /// Starts the build tool with a building type, for the build menu (M1-23). The ghost follows the pointer and a
@@ -1031,6 +1036,8 @@ public sealed partial class ToolController : Node
 
     private void EnqueuePendingNow()
     {
+        TakePreDemolishAutosave();
+
         foreach (EntityId id in _pendingBuildings)
         {
             EnqueueOwn(new Demolish(id));
@@ -1044,6 +1051,23 @@ public sealed partial class ToolController : Node
         GD.Print($"[Evenmere] Tools: enqueued confirmed demolish ({_pendingBuildings.Count} building(s), {_pendingRoads.Count} road tile(s))");
         _pendingBuildings.Clear();
         _pendingRoads.Clear();
+    }
+
+    // A confirmed bulk demolish takes a safety autosave first, so a misclick never loses more than a few minutes.
+    // The save joins the normal autosave rotation; like the periodic autosave it needs the strings and the recorder.
+    private void TakePreDemolishAutosave()
+    {
+        if (_host is not { IsRunning: true } || Recorder is null || _strings is null)
+        {
+            return;
+        }
+
+        string name = _strings.Get("ui.slot.autosave") + " — " + MenuText.SuggestName(_host, _strings);
+        string? hash = SaveService.AutosaveBeforeBulkDemolish(_host, Recorder, _pendingBuildings.Count, name);
+        if (hash is not null)
+        {
+            GD.Print($"[Evenmere] Tools: pre-demolish autosave {hash} before {_pendingBuildings.Count} building(s)");
+        }
     }
 
     private void MarkRoadInvalid(int count)

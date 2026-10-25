@@ -14,6 +14,9 @@ public static class SaveService
     private static readonly string _gameVersion =
         typeof(SaveService).Assembly.GetName().Version?.ToString(3) ?? "0.0";
 
+    /// <summary>How many buildings a single confirmed demolish must remove before the game takes a safety autosave.</summary>
+    public const int BulkDemolishAutosaveThreshold = 10;
+
     /// <summary>Gets the game version text stored in each save header.</summary>
     public static string GameVersion => _gameVersion;
 
@@ -39,6 +42,13 @@ public static class SaveService
             throw new InvalidOperationException("No simulation is running; there is nothing to save.");
         }
 
+        if (slotId == SaveSlots.AutosaveSlot)
+        {
+            // The periodic autosave rotates the slots first, so the fresh save always lands in the autosave slot and
+            // the two previous generations survive beside it. Manual saves into other slots never rotate.
+            SaveSlots.RotateAutosaves();
+        }
+
         string savePath = SaveSlots.SavePath(slotId);
         SaveSlots.WriteFileAtomic(savePath, stream =>
             SaveGame.Write(stream, host.Simulation, new SaveMeta(host.Content, GameVersion, host.MapId)));
@@ -61,6 +71,33 @@ public static class SaveService
 
         recorder.BeginSlot(SaveSlots.LogPath(slotId));
         return $"{hash:x16}";
+    }
+
+    /// <summary>
+    /// Tests whether a confirmed demolish should take a safety autosave first: more than
+    /// <see cref="BulkDemolishAutosaveThreshold"/> buildings at once (road tiles do not count).
+    /// </summary>
+    /// <param name="buildingCount">The confirmed buildings.</param>
+    /// <returns><see langword="true"/> when the demolish deserves a safety autosave.</returns>
+    public static bool NeedsPreDemolishAutosave(int buildingCount) => buildingCount > BulkDemolishAutosaveThreshold;
+
+    /// <summary>
+    /// Takes a safety autosave before a bulk demolish when <paramref name="buildingCount"/> is over the threshold;
+    /// otherwise does nothing and returns <see langword="null"/>. The save joins the normal autosave rotation.
+    /// </summary>
+    /// <param name="host">The running simulation host.</param>
+    /// <param name="recorder">The command log recorder, rebound to the fresh log.</param>
+    /// <param name="buildingCount">The confirmed buildings.</param>
+    /// <param name="displayName">The display name stored in the sidecar.</param>
+    /// <returns>The state hash of the saved world, or <see langword="null"/> when no save was taken.</returns>
+    public static string? AutosaveBeforeBulkDemolish(SimHost host, CommandLogRecorder recorder, int buildingCount, string displayName)
+    {
+        if (!NeedsPreDemolishAutosave(buildingCount))
+        {
+            return null;
+        }
+
+        return Save(host, recorder, SaveSlots.AutosaveSlot, displayName);
     }
 
     /// <summary>
