@@ -90,14 +90,19 @@ public sealed class ConditionEvaluatorTests
     }
 
     [Fact]
-    public void Count_WithATerrain_NeverHoldsUntilM209()
+    public void Count_WithATerrain_CountsOnlyTheBuildingsStandingOnIt()
     {
         var harness = ProgressionHarness.Create();
-        harness.Fake.Queries.Map.AddBuilding(new EntityId(10), harness.Building("grain_farm"), 0, 0);
         TerrainId hills = harness.Content.IdOf<TerrainId>("hills");
+        harness.Fake.Queries.Map.AddBuilding(new EntityId(10), harness.Building("grain_farm"), 0, 0);
+        harness.Fake.Queries.Map.AddBuilding(new EntityId(11), harness.Building("grain_farm"), 4, 0);
+        harness.Fake.Queries.Map.SetTile(4, 0, new TileInfo(hills, 0, SlopeClass.Flat, TileFeatures.None, RiverWidthClass.None, 0, null, 0));
 
-        harness.Queries.Evaluate(new CountCondition(new BuildingTagSelector("farm"), hills, 1)).ShouldBeFalse();
-        harness.Queries.Evaluate(new CountCondition(null, hills, 0)).ShouldBeFalse();
+        // Only (4, 0) sits on hills; (0, 0) keeps the map's default tile.
+        harness.Queries.Evaluate(new CountCondition(new BuildingTagSelector("farm"), hills, 1)).ShouldBeTrue();
+        harness.Queries.Evaluate(new CountCondition(new BuildingTagSelector("farm"), hills, 2)).ShouldBeFalse();
+        harness.Queries.Evaluate(new CountCondition(null, hills, 1)).ShouldBeTrue();
+        harness.Queries.Evaluate(new CountCondition(null, hills, 2)).ShouldBeFalse();
     }
 
     [Fact]
@@ -227,12 +232,14 @@ public sealed class ConditionEvaluatorTests
     }
 
     [Fact]
-    public void RoadTiles_WithARoadType_NeverHoldsUntilM209()
+    public void RoadTiles_WithARoadType_ReadsThatTypesCountNotTheTotal()
     {
         var harness = ProgressionHarness.Create();
         harness.Context.Counters.Add(CounterKey.RoadTilesLaid, 500);
+        harness.Fake.Queries.Roads.SetRoadTiles(harness.Building("dirt_road"), 40);
 
-        harness.Queries.Evaluate(new RoadTilesCondition(harness.Building("dirt_road"), 1)).ShouldBeFalse();
+        harness.Queries.Evaluate(new RoadTilesCondition(harness.Building("dirt_road"), 40)).ShouldBeTrue();
+        harness.Queries.Evaluate(new RoadTilesCondition(harness.Building("dirt_road"), 41)).ShouldBeFalse();
     }
 
     // ---- researched, adopted --------------------------------------------------------------------------------------
@@ -381,23 +388,25 @@ public sealed class ConditionEvaluatorTests
 
     // ---- kinds M1 does not implement ---------------------------------------------------------------------------------
 
-    public static TheoryData<Condition> UnimplementedKinds() => new()
+    public static TheoryData<Condition> NewCounterKinds() => new()
     {
         new ExpeditionsCondition(0),
         new FestivalsHeldCondition(0),
         new GreatWorksCondition(null, false, 0),
+        new GreatWorksCondition(null, true, 0),
         new VisitorsPerDayCondition(0),
         new DiscoveredCondition(DiscoveryKind.IronDeposit, null, 0),
+        new DiscoveredCondition(null, ProgressionPack.Content.IdOf<TerrainId>("hills"), 0),
     };
 
     [Theory]
-    [MemberData(nameof(UnimplementedKinds))]
-    public void Evaluate_KindsNotInTheSlice_AreFalseEvenWithAZeroThreshold(Condition condition)
+    [MemberData(nameof(NewCounterKinds))]
+    public void Evaluate_NewKinds_AreTrueAtAZeroThresholdWhenNothingWasCounted(Condition condition)
     {
         var harness = ProgressionHarness.Create();
 
-        harness.Queries.Evaluate(condition).ShouldBeFalse();
-        harness.Queries.Evaluate(new NotCondition(condition)).ShouldBeTrue();
+        harness.Queries.Evaluate(condition).ShouldBeTrue();
+        harness.Queries.Evaluate(new NotCondition(condition)).ShouldBeFalse();
     }
 
     // ---- plumbing -----------------------------------------------------------------------------------------------

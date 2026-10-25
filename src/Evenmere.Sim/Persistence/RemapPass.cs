@@ -249,6 +249,30 @@ internal static class RemapPass
             }
 
             state.Built = Permute(state.Built, tables.BuildingMap, tables.Content.Buildings.Count, static () => 0L);
+
+            for (int old = 0; old < tables.GreatWorkMap.Length; old++)
+            {
+                if (tables.GreatWorkMap[old] < 0)
+                {
+                    long made = old < state.GreatWorksCreated.Length ? state.GreatWorksCreated[old] : 0;
+                    long shown = old < state.GreatWorksDisplayed.Length ? state.GreatWorksDisplayed[old] : 0;
+                    Ledger.Add("great work", tables.OldGreatWorkName(old), $"counters discarded (created {made}, displayed {shown})");
+                }
+            }
+
+            state.GreatWorksCreated = Permute(state.GreatWorksCreated, tables.GreatWorkMap, tables.Content.GreatWorks.Count, static () => 0L);
+            state.GreatWorksDisplayed = Permute(state.GreatWorksDisplayed, tables.GreatWorkMap, tables.Content.GreatWorks.Count, static () => 0L);
+
+            for (int old = 0; old < tables.TerrainMap.Length; old++)
+            {
+                if (tables.TerrainMap[old] < 0)
+                {
+                    long revealed = old < state.RegionsRevealed.Length ? state.RegionsRevealed[old] : 0;
+                    Ledger.Add("terrain", tables.OldTerrainName(old), $"{revealed} revealed region(s) counted");
+                }
+            }
+
+            state.RegionsRevealed = Permute(state.RegionsRevealed, tables.TerrainMap, tables.Content.Terrains.Count, static () => 0L);
             state.Buildings = PermuteBits(state.Buildings, tables.BuildingMap, tables.Content.Buildings.Count);
             state.Recipes = PermuteBits(state.Recipes, tables.RecipeMap, tables.Content.Recipes.Count);
             state.Tiers = PermuteBits(state.Tiers, tables.TierMap, tables.Content.Tiers.Count);
@@ -548,6 +572,9 @@ internal static class RemapPass
             RoadsState state = world.Roads;
             if (state.Layer.Length == 0)
             {
+                // An island without roads still carries a sized (empty) count array, so the remap coverage walk sees
+                // the same shape on both sides.
+                state.TilesByRoadType = new long[tables.Content.Buildings.Count];
                 return;
             }
 
@@ -576,6 +603,23 @@ internal static class RemapPass
             {
                 report.Dropped.Add($"dropped {count} road tile(s) of unknown road type '{name}'");
             }
+
+            // The per-type counts mirror the remapped layer: rebuilding them from it keeps the values with the names
+            // the layer now carries, including the M2-09 counts an older save never wrote.
+            long[] rebuilt = new long[tables.Content.Buildings.Count];
+            foreach (ushort value in state.Layer)
+            {
+                int type = value - 1;
+                if (value != 0
+                    && (uint)type < (uint)rebuilt.Length
+                    && tables.Content.Buildings.Items[type].RoadCost is { } cost
+                    && cost > 0)
+                {
+                    rebuilt[type]++;
+                }
+            }
+
+            state.TilesByRoadType = rebuilt;
         }
 
         public void RemapMap()

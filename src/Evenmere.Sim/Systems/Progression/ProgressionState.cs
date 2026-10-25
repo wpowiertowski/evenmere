@@ -106,11 +106,46 @@ public sealed class ProgressionState
     [Key(16)]
     public long RoadTilesLaid { get; set; }
 
+    /// <summary>Gets or sets the cumulative number of expeditions completed. Written by the exploration system (M2-06); zero until then.</summary>
+    [Key(17)]
+    public long Expeditions { get; set; }
+
+    /// <summary>Gets or sets the cumulative number of festivals held. Written by the culture system (M2-08); zero until then.</summary>
+    [Key(18)]
+    public long FestivalsHeld { get; set; }
+
+    /// <summary>Gets or sets the cumulative number of great works created, indexed by <c>GreatWorkTypeId.Value</c>. Written by the great-works system (M3-03); zero until then.</summary>
+    [Key(19)]
+    [ContentIndexed(ContentKind.GreatWork)]
+    public long[] GreatWorksCreated { get; set; } = [];
+
+    /// <summary>Gets or sets the cumulative number of great works on display, indexed by <c>GreatWorkTypeId.Value</c>. Written by the great-works system (M3-03); zero until then.</summary>
+    [Key(20)]
+    [ContentIndexed(ContentKind.GreatWork)]
+    public long[] GreatWorksDisplayed { get; set; } = [];
+
+    /// <summary>Gets or sets the cumulative number of revealed regions of a terrain, indexed by <c>TerrainId.Value</c>. Written by the exploration system (M2-06); zero until then.</summary>
+    [Key(21)]
+    [ContentIndexed(ContentKind.Terrain)]
+    public long[] RegionsRevealed { get; set; } = [];
+
+    /// <summary>Gets or sets the cumulative number of discoveries made, indexed by <c>DiscoveryKind</c>. Written by the exploration system (M2-06); zero until then.</summary>
+    [Key(22)]
+    [NotContentIndexed("indexed by DiscoveryKind, a code enum, not a content kind")]
+    public long[] Discovered { get; set; } = [];
+
+    /// <summary>Gets or sets the visitors that arrived during the last full day. Set by the future visitors system (M3); zero until then.</summary>
+    [Key(23)]
+    public long VisitorsPerDay { get; set; }
+
     /// <summary>Gets how many members <see cref="PointKind"/> has, which is the length of <see cref="Points"/>.</summary>
     internal static int PointKindCount { get; } = EnumSize<PointKind>();
 
     /// <summary>Gets how many members <see cref="TraditionSlotType"/> has, which is the length of <see cref="TraditionSlots"/>.</summary>
     internal static int SlotTypeCount { get; } = EnumSize<TraditionSlotType>();
+
+    /// <summary>Gets how many members <see cref="DiscoveryKind"/> has, which is the length of <see cref="Discovered"/>.</summary>
+    internal static int DiscoveryKindCount { get; } = EnumSize<DiscoveryKind>();
 
     /// <summary>
     /// Sizes every array to the content, or checks the sizes it already has. A new game's state has empty arrays and gets
@@ -133,6 +168,10 @@ public sealed class ProgressionState
         Produced = Fit(Produced, content.Goods.Count, nameof(Produced));
         Consumed = Fit(Consumed, content.Goods.Count, nameof(Consumed));
         Built = Fit(Built, content.Buildings.Count, nameof(Built));
+        GreatWorksCreated = Fit(GreatWorksCreated, content.GreatWorks.Count, nameof(GreatWorksCreated));
+        GreatWorksDisplayed = Fit(GreatWorksDisplayed, content.GreatWorks.Count, nameof(GreatWorksDisplayed));
+        RegionsRevealed = Fit(RegionsRevealed, content.Terrains.Count, nameof(RegionsRevealed));
+        Discovered = Fit(Discovered, DiscoveryKindCount, nameof(Discovered));
         AppliedSources ??= [];
 
         if (content.Eras.Count > 0 && (Era < 0 || Era >= content.Eras.Count))
@@ -144,6 +183,25 @@ public sealed class ProgressionState
         CheckNotNegative(Produced, nameof(Produced));
         CheckNotNegative(Consumed, nameof(Consumed));
         CheckNotNegative(Built, nameof(Built));
+        CheckNotNegative(GreatWorksCreated, nameof(GreatWorksCreated));
+        CheckNotNegative(GreatWorksDisplayed, nameof(GreatWorksDisplayed));
+        CheckNotNegative(RegionsRevealed, nameof(RegionsRevealed));
+        CheckNotNegative(Discovered, nameof(Discovered));
+        if (Expeditions < 0)
+        {
+            throw new InvalidDataException("The progression state counts a negative number of expeditions.");
+        }
+
+        if (FestivalsHeld < 0)
+        {
+            throw new InvalidDataException("The progression state counts a negative number of festivals held.");
+        }
+
+        if (VisitorsPerDay < 0)
+        {
+            throw new InvalidDataException("The progression state counts a negative number of visitors per day.");
+        }
+
         if (RoadTilesLaid < 0)
         {
             throw new InvalidDataException("The progression state counts a negative number of road tiles.");

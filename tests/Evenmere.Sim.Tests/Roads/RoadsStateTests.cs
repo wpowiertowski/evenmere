@@ -41,11 +41,13 @@ public sealed class RoadsStateTests
     // --- Saving and loading ---
 
     [Fact]
-    public void Save_OnlyTheLayerIsPartOfTheState()
+    public void Save_OnlyTheLayerAndThePerTypeCountsArePartOfTheState()
     {
         string[] members = [.. typeof(RoadsState).GetProperties(BindingFlags.Public | BindingFlags.Instance).Select(static p => p.Name).Order()];
 
-        members.ShouldBe(["Height", "Layer", "Width"], "fields and lookups are derived data and must not be saved");
+        members.ShouldBe(
+            ["Height", "Layer", "TilesByRoadType", "Width"],
+            "fields and lookups are derived data and must not be saved; the per-type counts mirror the layer (M2-09)");
     }
 
     [Fact]
@@ -119,7 +121,9 @@ public sealed class RoadsStateTests
         ushort[] layer = new ushort[16];
         layer[5] = (ushort)(dirt.Value + 1);
         layer[6] = (ushort)(dirt.Value + 1);
-        sim.World.Roads = new RoadsState { Width = 4, Height = 4, Layer = layer };
+        long[] counts = new long[WorldBuilder.Content.Buildings.Count];
+        counts[dirt.Value] = 2;
+        sim.World.Roads = new RoadsState { Width = 4, Height = 4, Layer = layer, TilesByRoadType = counts };
 
         var restored = Simulation.Restore(WorldBuilder.Content, sim.SerializeState());
 
@@ -252,7 +256,8 @@ public sealed class RoadsStateTests
     public void Hash_OfTheSavedLayout_IsPinned()
     {
         // The bytes of the roads state are the save format and part of the state hash. If this changes, the layout of
-        // RoadsState changed: that needs an ADR and a save migration, not just a new number here.
+        // RoadsState changed: that needs an ADR and a save migration, not just a new number here. Key 3 (the per-type
+        // counts, M2-09) rides save version 2 per ADR-0018 with a load-safe default, so this is its re-baseline.
         ushort[] layer = new ushort[64];
         layer[9] = 1;
         layer[10] = 3;
@@ -263,6 +268,6 @@ public sealed class RoadsStateTests
         var hasher = new StableHasher();
         hasher.Add(MessagePackSerializer.Serialize(state, SimResolver.Options, TestContext.Current.CancellationToken));
 
-        hasher.ToUInt64().ShouldBe(0xEC5E3205C8487E30UL);
+        hasher.ToUInt64().ShouldBe(0x93706255374BC32BUL);
     }
 }

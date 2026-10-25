@@ -49,6 +49,7 @@ internal sealed class FakeMapQueries : IMapQueries, IBuildingSource
     /// <returns>This fake.</returns>
     public FakeMapQueries AddBuilding(BuildingInfo building)
     {
+        _scanVersion++;
         int index = _buildings.FindIndex(b => b.Id > building.Id);
         _buildings.Insert(index < 0 ? _buildings.Count : index, building);
         return this;
@@ -75,6 +76,7 @@ internal sealed class FakeMapQueries : IMapQueries, IBuildingSource
     /// <param name="building">The new value.</param>
     public void ReplaceBuilding(BuildingInfo building)
     {
+        _scanVersion++;
         int index = _buildings.FindIndex(b => b.Id == building.Id);
         _buildings[index] = building;
     }
@@ -82,7 +84,11 @@ internal sealed class FakeMapQueries : IMapQueries, IBuildingSource
     /// <summary>Removes a building.</summary>
     /// <param name="id">The entity ID.</param>
     /// <returns><see langword="true"/> if it existed.</returns>
-    public bool RemoveBuilding(EntityId id) => _buildings.RemoveAll(b => b.Id == id) > 0;
+    public bool RemoveBuilding(EntityId id)
+    {
+        _scanVersion++;
+        return _buildings.RemoveAll(b => b.Id == id) > 0;
+    }
 
     /// <summary>Marks the chunk that holds a tile dirty.</summary>
     /// <param name="x">The tile column.</param>
@@ -148,14 +154,26 @@ internal sealed class FakeMapQueries : IMapQueries, IBuildingSource
         return written;
     }
 
+    // A cursor over the ID-sorted list, like the real registry's: sequential iteration resumes where the last call
+    // stopped instead of rescanning from the start, so a full scan is linear. Any mutation invalidates the cursor.
+    private int _scanVersion;
+    private int _cursorVersion = -1;
+    private EntityId _cursorAfter;
+    private int _cursorIndex;
+
     /// <inheritdoc />
     bool IBuildingSource.TryGetNext(EntityId after, BuildingFilter filter, out BuildingInfo building)
     {
-        foreach (BuildingInfo candidate in _buildings)
+        int start = _cursorVersion == _scanVersion && _cursorAfter == after ? _cursorIndex : 0;
+        for (int i = start; i < _buildings.Count; i++)
         {
+            BuildingInfo candidate = _buildings[i];
             if (candidate.Id > after && (filter == BuildingFilter.Any || candidate.IsComplete))
             {
                 building = candidate;
+                _cursorVersion = _scanVersion;
+                _cursorAfter = candidate.Id;
+                _cursorIndex = i + 1;
                 return true;
             }
         }
