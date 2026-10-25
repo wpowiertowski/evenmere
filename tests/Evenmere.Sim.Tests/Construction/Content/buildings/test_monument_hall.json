@@ -1,0 +1,9 @@
+{
+  "id": "test_monument_hall",
+  "category": "monument",
+  "era": 1,
+  "footprint": [2, 2],
+  "cost": {},
+  "buildDays": 2,
+  "unique": true
+}

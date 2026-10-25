@@ -30,3 +30,10 @@ public sealed record BuildingDemolished(long Tick, EntityId Building, BuildingTy
 /// <param name="FromType">The type the building had.</param>
 /// <param name="ToType">The type the building has now.</param>
 public sealed record BuildingUpgraded(long Tick, EntityId Building, BuildingTypeId FromType, BuildingTypeId ToType) : SimEvent(Tick);
+
+/// <summary>A monument or wonder finished one of its stages. Its effects start only when the last stage completes.</summary>
+/// <param name="Tick">The tick during which the stage completed.</param>
+/// <param name="Building">The site's entity ID.</param>
+/// <param name="Monument">The monument or wonder whose stage completed.</param>
+/// <param name="Stage">The 0-based stage that completed.</param>
+public sealed record MonumentStageCompleted(long Tick, EntityId Building, MonumentId Monument, int Stage) : SimEvent(Tick);

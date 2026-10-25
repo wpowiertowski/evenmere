@@ -61,10 +61,14 @@ public sealed record ProductionInfo(
 /// <param name="Progress">The share of the build time that has elapsed, in per-mille.</param>
 /// <param name="Stall">Why the site is waiting: <see cref="StallReason.NoStorehouseReach"/> or <see cref="StallReason.MissingMaterial"/>; <see cref="StallReason.None"/> when it is advancing.</param>
 /// <param name="WaitingFor">For <see cref="StallReason.MissingMaterial"/>, the first good the next step lacks; otherwise <see langword="null"/>.</param>
+/// <param name="MonumentStage">For a monument site, the 0-based stage under construction; 0 for an ordinary site.</param>
+/// <param name="MonumentStageCount">For a monument site, how many stages the monument has in all; 0 for an ordinary site.</param>
 public readonly record struct SiteInfo(
     EntityId Building,
     int Stage,
     int Steps,
     Ratio Progress,
     StallReason Stall,
-    GoodId? WaitingFor);
+    GoodId? WaitingFor,
+    int MonumentStage = 0,
+    int MonumentStageCount = 0);
