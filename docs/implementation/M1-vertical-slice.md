@@ -18,12 +18,12 @@
 
 **Gate:**
 
-- [ ] **Bot:** balance bot v1 reaches 100 Villagers on the starter island in ≤ 45 min of game time, with no stall longer than one season. Its JSON report is attached to the gate record.
-- [ ] **Golden hash:** scenario `slice_villagers` passes against its golden hash.
-- [ ] **Save round trip:** saving and reloading at tick 20,000 continues to the same hash as an uninterrupted run (scenario).
-- [ ] **Playtest:** the developer reaches 100 Villagers in ≤ 45 min using only the UI and no cheats, and records calmness and clarity notes.
-- [ ] **Godot:** smoke v2 passes. The starter island holds ≥ 60 fps on the development Mac at default settings, and the build is playable with a gamepad at 1280 × 800.
-- [ ] **CI:** GitHub Actions is green on `main`, branch protection is on, and the PR flow is documented.
+- [x] **Bot:** balance bot v1 reaches 100 Villagers on the starter island in ≤ 45 min of game time, with no stall longer than one season. Its JSON report is attached to the gate record.
+- [x] **Golden hash:** scenario `slice_villagers` passes against its golden hash.
+- [x] **Save round trip:** saving and reloading at tick 20,000 continues to the same hash as an uninterrupted run (scenario).
+- [x] **Playtest:** the developer reaches 100 Villagers in ≤ 45 min using only the UI and no cheats, and records calmness and clarity notes.
+- [x] **Godot:** smoke v2 passes. The starter island holds ≥ 60 fps on the development Mac at default settings, and the build is playable with a gamepad at 1280 × 800. _Gamepad play waived at the M1 gate (no controller available); carried to the M2 gate._
+- [x] **CI:** GitHub Actions is green on `main`, branch protection is on, and the PR flow is documented.
 
 **Waves:**
 
@@ -70,7 +70,7 @@
 | M1-27 | Main menu, pause menu and save/load UI | game | M1-14, M1-18 | done |
 | M1-28 | Godot smoke v2 and view boundary check | game | M1-13, M1-20, M1-27 | done |
 | M1-29 | GitHub CI and PR flow | infra | M1-28, M1-16 | done |
-| M1-30 | Vertical-slice playtest and gate review | human | M1-29 | todo |
+| M1-30 | Vertical-slice playtest and gate review | human | M1-29 | done |
 | M1-31 | Workforce supply and demand in the HUD | game | M1-18, M1-23, M1-24 | done |
 | M1-32 | Isometric-style camera yaw | game | M1-17 | done |
 | M1-33 | Workforce hold on house advancement | sim | M1-10 | done |
@@ -1125,8 +1125,8 @@
 - **Homespun is optional for the slice target (from M1-16).** On seed 1 the balance bot reaches 100 Villagers at 26.9 game minutes, against a target of 45, without ever producing homespun. Villager houses sit at 8 of 10 residents on fish, bread and the shrine alone. Decide whether homespun should matter more for Villagers, for example through its share of the needs or the occupancy rule, or whether the faster pace is fine. **Decided (developer, M1 playtest):** both parts of the proposal were chosen, in M1-38: Villager basic goods rise to fish 3 · homespun 3 · bread 5, and a house with any basic need unmet caps at the lower tier's capacity.
 - **Settlers run out as houses advance (from M1-22).** In the `--demo-buildings` world, every house advances to Villagers, so no Settlers are left to staff the Settler-workforce producers, and the economy stalls. Players have to lock some houses to keep a Settler workforce. Decide whether the slice needs a clearer cue, through the advisors, the build menu or the tutorial, or a design change, such as Villagers also filling Settler jobs. **Decided (developer, M1 playtest):** automatic upgrades stay, and the upgrade lock remains the player's tool. M1-31 adds a per-tier workers-and-jobs indicator to the HUD and the build menu. M1-33 holds a house at its tier while advancing would leave that tier's jobs unstaffed. In the longer term, upgrade lines (M2-30) move jobs up the tiers. **Revised (developer, second playtest):** Villagers still sat idle while Settler jobs went short, so M1-36 lets idle higher-tier workers fill lower-tier jobs, blocks their houses from advancing on morale, counts construction sites and a 20% reserve in the hold, and slows advancing to six days; M1-37 shows all of this in the HUD, the build menu and the inspector. **Confirmed in play (2026-10-24):** population growth with jobs filled across tiers works well.
 - **Camera (developer playtests).** M1-32 set a 30° yaw offset, M1-34 lowered the pitch to 30–50°, and M1-35 made the window resizable, maximized at start and toggleable to fullscreen. **Confirmed in play (2026-10-24):** the current camera works well. M2-29 keeps it as the baseline when it compares 30° and 45° yaw.
-- **Carts are hard to see at island zoom (from M1-22).** Carts are about 12 px at zoom 40 and blend into the dirt roads. Consider brighter cart bodies or a light outline before real art.
-- **Placeholder look of river banks (from M1-19).** The river water strip shows a thin lip above the bank where it meets the slope. Judge in play whether it needs work before real art.
+- **Carts are hard to see at island zoom (from M1-22).** Carts are about 12 px at zoom 40 and blend into the dirt roads. Consider brighter cart bodies or a light outline before real art. **Waived (developer, M1 gate):** carts are fine as they are.
+- **Placeholder look of river banks (from M1-19).** The river water strip shows a thin lip above the bank where it meets the slope. Judge in play whether it needs work before real art. **Deferred (developer, M1 gate):** not judged in play; the art pass decides it, starting with M2-29.
 
 **Acceptance:** every gate checkbox is ticked or explicitly waived with a reason.
 
@@ -1340,4 +1340,28 @@
 
 ## Gate record
 
-_Filled in when M1 closes._
+**M1 closed on 2026-10-25.** Every gate item is ticked except gamepad play, which is waived and carried to the M2 gate.
+
+| Gate item | Result | Evidence |
+| --- | --- | --- |
+| Bot | Pass | `evenmere balance --map starter --bot tools/bots/slice.json --seed N --max-minutes 90` on `main` at M1-39: 100 Villagers at tick 8406 (35.0 game minutes) on seeds 1–3, with no stalls. The first Villager comes at 4.1 minutes and 50 Villagers at 31.7; the slow middle waits on milling and weaving research. Final hashes `8a20cb582e71ef02`, `114c57a8387bf549` and `c142b449d95a32b3`. JSON reports: [seed 1](records/m1/balance-seed1.json), [seed 2](records/m1/balance-seed2.json), [seed 3](records/m1/balance-seed3.json). The nightly workflow repeats this every night. |
+| Golden hash | Pass | `slice_villagers` and the other slice scenarios pass in `scripts/verify.sh` and in CI. |
+| Save round trip | Pass | `SaveRemapSliceTests.RoundTrip_20000_40000_MatchesUninterrupted` and `SaveFixtureTests` (the save at tick 20,000) pass in `scripts/verify.sh` and in CI. |
+| Playtest | Pass | The developer played a new game on the starter island using only the UI. They passed 100 Villagers in under 45 game minutes (the developer's estimate; the run wasn't timed) and reached the slice's end state: 172 Villagers and 56 Settlers by Year 3, Autumn (about 51 game minutes), with every chain running and Villagers covering Settler jobs. Their notes: the camera and the workforce stepping down "work pretty well"; at the end state, "so far so good". |
+| Godot | Pass, gamepad waived | Smoke v2 passes with the game and replay hashes agreeing (`3dc3b47ea4813c4d`). On the development Mac (Apple M4 Pro), `--bench-frames=900` at 1280 × 800 holds 120 fps (avg and p99 8.33 ms, the display's vsync cap) on `v1-slice.evsave` and on a 34-building Villager save, both at the default view and fully zoomed out. Gamepad play is waived for lack of a controller and is now an M2 gate item. |
+| CI | Pass | `ci.yml` runs `REQUIRE_GODOT=1 scripts/verify.sh` on Ubuntu and macOS and is green on `main`. The `main` ruleset requires a PR, both `verify` checks and an up-to-date branch, keeps history linear, and blocks force pushes and deletion. The PR and stacked-PR flow is documented in CLAUDE.md and [README.md](README.md) step 8. |
+
+**Decisions from the playtests:**
+
+- **Workforce:** higher tiers fill lower-tier jobs, underemployed houses wait on morale, the hold counts sites and a 20% reserve, and advancing takes six days (ADR-0016; M1-36 and M1-37). Confirmed in play.
+- **Needs:** higher tiers need more. Consumption per resident rises with each tier (EVL011), and a house fills past the lower tier's capacity only with every basic need met (M1-38).
+- **Camera:** a 30° yaw offset and a 30–50° pitch; the window is resizable, maximized at start and toggles fullscreen (M1-32, M1-34 and M1-35). Confirmed in play; M2-29 keeps it as the baseline.
+- **Advisors:** the idle research and civic notes appear only while something can be chosen (M1-39).
+- **Art direction:** hand-drawn isometric, like the reference the developer chose (ADR-0013); prototyped in M2-29.
+- **Upgrade lines:** techs and civics unlock upgraded service and production buildings with their own staffing (M2-30).
+
+**Carried forward:**
+
+- Gamepad play at 1280 × 800: an M2 gate item.
+- River bank look: the art pass, starting with M2-29.
+- In-place upgrade sites don't count towards planned demand yet (ADR-0016); revisit with the upgrade lines in M2-30.

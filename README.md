@@ -10,7 +10,7 @@
 
 A calm, single-player island city builder. You grow a settlement through Anno-style production chains, a Civilization-style technology tree and a parallel culture tree. There is no combat, no rivals and no fail state; you set the pace.
 
-> **Status: M1 vertical slice playable.** The starter island runs end to end: production chains, Settlers and Villagers, research and civics, save and load, and the full UI, on a deterministic simulation that CI checks on Linux and macOS. The M1 playtest is in progress; see the [implementation plan](docs/implementation/README.md).
+> **Status: M1 vertical slice complete.** The starter island runs end to end: production chains, Settlers and Villagers, research and civics, save and load, and the full UI, on a deterministic simulation that CI checks on Linux and macOS. The M1 gate closed on 2026-10-25; M2 (Era I complete) is next. See the [implementation plan](docs/implementation/README.md).
 
 ## The game
 
