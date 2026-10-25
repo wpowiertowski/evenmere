@@ -78,7 +78,7 @@ public sealed class ReferenceTests
     {
         using var content = TempContent.FromMinimal();
         content.Replace("tiers/villagers.json", "\"advanceFrom\": \"settlers\"", "\"advanceFrom\": \"serfs\"");
-        content.Replace("tiers/villagers.json", "\"fish\": 3", "\"bread\": 3");
+        content.Replace("tiers/villagers.json", "\"fish\": 4", "\"bread\": 4");
 
         ContentLoadResult result = content.Load();
 

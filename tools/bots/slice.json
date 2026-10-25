@@ -4,7 +4,9 @@
     {
       "research": "cultivation",
       "queue": [
-        "milling"
+        "animal_husbandry",
+        "milling",
+        "weaving"
       ]
     },
     {
@@ -39,7 +41,77 @@
       "near": "founders_hall"
     },
     {
+      "build": "settler_house",
+      "count": 8,
+      "near": "market"
+    },
+    {
       "build": "grain_farm",
+      "count": 1,
+      "near": "market"
+    },
+    {
+      "build": "settler_house",
+      "count": 9,
+      "near": "market"
+    },
+    {
+      "build": "shrine",
+      "count": 1,
+      "near": "market"
+    },
+    {
+      "build": "settler_house",
+      "count": 10,
+      "near": "market"
+    },
+    {
+      "build": "sheep_farm",
+      "count": 1,
+      "near": "market"
+    },
+    {
+      "build": "settler_house",
+      "count": 11,
+      "near": "market"
+    },
+    {
+      "build": "settler_house",
+      "count": 12,
+      "near": "market"
+    },
+    {
+      "build": "windmill",
+      "count": 1,
+      "near": "fishing_hut"
+    },
+    {
+      "build": "settler_house",
+      "count": 13,
+      "near": "market"
+    },
+    {
+      "build": "settler_house",
+      "count": 14,
+      "near": "market"
+    },
+    {
+      "build": "bakery",
+      "count": 1,
+      "near": "fishing_hut"
+    },
+    {
+      "build": "settler_house",
+      "count": 15,
+      "near": "market"
+    },
+    {
+      "build": "settler_house",
+      "count": 16,
+      "near": "market"
+    },
+    {
+      "build": "weavers_cottage",
       "count": 1,
       "near": "market"
     },
@@ -49,27 +121,12 @@
       "near": "market"
     },
     {
-      "build": "shrine",
-      "count": 1,
-      "near": "market"
-    },
-    {
       "waitUntilTick": 3600
     },
     {
       "build": "settler_house",
       "count": 19,
       "near": "market"
-    },
-    {
-      "build": "windmill",
-      "count": 1,
-      "near": "fishing_hut"
-    },
-    {
-      "build": "bakery",
-      "count": 1,
-      "near": "fishing_hut"
     },
     {
       "build": "shrine",

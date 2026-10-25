@@ -7,7 +7,7 @@ namespace Evenmere.Content.Lint;
 
 /// <summary>
 /// The content linter (ADR-0004): everything the loader reports, plus a JSON Schema check of every file (EVL001) and the
-/// rules that need the whole content set (EVL003 to EVL008). It never throws for bad content; it returns diagnostics.
+/// rules that need the whole content set (EVL003 to EVL008 and EVL011). It never throws for bad content; it returns diagnostics.
 /// <list type="table">
 /// <listheader><term>Code</term><description>Rule</description></listheader>
 /// <item><term>EVL001</term><description>Shape: the loader's errors, and every file against its JSON Schema.</description></item>
@@ -18,8 +18,9 @@ namespace Evenmere.Content.Lint;
 /// <item><term>EVL006</term><description>Every tier's basic needs can be met with items of its era or earlier.</description></item>
 /// <item><term>EVL007</term><description>Every item has a display name (error) and description (warning) in <c>locale/en</c>.</description></item>
 /// <item><term>EVL008</term><description>Era gateways exist, and no node requires a node of a later era.</description></item>
+/// <item><term>EVL011</term><description>A tier with an advanceFrom tier needs strictly more basic goods per resident than that tier.</description></item>
 /// </list>
-/// The rules EVL003 to EVL008 read the typed <see cref="ContentDb"/>, so they run only when loading produced one. Shape
+/// The rules EVL003 to EVL008 and EVL011 read the typed <see cref="ContentDb"/>, so they run only when loading produced one. Shape
 /// errors, unresolved references and locale file problems are reported either way.
 /// </summary>
 public static class ContentLinter
@@ -101,6 +102,7 @@ public static class ContentLinter
             TierNeedsRule.Run(context, unlocks);
             LocaleRule.Run(context, raw);
             EraRule.Run(context);
+            TierConsumptionRule.Run(context);
             all.AddRange(context.Diagnostics);
         }
 
