@@ -447,9 +447,9 @@ public sealed partial class BuildingRenderer : Node3D
 
         string typeName = _host.Content.Buildings.NameOf(cached.Type);
         BuildingDef def = _host.Content.Buildings.Get(cached.Type);
-        (BuildingShape shape, _) = _factory.VisualFor(typeName);
         ArrayMesh bodyMesh = _factory.BodyFor(typeName, def.Footprint.Width, def.Footprint.Height);
-        float height = BuildingMeshBuilder.HeightOf(shape, def.Footprint.Width, def.Footprint.Height);
+        // The scaffold stands at the finished height: the kit mesh height when a spec exists, else the estimate.
+        float height = _factory.FinishedHeightFor(typeName, def.Footprint.Width, def.Footprint.Height);
         ArrayMesh scaffoldMesh = _factory.ScaffoldFor(typeName, cached.Width, cached.Height, height);
 
         (float cx, float cz) = CentreOf(cached);

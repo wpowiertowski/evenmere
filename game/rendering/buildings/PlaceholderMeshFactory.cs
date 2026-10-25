@@ -1,4 +1,5 @@
 using Evenmere.Game.Data.Visuals;
+using Evenmere.Game.Rendering.Buildings.Kit;
 using Godot;
 
 namespace Evenmere.Game.Rendering.Buildings;
@@ -12,16 +13,20 @@ namespace Evenmere.Game.Rendering.Buildings;
 public sealed class PlaceholderMeshFactory : IDisposable
 {
     private static readonly string _mappingPath = "res://data/visuals/era1-slice.json";
+    private static readonly string _kitPrefix = "res://data/visuals/kit/";
+    private static readonly string _kitSuffix = ".json";
 
     private static readonly Color _fallbackColour = new(0.54f, 0.54f, 0.54f);
     private static readonly Color _ruinColour = new(0.48f, 0.48f, 0.48f);
     private static readonly Color _scaffoldColour = new(0.6f, 0.48f, 0.32f);
 
     private readonly BuildingMeshBuilder _builder = new();
+    private readonly KitBuilder _kitBuilder = new();
     private readonly Dictionary<string, ArrayMesh> _bodies = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ArrayMesh> _ruins = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ArrayMesh> _scaffolds = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (BuildingShape Shape, Color Colour)> _visuals = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, KitSpec?> _kits = new(StringComparer.Ordinal);
     private readonly HashSet<string> _warned = new(StringComparer.Ordinal);
     private readonly StandardMaterial3D _buildingMaterial;
     private readonly StandardMaterial3D _scaffoldMaterial;
@@ -112,6 +117,14 @@ public sealed class PlaceholderMeshFactory : IDisposable
             return mesh;
         }
 
+        if (TryGetKit(typeName, width, depth, out KitSpec? spec) && spec is not null)
+        {
+            KitComposer.Build(_kitBuilder, spec);
+            mesh = ToKitMesh(_kitBuilder);
+            _bodies[key] = mesh;
+            return mesh;
+        }
+
         (BuildingShape shape, Color colour) = VisualFor(typeName);
         _builder.RebuildBody(shape, width, depth);
         mesh = ToMesh(_builder, _buildingMaterial, slot => SlotColour(shape, colour, slot));
@@ -152,10 +165,38 @@ public sealed class PlaceholderMeshFactory : IDisposable
             return mesh;
         }
 
+        if (TryGetKit(typeName, width, depth, out KitSpec? kit) && kit is not null)
+        {
+            _kitBuilder.Begin();
+            _kitBuilder.Scaffold(width, depth, height, SlotOf("wood.beam.dark"), SlotOf("wood.plank.mid"), SlotOf("prop.rope"), SlotOf("wood.timber.light"), SlotOf("stone.light"), SlotOf("prop.tarp"));
+            mesh = ToKitMesh(_kitBuilder);
+            _scaffolds[key] = mesh;
+            return mesh;
+        }
+
         _builder.RebuildScaffold(width, depth, height);
         mesh = ToMesh(_builder, _scaffoldMaterial, static _ => _scaffoldColour.SrgbToLinear());
         _scaffolds[key] = mesh;
         return mesh;
+    }
+
+    /// <summary>
+    /// Gets the finished height a building type reaches, for scaffold sizing: the kit mesh height when a spec
+    /// exists, otherwise the placeholder estimate. One mesh per type keeps multimesh batching.
+    /// </summary>
+    /// <param name="typeName">The content building ID.</param>
+    /// <param name="width">The unrotated footprint width in tiles.</param>
+    /// <param name="depth">The unrotated footprint depth in tiles.</param>
+    /// <returns>The height in tile units.</returns>
+    public float FinishedHeightFor(string typeName, float width, float depth)
+    {
+        if (TryGetKit(typeName, width, depth, out KitSpec? spec) && spec is not null)
+        {
+            return Math.Max(0.6f, KitComposer.BuildHeight(_kitBuilder, spec));
+        }
+
+        (BuildingShape shape, _) = VisualFor(typeName);
+        return BuildingMeshBuilder.HeightOf(shape, width, depth);
     }
 
     /// <summary>Gets the shared unit foundation skirt, scaled per building by the renderer.</summary>
@@ -196,6 +237,80 @@ public sealed class PlaceholderMeshFactory : IDisposable
         MeshSlot.Roof => new Color(body.R * 0.72f, body.G * 0.72f, body.B * 0.72f),
         _ => new Color(body.R * 0.5f, body.G * 0.5f, body.B * 0.5f),
     };
+
+    private bool TryGetKit(string typeName, float width, float depth, out KitSpec? spec)
+    {
+        if (_kits.TryGetValue(typeName, out KitSpec? cached))
+        {
+            spec = cached;
+            return spec is not null;
+        }
+
+        string json = Godot.FileAccess.GetFileAsString(_kitPrefix + typeName + _kitSuffix);
+        if (string.IsNullOrEmpty(json))
+        {
+            // No spec yet (roads, bridges and future buildings): the placeholder path draws them.
+            _kits[typeName] = null;
+            spec = null;
+            return false;
+        }
+
+        var parsed = KitSpec.Load(typeName, json, static text => GD.PushWarning($"[Evenmere] Buildings: {text}"));
+        if (parsed is not null && (Math.Abs(parsed.Width - width) > 0.01f || Math.Abs(parsed.Depth - depth) > 0.01f))
+        {
+            GD.PushWarning($"[Evenmere] Buildings: kit spec '{typeName}' was authored for {parsed.Width}x{parsed.Depth} but content says {width}x{depth}; using the authored shape.");
+        }
+
+        _kits[typeName] = parsed;
+        spec = parsed;
+        return spec is not null;
+    }
+
+    private static byte SlotOf(string token) =>
+        KitPalette.TryGetSlot(token, out byte slot) ? slot : (byte)0;
+
+    private ArrayMesh ToKitMesh(KitBuilder builder)
+    {
+        var vertices = new Vector3[builder.VertexCount];
+        ReadOnlySpan<float> positions = builder.Vertices;
+        for (int i = 0; i < builder.VertexCount; i++)
+        {
+            vertices[i] = new Vector3(positions[(i * 3) + 0], positions[(i * 3) + 1], positions[(i * 3) + 2]);
+        }
+
+        var normals = new Vector3[builder.VertexCount];
+        ReadOnlySpan<float> normalData = builder.Normals;
+        for (int i = 0; i < builder.VertexCount; i++)
+        {
+            normals[i] = new Vector3(normalData[(i * 3) + 0], normalData[(i * 3) + 1], normalData[(i * 3) + 2]);
+        }
+
+        var colours = new Color[builder.VertexCount];
+        ReadOnlySpan<byte> slots = builder.Slots;
+        for (int i = 0; i < builder.VertexCount; i++)
+        {
+            colours[i] = Color.FromHtml(KitPalette.HexOf(slots[i])).SrgbToLinear();
+        }
+
+        int[] indices = new int[builder.IndexCount];
+        ReadOnlySpan<int> indexData = builder.Indices;
+        for (int i = 0; i < builder.IndexCount; i++)
+        {
+            indices[i] = indexData[i];
+        }
+
+        Godot.Collections.Array arrays = new();
+        arrays.Resize((int)Mesh.ArrayType.Max);
+        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+        arrays[(int)Mesh.ArrayType.Normal] = normals;
+        arrays[(int)Mesh.ArrayType.Color] = colours;
+        arrays[(int)Mesh.ArrayType.Index] = indices;
+
+        ArrayMesh mesh = new();
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        mesh.SurfaceSetMaterial(0, _buildingMaterial);
+        return mesh;
+    }
 
     private static ArrayMesh ToMesh(BuildingMeshBuilder builder, Material material, Func<MeshSlot, Color> colourOf)
     {
