@@ -71,6 +71,8 @@ internal sealed partial class RoadNetwork
                 _minRoadCost = Math.Min(_minRoadCost, cost);
             }
         }
+
+        EnsureCounts();
     }
 
     /// <summary>Gets the number of distance-field builds since the network was created. Tests use it to see what a change rebuilt.</summary>
@@ -80,6 +82,20 @@ internal sealed partial class RoadNetwork
     /// <param name="type">The building type.</param>
     /// <returns><see langword="true"/> if tiles can be paved with it.</returns>
     public bool IsRoadType(BuildingTypeId type) => type.Value < _roadCost.Length && _roadCost[type.Value] > 0;
+
+    /// <summary>Counts the road tiles of one road type, for the <c>roadTiles</c> inspiration condition.</summary>
+    /// <param name="type">The road type.</param>
+    /// <returns>The tiles paved with it right now; 0 when it is not a road type of the loaded content.</returns>
+    public long RoadTiles(BuildingTypeId type)
+    {
+        if (!IsRoadType(type))
+        {
+            return 0;
+        }
+
+        EnsureCounts();
+        return _state.TilesByRoadType[type.Value];
+    }
 
     /// <summary>Finds the road on a tile.</summary>
     /// <param name="x">The column.</param>
@@ -166,9 +182,11 @@ internal sealed partial class RoadNetwork
     {
         EnsureReady();
         EnsureLayer();
+        EnsureCounts();
 
         ushort value = checked((ushort)(type.Value + 1));
         ushort[] layer = _state.Layer;
+        long[] counts = _state.TilesByRoadType;
         int width = _state.Width;
         _changed.Clear();
         int laid = 0;
@@ -186,7 +204,13 @@ internal sealed partial class RoadNetwork
             {
                 laid++;
             }
+            else if ((uint)(before - 1) < (uint)counts.Length)
+            {
+                // An upgrade moves the tile from the old type's count to the new one.
+                counts[before - 1]--;
+            }
 
+            counts[type.Value]++;
             layer[index] = value;
             _changed.Add(index);
             box = box.Include(tile.X, tile.Y);
@@ -216,8 +240,10 @@ internal sealed partial class RoadNetwork
         }
 
         EnsureReady();
+        EnsureCounts();
 
         ushort[] layer = _state.Layer;
+        long[] counts = _state.TilesByRoadType;
         int width = _state.Width;
         _changed.Clear();
         var box = new Box(int.MaxValue, int.MaxValue, int.MinValue, int.MinValue);
@@ -232,6 +258,12 @@ internal sealed partial class RoadNetwork
             if (layer[index] == 0)
             {
                 continue;
+            }
+
+            ushort removed = layer[index];
+            if ((uint)(removed - 1) < (uint)counts.Length)
+            {
+                counts[removed - 1]--;
             }
 
             layer[index] = 0;
@@ -282,6 +314,28 @@ internal sealed partial class RoadNetwork
         {
             throw new InvalidDataException($"The road layer is {_state.Width} × {_state.Height} but the map is {width} × {height}.");
         }
+    }
+
+    // Sizes the per-type counts to the content, recounting from the layer when they are missing or the wrong length
+    // (an older save). Counts are derived data, so rebuilding them is always safe; it just costs one layer scan.
+    private void EnsureCounts()
+    {
+        if (_state.TilesByRoadType is not null && _state.TilesByRoadType.Length == _content.Buildings.Count)
+        {
+            return;
+        }
+
+        long[] counts = new long[_content.Buildings.Count];
+        foreach (ushort value in _state.Layer)
+        {
+            int type = value - 1;
+            if (value != 0 && (uint)type < (uint)counts.Length && _roadCost[type] > 0)
+            {
+                counts[type]++;
+            }
+        }
+
+        _state.TilesByRoadType = counts;
     }
 
     private bool TryGetBuilding(EntityId id, out BuildingInfo building)

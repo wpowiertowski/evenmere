@@ -657,9 +657,37 @@
         "Member": "property RoadTilesLaid",
         "Type": "System.Int64"
       },
+      "17": {
+        "Member": "property Expeditions",
+        "Type": "System.Int64"
+      },
+      "18": {
+        "Member": "property FestivalsHeld",
+        "Type": "System.Int64"
+      },
+      "19": {
+        "Member": "property GreatWorksCreated",
+        "Type": "System.Int64[]"
+      },
       "2": {
         "Member": "property Tiers",
         "Type": "System.UInt64[]"
+      },
+      "20": {
+        "Member": "property GreatWorksDisplayed",
+        "Type": "System.Int64[]"
+      },
+      "21": {
+        "Member": "property RegionsRevealed",
+        "Type": "System.Int64[]"
+      },
+      "22": {
+        "Member": "property Discovered",
+        "Type": "System.Int64[]"
+      },
+      "23": {
+        "Member": "property VisitorsPerDay",
+        "Type": "System.Int64"
       },
       "3": {
         "Member": "property Traditions",
@@ -732,6 +760,10 @@
       "2": {
         "Member": "property Layer",
         "Type": "System.UInt16[]"
+      },
+      "3": {
+        "Member": "property TilesByRoadType",
+        "Type": "System.Int64[]"
       }
     },
     "Evenmere.Sim.Systems.Statistics.StatisticsState": {

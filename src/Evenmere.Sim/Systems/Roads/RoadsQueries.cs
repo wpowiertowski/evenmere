@@ -12,6 +12,9 @@ internal sealed class RoadsQueries(RoadNetwork network) : IRoadsQueries
     public BuildingTypeId? RoadAt(int x, int y) => network.RoadAt(x, y);
 
     /// <inheritdoc />
+    long IRoadsQueries.RoadTiles(BuildingTypeId road) => network.RoadTiles(road);
+
+    /// <inheritdoc />
     public bool HasRoadAccess(EntityId building) => network.HasRoadAccess(building);
 
     /// <inheritdoc />

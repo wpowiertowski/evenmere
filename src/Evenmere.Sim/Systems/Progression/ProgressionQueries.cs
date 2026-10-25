@@ -102,6 +102,9 @@ internal sealed class ProgressionQueries : IProgressionQueries
     /// <inheritdoc />
     public long Counter(CounterKey key) => _counters.Get(key);
 
+    /// <summary>Gets the condition evaluator, so tests can inspect its memoisation.</summary>
+    internal ConditionEvaluator Evaluator => _evaluator;
+
     /// <inheritdoc />
     public bool Evaluate(Condition condition) => _evaluator.Evaluate(condition);
 }

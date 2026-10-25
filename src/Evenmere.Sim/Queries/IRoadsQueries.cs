@@ -17,6 +17,11 @@ public interface IRoadsQueries
     /// <returns>The road type (a building type with a road cost), or <see langword="null"/> when the tile has no road or is off the map.</returns>
     BuildingTypeId? RoadAt(int x, int y);
 
+    /// <summary>Counts the road tiles of one road type, for the <c>roadTiles</c> inspiration condition. (M2-09.)</summary>
+    /// <param name="road">The road type.</param>
+    /// <returns>The tiles paved with it right now; 0 when it is not a road type of the loaded content.</returns>
+    long RoadTiles(BuildingTypeId road);
+
     /// <summary>Tests whether at least one road tile touches the building's footprint along an edge.</summary>
     /// <param name="building">The building or site.</param>
     /// <returns><see langword="true"/> if the building has road access; <see langword="false"/> if it has none or does not exist.</returns>

@@ -1,3 +1,4 @@
+using Evenmere.Content.Definitions;
 using Evenmere.Core.Ids;
 using MessagePack;
 
@@ -86,6 +87,24 @@ public enum CounterKind : byte
 
     /// <summary>The cumulative number of road tiles laid (of any road type).</summary>
     RoadTilesLaid = 3,
+
+    /// <summary>The cumulative number of expeditions completed. Written by the exploration system (M2-06); zero until then.</summary>
+    Expeditions = 4,
+
+    /// <summary>The cumulative number of festivals held. Written by the culture system (M2-08); zero until then.</summary>
+    FestivalsHeld = 5,
+
+    /// <summary>The cumulative number of great works created, indexed by <c>GreatWorkTypeId.Value</c>. Written by the great-works system (M3-03); zero until then.</summary>
+    GreatWorksCreated = 6,
+
+    /// <summary>The cumulative number of great works on display, indexed by <c>GreatWorkTypeId.Value</c>. Written by the great-works system (M3-03); zero until then.</summary>
+    GreatWorksDisplayed = 7,
+
+    /// <summary>The cumulative number of discoveries made, indexed by <c>DiscoveryKind</c>. Written by the exploration system (M2-06); zero until then.</summary>
+    Discovered = 8,
+
+    /// <summary>The cumulative number of revealed regions of a terrain, indexed by <c>TerrainId.Value</c>. Written by the exploration system (M2-06); zero until then.</summary>
+    RegionsRevealed = 9,
 }
 
 /// <summary>
@@ -114,4 +133,30 @@ public readonly record struct CounterKey([property: Key(0)] CounterKind Kind, [p
 
     /// <summary>Gets the key of the number of road tiles laid so far.</summary>
     public static CounterKey RoadTilesLaid => new(CounterKind.RoadTilesLaid, 0);
+
+    /// <summary>Gets the key of the cumulative number of expeditions completed.</summary>
+    public static CounterKey Expeditions => new(CounterKind.Expeditions, 0);
+
+    /// <summary>Gets the key of the cumulative number of festivals held.</summary>
+    public static CounterKey FestivalsHeld => new(CounterKind.FestivalsHeld, 0);
+
+    /// <summary>Gets the key of the cumulative number of great works created of a type.</summary>
+    /// <param name="type">The great-work type.</param>
+    /// <returns>The key.</returns>
+    public static CounterKey GreatWorksCreated(GreatWorkTypeId type) => new(CounterKind.GreatWorksCreated, type.Value);
+
+    /// <summary>Gets the key of the cumulative number of great works on display of a type.</summary>
+    /// <param name="type">The great-work type.</param>
+    /// <returns>The key.</returns>
+    public static CounterKey GreatWorksDisplayed(GreatWorkTypeId type) => new(CounterKind.GreatWorksDisplayed, type.Value);
+
+    /// <summary>Gets the key of the cumulative number of discoveries made of a kind.</summary>
+    /// <param name="kind">The discovery kind.</param>
+    /// <returns>The key.</returns>
+    public static CounterKey Discovered(DiscoveryKind kind) => new(CounterKind.Discovered, (int)kind);
+
+    /// <summary>Gets the key of the cumulative number of revealed regions of a terrain.</summary>
+    /// <param name="terrain">The terrain.</param>
+    /// <returns>The key.</returns>
+    public static CounterKey RegionsRevealed(TerrainId terrain) => new(CounterKind.RegionsRevealed, terrain.Value);
 }

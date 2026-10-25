@@ -12,6 +12,7 @@ namespace Evenmere.Sim.Tests.Fakes;
 internal sealed class FakeRoadsQueries : IRoadsQueries
 {
     private readonly Dictionary<TileCoord, BuildingTypeId> _roads = [];
+    private readonly Dictionary<BuildingTypeId, long> _roadTiles = [];
     private readonly HashSet<EntityId> _roadAccess = [];
     private readonly SortedDictionary<(EntityId Storehouse, EntityId Building), int> _costs = [];
     private readonly HashSet<(EntityId House, ServiceKind Service)> _covered = [];
@@ -27,6 +28,16 @@ internal sealed class FakeRoadsQueries : IRoadsQueries
     public FakeRoadsQueries SetRoad(int x, int y, BuildingTypeId type)
     {
         _roads[new TileCoord(x, y)] = type;
+        return this;
+    }
+
+    /// <summary>Sets how many road tiles of a type stand, as <see cref="IRoadsQueries.RoadTiles"/> reports.</summary>
+    /// <param name="type">The road type.</param>
+    /// <param name="tiles">The tile count.</param>
+    /// <returns>This fake.</returns>
+    public FakeRoadsQueries SetRoadTiles(BuildingTypeId type, long tiles)
+    {
+        _roadTiles[type] = tiles;
         return this;
     }
 
@@ -99,6 +110,9 @@ internal sealed class FakeRoadsQueries : IRoadsQueries
 
     /// <inheritdoc />
     public BuildingTypeId? RoadAt(int x, int y) => _roads.TryGetValue(new TileCoord(x, y), out BuildingTypeId type) ? type : null;
+
+    /// <inheritdoc />
+    long IRoadsQueries.RoadTiles(BuildingTypeId road) => _roadTiles.GetValueOrDefault(road);
 
     /// <inheritdoc />
     public bool HasRoadAccess(EntityId building) => _roadAccess.Contains(building);
