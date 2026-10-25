@@ -43,6 +43,9 @@ public sealed partial class BuildMenu : PanelContainer
     private const float MenuHeight = 400f;
     private const float SideMargin = 16f;
     private const float BottomMargin = 16f;
+    // The pause menu's Menu button sits bottom-right (124 by 48 at a 16 margin), like the inspector's MenuReserve
+    // (M1-37): the panel ends above it with the same margin, so the menu's own cards stay clear of the button.
+    private const float MenuReserve = 64f + SideMargin;
     private const float CardMinWidth = 300f;
     private const float SwatchSize = 52f;
     private const int IconFontSize = 30;
@@ -305,8 +308,8 @@ public sealed partial class BuildMenu : PanelContainer
         AnchorBottom = 1f;
         OffsetLeft = SideMargin;
         OffsetRight = -SideMargin;
-        OffsetTop = -MenuHeight;
-        OffsetBottom = -BottomMargin;
+        OffsetTop = -MenuHeight - (MenuReserve - BottomMargin);
+        OffsetBottom = -MenuReserve;
         MouseFilter = Control.MouseFilterEnum.Stop;
     }
 

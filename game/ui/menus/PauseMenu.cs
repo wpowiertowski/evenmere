@@ -9,8 +9,8 @@ namespace Evenmere.Game.Ui.Menus;
 
 /// <summary>
 /// The pause menu: a small focusable Menu button in the corner while playing, opening on demand (or on
-/// <c>tool_cancel</c> when no open panel or tool handled it first) into Resume, Save, Load, Settings and Quit to
-/// Menu. The simulation pauses while it is open and resumes at the previous speed on resume. Saving and loading go
+/// <c>tool_cancel</c> when no open panel or tool handled it first) into Resume, Save, Load, Settings, Fullscreen and
+/// Quit to Menu. The simulation pauses while it is open and resumes at the previous speed on resume. Saving and loading go
 /// through <see cref="SaveService"/>, the slot list comes from <see cref="SaveSlots"/>, and an autosave runs every
 /// <see cref="MenuText.AutosaveDays"/> in-game days into the single <c>autosave</c> slot, between ticks.
 /// Main.tscn keeps this node near the top so it receives unhandled <c>tool_cancel</c> last, after every tool and
@@ -34,6 +34,7 @@ public sealed partial class PauseMenu : Control
     private PanelContainer? _panel;
     private Label? _panelTitle;
     private VBoxContainer? _buttons;
+    private bool _lastFullscreen;
     private SlotListDialog? _dialog;
     private SettingsStub? _settings;
     private LoadReportNote? _report;
@@ -45,6 +46,9 @@ public sealed partial class PauseMenu : Control
 
     /// <summary>Gets or sets the command-log recorder the saves rebind. It is set by the scene root.</summary>
     public CommandLogRecorder? Recorder { get; set; }
+
+    /// <summary>Raised when the player asks for fullscreen through the pause menu button, so the scene root can toggle the window.</summary>
+    public event Action? FullscreenToggleRequested;
 
     /// <summary>Raised after quitting to the menu, so the scene root can show the main menu.</summary>
     public event Action? QuitToMenuRequested;
@@ -197,7 +201,7 @@ public sealed partial class PauseMenu : Control
         top.AddChild(buttons);
         _buttons = buttons;
 
-        foreach (string name in new[] { "Resume", "Save", "Load", "Settings", "QuitToMenu" })
+        foreach (string name in new[] { "Resume", "Save", "Load", "Settings", "Fullscreen", "QuitToMenu" })
         {
             var button = new Button { Name = name, FocusMode = FocusModeEnum.All, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
             buttons.AddChild(button);
@@ -207,6 +211,7 @@ public sealed partial class PauseMenu : Control
         GetButton("Save").Pressed += OpenSave;
         GetButton("Load").Pressed += OpenLoad;
         GetButton("Settings").Pressed += OpenSettings;
+        GetButton("Fullscreen").Pressed += () => FullscreenToggleRequested?.Invoke();
         GetButton("QuitToMenu").Pressed += QuitToMenu;
 
         var dialog = new SlotListDialog();
@@ -261,8 +266,26 @@ public sealed partial class PauseMenu : Control
         SetButton("Save", "ui.pause.save", "ui.pause.save.tip");
         SetButton("Load", "ui.pause.load", "ui.pause.load.tip");
         SetButton("Settings", "ui.pause.settings", "ui.pause.settings.tip");
+        _lastFullscreen = GetWindow().Mode == Window.ModeEnum.Fullscreen;
+        SetButton("Fullscreen", FullscreenButtonKey(_lastFullscreen), FullscreenButtonTipKey(_lastFullscreen));
         SetButton("QuitToMenu", "ui.pause.quit_to_menu", "ui.pause.quit_to_menu.tip");
     }
+
+    /// <summary>
+    /// Gets the locale key for the pause menu's fullscreen button: <c>ui.pause.windowed</c> when fullscreen (the
+    /// button leaves fullscreen) and <c>ui.pause.fullscreen</c> otherwise. Pure and Godot-free so the game unit
+    /// tests cover both states.
+    /// </summary>
+    /// <param name="isFullscreen"><see langword="true"/> when the window is currently fullscreen.</param>
+    /// <returns>The label's locale key.</returns>
+    public static string FullscreenButtonKey(bool isFullscreen) =>
+        isFullscreen ? "ui.pause.windowed" : "ui.pause.fullscreen";
+
+    /// <summary>Gets the locale key for the pause menu's fullscreen button tooltip, matching <see cref="FullscreenButtonKey"/>.</summary>
+    /// <param name="isFullscreen"><see langword="true"/> when the window is currently fullscreen.</param>
+    /// <returns>The tooltip's locale key.</returns>
+    public static string FullscreenButtonTipKey(bool isFullscreen) =>
+        isFullscreen ? "ui.pause.windowed.tip" : "ui.pause.fullscreen.tip";
 
     private void SetButton(string name, string textKey, string tipKey)
     {
@@ -289,6 +312,25 @@ public sealed partial class PauseMenu : Control
             // The menu texts are set on open; label the corner button from the first running frame instead,
             // so it never shows as an empty panel while the menu was never opened.
             RefreshTexts();
+        }
+
+        UpdateFullscreenButton();
+    }
+
+    // The window mode can change while the menu is open (F11 or Ctrl+Cmd+F still work there), so the Fullscreen
+    // button re-reads its label every frame instead of only on open.
+    private void UpdateFullscreenButton()
+    {
+        if (!_open || _strings is null || _buttons is null)
+        {
+            return;
+        }
+
+        bool fullscreen = GetWindow().Mode == Window.ModeEnum.Fullscreen;
+        if (fullscreen != _lastFullscreen)
+        {
+            _lastFullscreen = fullscreen;
+            SetButton("Fullscreen", FullscreenButtonKey(fullscreen), FullscreenButtonTipKey(fullscreen));
         }
     }
 

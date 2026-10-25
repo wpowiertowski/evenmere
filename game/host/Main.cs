@@ -27,6 +27,7 @@ namespace Evenmere.Game.Host;
 public sealed partial class Main : Node3D
 {
     private static readonly Vector2I _minimumWindowSize = new(1280, 800);
+    private float _minSizeScreen = -1f;
 
     private bool _startedMaximized;
 
@@ -55,6 +56,7 @@ public sealed partial class Main : Node3D
         {
             pause.Recorder = _recorder;
             pause.QuitToMenuRequested += () => ShowMenu(host, pause);
+            pause.FullscreenToggleRequested += ToggleFullscreen;
         }
 
         if (LaunchOptions.RequestsSmoke(args))
@@ -105,40 +107,56 @@ public sealed partial class Main : Node3D
     }
 
     /// <summary>
-    /// Applies the window contract (M1-35): every run keeps the 1280 × 800 minimum, a normal launch starts
-    /// maximized, and the fixed-size runs (the headless smoke, screenshots and the frame bench) keep the exact
-    /// launch size. Maximizing happens here in code, rather than through <c>window/size/mode</c> in project.godot,
-    /// because the choice depends on the launch options: a project setting could not exempt the fixed-size runs.
+    /// Applies the window contract (M1-35, M2-31): every run keeps the 1280 × 800 minimum, a normal launch starts
+    /// maximized, and the fixed-size runs (the headless smoke, screenshots, the frame bench and the debug
+    /// <c>--window-size</c> override) keep the exact launch size. Maximizing happens here in code, rather than through
+    /// <c>window/size/mode</c> in project.godot, because the choice depends on the launch options: a project setting
+    /// could not exempt the fixed-size runs.
     /// </summary>
     /// <param name="args">The user arguments, as <c>OS.GetCmdlineUserArgs()</c> returns them.</param>
     private void ApplyWindowMode(string[] args)
     {
         Window window = GetWindow();
 
-        // Godot has no project setting for the minimum window size.
-        window.MinSize = _minimumWindowSize;
+        // The 1280 x 800 minimum counts logical points; Window.MinSize counts physical pixels (backing store),
+        // so it is scaled by the screen scale and re-applied in _Process when the scale changes.
+        ApplyMinSize();
+
+        // Debug only: an exact window size in logical points for the evidence screenshots, so the 1280 × 800,
+        // 1600 × 900 and 2560 × 1600 shots frame those sizes exactly. Window.Size counts physical pixels, so the
+        // points are scaled up. Un-maximize first: assigning a size to a maximized window would otherwise fight
+        // the window manager.
+        if (OS.IsDebugBuild() && WindowSetup.TryParseWindowSize(args, out int width, out int height))
+        {
+            float scale = ScreenScale();
+            window.Mode = Window.ModeEnum.Windowed;
+            window.Size = new Vector2I(Mathf.RoundToInt(width * scale), Mathf.RoundToInt(height * scale));
+            GD.Print($"[Evenmere] window: debug override {width}x{height} points (minimum 1280x800); F11 or the pause menu toggles fullscreen.");
+            return;
+        }
 
         if (!WindowSetup.ShouldMaximize(args))
         {
-            GD.Print($"[Evenmere] window: keeping the launch size {window.Size.X}x{window.Size.Y} (minimum 1280x800) for a fixed-size {WindowSetup.FixedSizeReason(args)} run; F11 toggles fullscreen.");
+            GD.Print($"[Evenmere] window: keeping the launch size {window.Size.X}x{window.Size.Y} (minimum 1280x800) for a fixed-size {WindowSetup.FixedSizeReason(args)} run; F11 or the pause menu toggles fullscreen.");
             return;
         }
 
         if (DisplayServer.GetName() == "headless")
         {
-            GD.Print($"[Evenmere] window: keeping the launch size {window.Size.X}x{window.Size.Y} on a headless display; a desktop run would start maximized. F11 toggles fullscreen.");
+            GD.Print($"[Evenmere] window: keeping the launch size {window.Size.X}x{window.Size.Y} on a headless display; a desktop run would start maximized. F11 or the pause menu toggles fullscreen.");
             return;
         }
 
         window.Mode = Window.ModeEnum.Maximized;
         _startedMaximized = true;
-        GD.Print("[Evenmere] window: starting maximized (minimum 1280x800); F11 toggles fullscreen.");
+        GD.Print("[Evenmere] window: starting maximized (minimum 1280x800); F11 or the pause menu toggles fullscreen.");
     }
 
     /// <summary>
     /// Switches between fullscreen and the windowed mode, restoring the maximized state a normal launch started in.
+    /// The pause menu's Fullscreen button calls this through <c>PauseMenu.FullscreenToggleRequested</c>.
     /// </summary>
-    private void ToggleFullscreen()
+    public void ToggleFullscreen()
     {
         Window window = GetWindow();
         window.Mode = window.Mode == Window.ModeEnum.Fullscreen
@@ -150,7 +168,31 @@ public sealed partial class Main : Node3D
     /// <inheritdoc />
     public override void _Process(double delta)
     {
+        ApplyMinSize();
         _debug?.Process(this, delta);
+    }
+
+    /// <summary>Reads the display's HiDPI scale for the window's current screen; non-positive counts as 1.</summary>
+    /// <returns>The screen scale (2 on a Retina Mac, 1 on a Steam Deck).</returns>
+    private static float ScreenScale()
+    {
+        float screen = DisplayServer.ScreenGetScale((int)DisplayServer.ScreenOfMainWindow);
+        return screen > 0f ? screen : 1f;
+    }
+
+    // The minimum window size is 1280 x 800 logical points, but Window.MinSize counts physical pixels: scale it by
+    // the screen scale, and re-apply it when the scale changes (the window moving to another display).
+    private void ApplyMinSize()
+    {
+        float screen = DisplayServer.ScreenGetScale((int)DisplayServer.ScreenOfMainWindow);
+        if (screen == _minSizeScreen)
+        {
+            return;
+        }
+
+        _minSizeScreen = screen;
+        float scale = ScreenScale();
+        GetWindow().MinSize = new Vector2I(Mathf.RoundToInt(_minimumWindowSize.X * scale), Mathf.RoundToInt(_minimumWindowSize.Y * scale));
     }
 
     /// <inheritdoc />

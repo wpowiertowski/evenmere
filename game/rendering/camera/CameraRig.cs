@@ -1,4 +1,6 @@
+using System.Globalization;
 using Evenmere.Game.Controls;
+using Evenmere.Game.Ui.Common;
 using Godot;
 using SysVector3 = System.Numerics.Vector3;
 
@@ -22,6 +24,7 @@ namespace Evenmere.Game.Rendering.Camera;
 public sealed partial class CameraRig : Node3D
 {
     private const float MaxStepSeconds = 0.25f;
+    private const string CheckZoomPrefix = "--check-zoom=";
     private const float FocusHeightResponse = 8f;
     private const float SettleDistance = 1e-4f;
     private const float SettleVelocity = 1e-3f;
@@ -45,6 +48,14 @@ public sealed partial class CameraRig : Node3D
 
     private bool _dragging;
     private Vector2 _pointer;
+    private Vector2I _lastFovSize = new(-1, -1);
+    private float _lastFovScreen = -1f;
+
+    // Debug-only --check-zoom state (M2-31 evidence): 0 idle, 1 warp the pointer, 2 inject the wheel, 3 read the zoom.
+    private int _checkZoomStage;
+    private Vector2 _checkZoomPoint = Vector2.Zero;
+    private float _checkZoomBefore;
+    private ulong _checkZoomFrame;
 
     // True from the first mouse-motion event until the pointer leaves the window. Entering the window is not enough: the
     // position is only known from a motion event, and edge scrolling must never act on a guess.
@@ -172,6 +183,7 @@ public sealed partial class CameraRig : Node3D
         window.MouseExited += OnMouseExited;
         window.FocusEntered += OnFocusEntered;
         window.FocusExited += OnFocusExited;
+        window.SizeChanged += ApplyFov;
 
         (float centerX, float centerZ) = Bounds.Center();
         _focus = new Vector2(centerX, centerZ);
@@ -180,6 +192,16 @@ public sealed partial class CameraRig : Node3D
         _yaw = CameraMath.TargetYawRadians(_rotationSteps, YawOffsetDegrees);
         _yawVelocity = 0f;
         _focusHeight = FocusGroundHeight();
+        _lastFovSize = GetWindow().Size;
+        _lastFovScreen = DisplayServer.ScreenGetScale((int)DisplayServer.ScreenOfMainWindow);
+        ApplyFov();
+
+        // Debug evidence only: --check-zoom=sx,sy warps the pointer there, injects one wheel-up through the real
+        // input path and logs the hovered control and the zoom before and after (M2-31).
+        if (OS.IsDebugBuild())
+        {
+            ParseCheckZoom();
+        }
 
         ApplyTransform(minZoom, maxZoom);
     }
@@ -196,11 +218,18 @@ public sealed partial class CameraRig : Node3D
         window.MouseExited -= OnMouseExited;
         window.FocusEntered -= OnFocusEntered;
         window.FocusExited -= OnFocusExited;
+        window.SizeChanged -= ApplyFov;
     }
 
     /// <inheritdoc />
     public override void _Process(double delta)
     {
+        CheckFovScale();
+        if (_checkZoomStage != 0)
+        {
+            TickCheckZoom();
+        }
+
         float dt = Math.Min((float)delta, MaxStepSeconds);
         (float minZoom, float maxZoom) = ZoomRange();
 
@@ -233,7 +262,7 @@ public sealed partial class CameraRig : Node3D
         }
     }
 
-    /// <summary>Handles the discrete inputs the UI did not use: starting a drag, wheel and pinch zoom, and quarter turns.</summary>
+    /// <summary>Handles the discrete inputs the UI did not use: starting a drag, wheel and pinch zoom (only when the pointer is over no blocking control), and quarter turns.</summary>
     /// <param name="event">The input event.</param>
     public override void _UnhandledInput(InputEvent @event)
     {
@@ -249,17 +278,29 @@ public sealed partial class CameraRig : Node3D
                 break;
 
             case InputEventMouseButton button when button.IsActionPressed(InputActions.CameraZoomIn):
-                ZoomByNotches(button.Factor > 0f ? button.Factor : 1f);
+                if (CameraMath.ShouldPointerZoom(GetViewport().GuiGetHoveredControl() is not null))
+                {
+                    ZoomByNotches(button.Factor > 0f ? button.Factor : 1f);
+                }
+
                 break;
 
             case InputEventMouseButton button when button.IsActionPressed(InputActions.CameraZoomOut):
-                ZoomByNotches(-(button.Factor > 0f ? button.Factor : 1f));
+                if (CameraMath.ShouldPointerZoom(GetViewport().GuiGetHoveredControl() is not null))
+                {
+                    ZoomByNotches(-(button.Factor > 0f ? button.Factor : 1f));
+                }
+
                 break;
 
             case InputEventMagnifyGesture pinch when pinch.Factor > 0f:
                 // Fingers apart (factor above 1) bring the camera closer.
-                _targetLogZoom -= MathF.Log(pinch.Factor);
-                ClampTargetZoom();
+                if (CameraMath.ShouldPointerZoom(GetViewport().GuiGetHoveredControl() is not null))
+                {
+                    _targetLogZoom -= MathF.Log(pinch.Factor);
+                    ClampTargetZoom();
+                }
+
                 break;
 
             case InputEventAction or InputEventKey or InputEventJoypadButton:
@@ -528,6 +569,107 @@ public sealed partial class CameraRig : Node3D
     {
         (float minZoom, float maxZoom) = ZoomRange();
         _targetLogZoom = Math.Clamp(_targetLogZoom, MathF.Log(minZoom), MathF.Log(maxZoom));
+    }
+
+    /// <summary>
+    /// Sets the vertical field of view from the window's height in logical points, so one tile covers the same number
+    /// of points at any window size and a bigger window shows more island (<see cref="CameraMath.VerticalFovDegrees"/>).
+    /// It runs on ready and on every resize; the 1600 x 900-point view keeps its 45-degree look.
+    /// </summary>
+    private void ApplyFov()
+    {
+        if (_camera is null || !IsInsideTree())
+        {
+            return;
+        }
+
+        // Window.Size counts physical pixels (backing store); the formula works in logical points.
+        float screen = DisplayServer.ScreenGetScale((int)DisplayServer.ScreenOfMainWindow);
+        float pointsH = UiScale.PointsFromPixels(GetWindow().Size.Y, screen);
+        float fov = CameraMath.VerticalFovDegrees(pointsH);
+        if (MathF.Abs(_camera.Fov - fov) > 0.01f)
+        {
+            _camera.Fov = fov;
+        }
+    }
+
+    // The window's screen scale can change without a resize (the window moving to a display with another HiDPI
+    // scale), so the field of view re-applies whenever the size or the scale changed: the same check HudRoot runs.
+    private void CheckFovScale()
+    {
+        Vector2I size = GetWindow().Size;
+        float screen = DisplayServer.ScreenGetScale((int)DisplayServer.ScreenOfMainWindow);
+        if (size != _lastFovSize || screen != _lastFovScreen)
+        {
+            _lastFovSize = size;
+            _lastFovScreen = screen;
+            ApplyFov();
+        }
+    }
+
+    // Reads a debug-only --check-zoom=sx,sy argument (viewport pixels): the _Process sequence warps the pointer
+    // there, injects one wheel-up and logs the hovered control with the zoom before and after.
+    private void ParseCheckZoom()
+    {
+        foreach (string arg in OS.GetCmdlineUserArgs())
+        {
+            if (!arg.StartsWith(CheckZoomPrefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            string[] parts = arg[CheckZoomPrefix.Length..].Split(',');
+            if (parts.Length == 2
+                && float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float sx)
+                && float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float sy))
+            {
+                _checkZoomPoint = new Vector2(sx, sy);
+                _checkZoomStage = 1;
+                GD.Print($"[Evenmere] check-zoom: will inject one wheel-up at ({sx}, {sy}).");
+                return;
+            }
+
+            GD.PushWarning($"[Evenmere] ignoring malformed --check-zoom '{arg}'; want 'sx,sy'.");
+        }
+    }
+
+    // The debug-only --check-zoom sequence: warp the pointer to the point, let the hover settle, inject one
+    // wheel-up through the real input path (so panels consume it exactly as a physical wheel would), then log the
+    // zoom once the easing settled and quit.
+    private void TickCheckZoom()
+    {
+        ulong frame = Engine.GetProcessFrames();
+        if (_checkZoomStage == 1 && frame >= 60)
+        {
+            // Both: the warp moves the visible cursor, and the synthetic motion drives the viewport's hover state
+            // (hover follows event positions, so the check never depends on where the OS cursor rested).
+            Input.WarpMouse(_checkZoomPoint);
+            var motion = new InputEventMouseMotion { Position = _checkZoomPoint };
+            Input.ParseInputEvent(motion);
+            _checkZoomFrame = frame;
+            _checkZoomStage = 2;
+        }
+        else if (_checkZoomStage == 2 && frame >= _checkZoomFrame + 6)
+        {
+            Control? hovered = GetViewport().GuiGetHoveredControl();
+            Vector2 mouse = GetViewport().GetMousePosition();
+            _checkZoomBefore = Zoom;
+            GD.Print($"[Evenmere] ZOOM point=({_checkZoomPoint.X:F0}, {_checkZoomPoint.Y:F0}) mouse=({mouse.X:F0}, {mouse.Y:F0}) hovered={(hovered is null ? "none" : hovered.Name + " (" + hovered.GetType().Name + ")")} zoomBefore={_checkZoomBefore:F3}");
+            // Press and release go out together, the way a physical wheel detent arrives: the action never reads
+            // as held, so the polled key-zoom adds nothing and the log shows exactly one discrete notch (or none).
+            var press = new InputEventMouseButton { ButtonIndex = MouseButton.WheelUp, Pressed = true, Position = _checkZoomPoint };
+            Input.ParseInputEvent(press);
+            var release = new InputEventMouseButton { ButtonIndex = MouseButton.WheelUp, Pressed = false, Position = _checkZoomPoint };
+            Input.ParseInputEvent(release);
+            _checkZoomFrame = frame;
+            _checkZoomStage = 3;
+        }
+        else if (_checkZoomStage == 3 && frame >= _checkZoomFrame + 120)
+        {
+            GD.Print($"[Evenmere] ZOOM point=({_checkZoomPoint.X:F0}, {_checkZoomPoint.Y:F0}) zoomBefore={_checkZoomBefore:F3} zoomAfter={Zoom:F3}");
+            _checkZoomStage = 0;
+            GetTree().Quit(0);
+        }
     }
 
     /// <summary>Moves the focus so the ground point under the pointer stays under it.</summary>

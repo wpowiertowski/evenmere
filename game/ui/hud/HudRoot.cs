@@ -50,6 +50,9 @@ public sealed partial class HudRoot : Control
     private HudChip? _cultureChip;
     private SimSpeed _resumeSpeed = SimSpeed.X1;
     private float _uiScaleFactor = UiScale.Default;
+    private Vector2I _lastScaleSize = new(-1, -1);
+    private float _lastScaleScreen = -1f;
+    private float _lastScaleUi = -1f;
 
     /// <summary>
     /// Gets or sets whether the keyboard 1-3 speed hotkeys stop changing the speed. The build menu sets it while
@@ -63,8 +66,9 @@ public sealed partial class HudRoot : Control
     public NodePath HostPath { get; set; } = new("../../SimHost");
 
     /// <summary>
-    /// Gets or sets the UI scale, from <see cref="UiScale.Minimum"/> to <see cref="UiScale.Maximum"/>. It is applied to the root
-    /// window's <c>content_scale_factor</c>, so it scales every control in the game. There is no settings screen yet
+    /// Gets or sets the UI scale, from <see cref="UiScale.Minimum"/> to <see cref="UiScale.Maximum"/>. It feeds the
+    /// window scale policy (<see cref="UiScale.ContentScale"/>) applied to the root window's
+    /// <c>content_scale_factor</c>, so it scales every control in the game. There is no settings screen yet
     /// (M4-05); until then it is set here or with the <c>--ui-scale=N</c> launch argument.
     /// </summary>
     [Export(PropertyHint.Range, "0.75,1.5,0.05")]
@@ -76,7 +80,7 @@ public sealed partial class HudRoot : Control
             _uiScaleFactor = UiScale.Clamp(value);
             if (IsInsideTree())
             {
-                GetWindow().ContentScaleFactor = _uiScaleFactor;
+                ApplyContentScale();
             }
         }
     }
@@ -89,7 +93,8 @@ public sealed partial class HudRoot : Control
             _uiScaleFactor = requested;
         }
 
-        GetWindow().ContentScaleFactor = _uiScaleFactor;
+        GetWindow().SizeChanged += ApplyContentScale;
+        ApplyContentScale();
 
         _host = GetNodeOrNull<SimHost>(HostPath);
         if (_host is null)
@@ -121,6 +126,7 @@ public sealed partial class HudRoot : Control
     /// <inheritdoc />
     public override void _ExitTree()
     {
+        GetWindow().SizeChanged -= ApplyContentScale;
         if (_host is not null)
         {
             _host.EventsDrained -= OnEventsDrained;
@@ -135,6 +141,11 @@ public sealed partial class HudRoot : Control
     /// <inheritdoc />
     public override void _Process(double delta)
     {
+        // The window size and the screen scale can both change without a scene reload (a resize, or the window
+        // moving to a display with another HiDPI scale), so the content scale is re-applied every frame; it only
+        // touches the window when the inputs changed.
+        ApplyContentScale();
+
         // Built again if the host starts another world, because that loads its content afresh.
         if (_host is { IsRunning: true } host && !ReferenceEquals(_builtFor, host.Content))
         {
@@ -196,6 +207,45 @@ public sealed partial class HudRoot : Control
         {
             hudFocus.ReleaseFocus();
             GetViewport().SetInputAsHandled();
+        }
+    }
+
+    /// <summary>
+    /// Applies the window scale policy to the root window: the HiDPI screen scale times the UI scale setting times
+    /// the window-size factor (<see cref="UiScale.ContentScale"/>). It re-applies on window resize (through the
+    /// <c>SizeChanged</c> signal) and on a screen change (through the per-frame check in <c>_Process</c>), so the UI
+    /// keeps its 1600 × 900 design size in logical points at any window size and on any display.
+    /// </summary>
+    private void ApplyContentScale()
+    {
+        if (!IsInsideTree())
+        {
+            return;
+        }
+
+        Window window = GetWindow();
+        Vector2I size = window.Size;
+        float screen = DisplayServer.ScreenGetScale((int)DisplayServer.ScreenOfMainWindow);
+        if (size == _lastScaleSize && screen == _lastScaleScreen && _uiScaleFactor == _lastScaleUi)
+        {
+            return;
+        }
+
+        _lastScaleSize = size;
+        _lastScaleScreen = screen;
+        _lastScaleUi = _uiScaleFactor;
+        // Window.Size counts physical pixels (backing store); the policy works in logical points.
+        float pointsW = UiScale.PointsFromPixels(size.X, screen);
+        float pointsH = UiScale.PointsFromPixels(size.Y, screen);
+        float scale = UiScale.ContentScale(pointsW, pointsH, screen, _uiScaleFactor);
+        if (Math.Abs(window.ContentScaleFactor - scale) > 0.0001f)
+        {
+            window.ContentScaleFactor = scale;
+        }
+
+        if (OS.IsDebugBuild())
+        {
+            GD.Print($"[Evenmere] UI: content scale {scale:F3} (window {pointsW:F0}x{pointsH:F0} points, {size.X}x{size.Y} px, screen {screen:F2}, setting {_uiScaleFactor:F2}).");
         }
     }
 

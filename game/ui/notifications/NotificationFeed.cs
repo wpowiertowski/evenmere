@@ -60,6 +60,10 @@ public sealed partial class NotificationFeed : Control
     private VBoxContainer? _toastBox;
     private Button? _feedButton;
     private PanelContainer? _advicePanel;
+    private bool _menuForced;
+    private bool _savedAdviceCollapsed;
+    private bool _savedHistoryVisible;
+    private BuildMenu.BuildMenu? _buildMenu;
     private Control? _toggles;
 
     /// <summary>Gets or sets the path to the research/civics toggle buttons, whose bottom edge this column stacks under.</summary>
@@ -99,6 +103,10 @@ public sealed partial class NotificationFeed : Control
     [Export]
     public NodePath CulturePath { get; set; } = new("../CulturePanel");
 
+    /// <summary>Gets or sets the path to the build menu, which the feed yields to while it is open.</summary>
+    [Export]
+    public NodePath BuildMenuPath { get; set; } = new("../BuildMenu");
+
     /// <inheritdoc />
     public override void _Ready()
     {
@@ -115,6 +123,7 @@ public sealed partial class NotificationFeed : Control
 
         _host = GetNodeOrNull<SimHost>(HostPath);
         _rig = GetNodeOrNull<CameraRig>(RigPath);
+        _buildMenu = GetNodeOrNull<BuildMenu.BuildMenu>(BuildMenuPath);
         if (_host is null)
         {
             GD.PushError($"[Evenmere] notifications: no SimHost at '{HostPath}'; the feed stays empty.");
@@ -137,6 +146,22 @@ public sealed partial class NotificationFeed : Control
     /// <inheritdoc />
     public override void _Process(double delta)
     {
+        // While the build menu is open the feed collapses to its header chip (M2-31): the pinned-notes panel
+        // shrinks to its Watching header, the history hides and the toasts pause out of sight, so nothing covers
+        // the menu's left part. Closing the menu restores everything exactly as it was.
+        bool menuOpen = _buildMenu is { IsOpen: true };
+        if (menuOpen != _menuForced)
+        {
+            if (menuOpen)
+            {
+                CollapseForMenu();
+            }
+            else
+            {
+                RestoreAfterMenu();
+            }
+        }
+
         TickToasts(delta);
         LayoutLeftColumn();
 
@@ -803,6 +828,13 @@ public sealed partial class NotificationFeed : Control
         var header = new Button { FocusMode = Control.FocusModeEnum.All };
         header.Pressed += () =>
         {
+            // While the build menu forces the collapse, the header stays as it is: expanding under the menu would
+            // cover the menu's left part again.
+            if (_menuForced)
+            {
+                return;
+            }
+
             _adviceCollapsed = !_adviceCollapsed;
             LayoutAdvice();
         };
@@ -861,6 +893,48 @@ public sealed partial class NotificationFeed : Control
                 _advicePanel.OffsetBottom = panelTop + height;
             }
         }
+    }
+
+    // Collapses the feed to its header chip while the build menu is open: the pinned-notes panel shrinks to its
+    // Watching header, the history hides and the toasts hide (their timers keep running, so survivors reappear on
+    // close). Every previous state is saved for RestoreAfterMenu.
+    private void CollapseForMenu()
+    {
+        _menuForced = true;
+        _savedAdviceCollapsed = _adviceCollapsed;
+        _savedHistoryVisible = _history?.Visible ?? false;
+        _adviceCollapsed = true;
+        if (_history is not null)
+        {
+            _history.Visible = false;
+        }
+
+        if (_toastBox is not null)
+        {
+            _toastBox.Visible = false;
+        }
+
+        RetitleAdvice();
+        LayoutAdvice();
+    }
+
+    // Brings the feed back exactly as it was before the build menu opened.
+    private void RestoreAfterMenu()
+    {
+        _menuForced = false;
+        _adviceCollapsed = _savedAdviceCollapsed;
+        if (_history is not null)
+        {
+            _history.Visible = _savedHistoryVisible;
+        }
+
+        if (_toastBox is not null)
+        {
+            _toastBox.Visible = true;
+        }
+
+        RetitleAdvice();
+        LayoutAdvice();
     }
 
     // Sizes the panel to its content, capped at 40% of the viewport height; beyond that the rows scroll.

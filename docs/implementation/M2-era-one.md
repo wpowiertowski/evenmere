@@ -24,7 +24,7 @@ From M2 onward, every task lands through a **PR with green CI**.
 | Wave | Tasks |
 | --- | --- |
 | 0 | M2-00 |
-| A | M2-01, M2-04, M2-05, M2-07, M2-08, M2-09, M2-10, M2-14, M2-15, M2-26, M2-29, M2-30 |
+| A | M2-01, M2-04, M2-05, M2-07, M2-08, M2-09, M2-10, M2-14, M2-15, M2-26, M2-29, M2-30, M2-31 |
 | B | M2-02, M2-11, M2-12, M2-16, M2-18, M2-19, M2-20, M2-21, M2-22 |
 | C | M2-03, M2-06, M2-13, M2-24, M2-25, M2-27 |
 | D | M2-17, M2-23 |
@@ -65,6 +65,7 @@ From M2 onward, every task lands through a **PR with green CI**.
 | M2-28 | Era I playtest and gate review | human | all M2 tasks | todo |
 | M2-29 | Look development: hand-drawn rendering prototype | game | M1 gate | todo |
 | M2-30 | Upgrade lines: design pass, crew stat and Era I upgrades | human + content | M2-00 | todo |
+| M2-31 | Window and input polish from the M1 playtest | game | M1 gate | done |
 
 ---
 
@@ -714,6 +715,33 @@ From M2 onward, every task lands through a **PR with green CI**.
 - Era I upgrades pass lint, including EVL010.
 - A scenario upgrades a building and shows the workforce demand moving to the new tier.
 - The `crew` stat has unit tests.
+
+---
+
+### M2-31 · Window and input polish from the M1 playtest
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| game | M1 gate | `game/project.godot` ([display] only), `game/host/Main.cs` and `game/host/WindowSetup.cs`, `game/ui/common/UiScale.cs`, `game/ui/hud/HudRoot.cs` (content-scale code only), `game/rendering/camera/**`, `game/ui/menus/PauseMenu.cs` and `PauseMenu.tscn`, `content/locale/en/ui-menus.json`, `game/ui/notifications/**` and `game/ui/build_menu/BuildMenu.cs` (overlap fix only), `tests/Evenmere.Game.Tests/**`, `docs/implementation/M2-era-one.md`, `docs/design/architecture.md` (only if it describes the stretch mode or the UI scale) |
+
+**Reads:** AGENTS.md (§Godot conventions); `game/project.godot`; `game/host/Main.cs` and `WindowSetup.cs`; `game/ui/common/UiScale.cs`; `game/ui/hud/HudRoot.cs`; `game/rendering/camera/`; `game/ui/menus/PauseMenu.cs`; `game/ui/notifications/`; `game/ui/build_menu/BuildMenu.cs`.
+
+**Goal:** the UI keeps its 1600 × 900 design size at any window size, a bigger window shows more island, fullscreen has a mouse- and gamepad-reachable button, the feed stays clear of the build menu, and scrolling a list never zooms the map.
+
+**Steps:**
+
+1. **UI scale policy:** drop the `canvas_items` stretch for the default `disabled` mode and set `ContentScaleFactor` from one pure function — `screenScale × uiScaleSetting × clamp(min(windowPointsW / 1600, windowPointsH / 900), 0.8, 1.0)` — re-applied on resize and screen change. Window sizes arrive as physical pixels on HiDPI macOS, so one shared helper converts them to logical points first.
+2. **Map growth:** set the Camera3D vertical FOV from the window height in points (`tan(fov / 2) = tan(22.5°) × h / 900`, clamped 30°–75°), so one tile covers the same points at any size.
+3. **Fullscreen button:** add a Fullscreen/Windowed button to the pause menu calling the same toggle as `toggle_fullscreen`, with locale keys in `ui-menus.json`.
+4. **Feed overlap:** while the build menu is open the feed collapses to its Watching header chip (history and toasts hide) and restores afterwards.
+5. **Zoom guard:** wheel, trackpad scroll and pinch zoom only when the pointer is over no blocking control; gamepad zoom, edge scroll and drag panning keep their rules.
+
+**Acceptance:**
+
+- `REQUIRE_GODOT=1 scripts/verify.sh` passes and the smoke hashes agree.
+- Screenshots at 1280 × 800, 1600 × 900 and 2560 × 1600 points show same-size HUD chips at the two larger sizes with more island visible, plus a build-menu-open shot with two notices showing.
+- A log line or test shows a wheel event over the build menu leaving the zoom unchanged.
+- Godot-free tests cover the scale policy, the FOV formula, the zoom guard and the button labels.
 
 ---
 
