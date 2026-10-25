@@ -1,5 +1,6 @@
 using System.Reflection;
 using Evenmere.Content;
+using Evenmere.Content.Definitions;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Sim.Queries.Types;
@@ -53,6 +54,11 @@ internal static class CommandSamples
             return (Rotation)(1 + variant);
         }
 
+        if (type == typeof(TraditionSlotType))
+        {
+            return (TraditionSlotType)(variant % Enum.GetValues<TraditionSlotType>().Length);
+        }
+
         if (type == typeof(EntityId))
         {
             return new EntityId(5 + variant);
@@ -75,6 +81,13 @@ internal static class CommandSamples
             array.SetValue(Value(element, variant, content), 0);
             array.SetValue(Value(element, variant + 2, content), 1);
             return array;
+        }
+
+        if (Nullable.GetUnderlyingType(type) is { } underlying)
+        {
+            // Variant 0 carries a value and variant 1 is empty, so the two samples differ. The null is the point
+            // for a nullable parameter, and the caller stores it in an object?[]; the suppression is safe.
+            return variant == 0 ? Value(underlying, variant, content) : null!;
         }
 
         if (IsContentId(type))

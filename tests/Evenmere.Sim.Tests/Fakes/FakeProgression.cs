@@ -21,6 +21,8 @@ internal sealed class FakeProgressionQueries : IProgressionQueries
     private readonly HashSet<TierId> _tiers = [];
     private readonly HashSet<TerrainAccess> _access = [];
     private readonly HashSet<(FeatureKind Feature, GreatWorkTypeId? Type)> _features = [];
+    private readonly HashSet<TraditionId> _traditions = [];
+    private readonly int[] _traditionSlots = new int[Enum.GetValues<TraditionSlotType>().Length];
     private readonly List<(Stat Stat, ModifierContribution Contribution, Func<ModifierContext, bool>? AppliesTo)> _modifiers = [];
     private readonly SortedDictionary<(CounterKind Kind, int Subject), long> _counters = [];
 
@@ -111,6 +113,25 @@ internal sealed class FakeProgressionQueries : IProgressionQueries
     /// <inheritdoc />
     public bool IsUnlocked(TierId tier) => _tiers.Contains(tier);
 
+    /// <summary>Unlocks tradition cards.</summary>
+    /// <param name="traditions">The traditions.</param>
+    /// <returns>This fake.</returns>
+    public FakeProgressionQueries UnlockTraditions(params TraditionId[] traditions)
+    {
+        _traditions.UnionWith(traditions);
+        return this;
+    }
+
+    /// <summary>Sets how many tradition slots of a type have been granted.</summary>
+    /// <param name="slot">The slot type.</param>
+    /// <param name="count">The number of slots.</param>
+    /// <returns>This fake.</returns>
+    public FakeProgressionQueries SetTraditionSlots(TraditionSlotType slot, int count)
+    {
+        _traditionSlots[(int)slot] = count;
+        return this;
+    }
+
     /// <inheritdoc />
     public bool HasAccess(TerrainAccess access) => _access.Contains(access);
 
@@ -148,6 +169,13 @@ internal sealed class FakeProgressionQueries : IProgressionQueries
     public long Counter(CounterKey key) => _counters.GetValueOrDefault((key.Kind, key.Subject));
 
     /// <inheritdoc />
+    bool IProgressionQueries.IsTraditionUnlocked(TraditionId tradition) => _traditions.Contains(tradition);
+
+    /// <inheritdoc />
+    int IProgressionQueries.TraditionSlotCount(TraditionSlotType slot) =>
+        (uint)slot < (uint)_traditionSlots.Length ? _traditionSlots[(int)slot] : 0;
+
+    /// <inheritdoc />
     public bool Evaluate(Condition condition) => ConditionEvaluator(condition);
 }
 
@@ -162,8 +190,14 @@ internal sealed class FakeProgressionService : IProgressionService
     /// <summary>Gets the sources that were applied, in the order they first were.</summary>
     public IEnumerable<EffectSource> AppliedSources => _calls.Select(static c => c.Source).Distinct();
 
+    /// <summary>Gets the sources that were removed, in order.</summary>
+    public List<EffectSource> RemovedSources { get; } = [];
+
     /// <inheritdoc />
     public void ApplyEffects(EffectSource source, ImmutableArray<Effect> effects) => _calls.Add((source, effects));
+
+    /// <inheritdoc />
+    void IProgressionService.RemoveSource(EffectSource source) => RemovedSources.Add(source);
 }
 
 /// <summary>A points ledger that adds up credits until they are taken, as the real one does.</summary>

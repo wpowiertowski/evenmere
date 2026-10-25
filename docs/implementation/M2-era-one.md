@@ -71,7 +71,7 @@ file per card as listed; never edit another card's file.
 | M2-04 | Bridges and river crossing | sim | M2-00 | todo |
 | M2-05 | Seasons | sim | M2-00 | done |
 | M2-06 | Exploration: fog, expeditions and discoveries | sim | M2-02b, M2-10 | todo |
-| M2-07 | Traditions and slots | sim | M2-00 | todo |
+| M2-07 | Traditions and slots | sim | M2-00 | done |
 | M2-08 | Festivals | sim | M2-00 | todo |
 | M2-09 | Inspirations and the full condition vocabulary | sim | M2-00 | todo |
 | M2-10 | Monuments: multi-stage construction | sim | M2-00 | todo |

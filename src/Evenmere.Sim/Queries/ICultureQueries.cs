@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
+using Evenmere.Sim.Systems.Culture.Traditions;
 
 namespace Evenmere.Sim.Queries;
 
@@ -45,4 +46,23 @@ public interface ICultureQueries
     /// <param name="civic">The civic.</param>
     /// <returns><see langword="true"/> if the inspiration has triggered.</returns>
     bool IsInspired(CivicId civic);
+
+    /// <summary>
+    /// Lists every granted tradition slot with the card it holds, grouped by slot type and then index: one view per
+    /// granted slot, in ascending (slot type, index) order. A view holds <see langword="null"/> when its slot is empty.
+    /// (M2-07.)
+    /// </summary>
+    /// <returns>The slot views.</returns>
+    ImmutableArray<TraditionSlotView> Slots();
+
+    /// <summary>Lists the tradition cards the island has unlocked, in ascending ID order. (M2-07.)</summary>
+    /// <returns>The unlocked traditions.</returns>
+    ImmutableArray<TraditionId> UnlockedTraditions();
+
+    /// <summary>
+    /// Gets the slotted style card, if one is slotted. Style cards carry the <c>style</c> tag and only one may be
+    /// slotted at a time, so this is the island's active architectural style. (M2-07.)
+    /// </summary>
+    /// <returns>The slotted style card, or <see langword="null"/> when none is slotted.</returns>
+    TraditionId? ActiveStyle();
 }

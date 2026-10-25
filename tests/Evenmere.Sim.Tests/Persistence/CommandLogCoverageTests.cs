@@ -1,10 +1,12 @@
 using Evenmere.Content;
+using Evenmere.Content.Definitions;
 using Evenmere.Core.Ids;
 using Evenmere.Sim.Persistence;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Advisors.Commands;
 using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
+using Evenmere.Sim.Systems.Culture.Traditions.Commands;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
 using Evenmere.Sim.Systems.Research.Commands;
@@ -110,6 +112,7 @@ public sealed class CommandLogCoverageTests
                 _ when type == typeof(SetResearchQueue) => new SetResearchQueue([content.IdOf<TechId>("cultivation"), content.IdOf<TechId>("milling")]),
                 _ when type == typeof(SetCivicTarget) => new SetCivicTarget(content.IdOf<CivicId>("hearth_and_shrine")),
                 _ when type == typeof(SetCivicQueue) => new SetCivicQueue([content.IdOf<CivicId>("hearth_and_shrine")]),
+                _ when type == typeof(SetTradition) => new SetTradition(TraditionSlotType.Hearth, 0, null),
                 _ when type == typeof(DismissAdvice) => new DismissAdvice(3),
                 _ => null,
             };

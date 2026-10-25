@@ -24,6 +24,7 @@ M2 gate requires that fixture to migrate and continue deterministically.
   new migration class; a change that alters the meaning of an existing key needs version 3
   and a new class. M2-15 owns the version bump and the 0001→0002 class; each later state
   card states in its PR whether it needed a new class (expected: none).
+- **Two save fixtures (amended in M2-07).** `tests/fixtures/saves/v1-slice.evsave` is the frozen M1 save, the last version-1 file, and is never regenerated: its tests check that it migrates cleanly and continues deterministically. `tests/fixtures/saves/slice-20000.evsave` is the current-version golden, which `EVENMERE_UPDATE_GOLDEN=1` regenerates when state changes.
 - `tests/fixtures/saves/state-keys.json` is re-baselined once by M2-15 and then kept
   current by whichever card adds a key (the baseline test prints the refresh command).
 - `SaveHeader` gains exactly one M2 key: `CheatsUsed` (bool, default false), added by M2-26 with no version bump, so the load list can show it without reading state. No other M2 card touches the header.

@@ -8,6 +8,7 @@ using Evenmere.Sim.State;
 using Evenmere.Sim.Systems.Advisors;
 using Evenmere.Sim.Systems.Construction;
 using Evenmere.Sim.Systems.Culture;
+using Evenmere.Sim.Systems.Culture.Traditions;
 using Evenmere.Sim.Systems.Logistics;
 using Evenmere.Sim.Systems.Map;
 using Evenmere.Sim.Systems.Modifiers;
@@ -197,6 +198,27 @@ internal static class RemapPass
                 }
 
                 state.Queue = [.. kept];
+            }
+
+            // Slotted cards are already sorted by (slot type, index), and the remap keeps that order: it only swaps
+            // the tradition value, which the sort key never reads. (M2-07.)
+            if (state.Slotted.Length > 0)
+            {
+                var slotted = new List<SlottedTradition>(state.Slotted.Length);
+                foreach (SlottedTradition entry in state.Slotted)
+                {
+                    int mapped = tables.MapTradition(entry.Tradition.Value);
+                    if (mapped < 0)
+                    {
+                        Ledger.Add("tradition", tables.OldTraditionName(entry.Tradition.Value), $"slotted card in {entry.Slot} {entry.Index} removed");
+                    }
+                    else
+                    {
+                        slotted.Add(new SlottedTradition(entry.Slot, entry.Index, TraditionId.From(checked((ushort)mapped))));
+                    }
+                }
+
+                state.Slotted = [.. slotted];
             }
         }
 

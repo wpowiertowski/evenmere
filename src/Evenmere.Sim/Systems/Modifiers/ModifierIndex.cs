@@ -42,6 +42,7 @@ internal sealed class ModifierIndex
 
     private readonly ContentDb _content;
     private readonly List<Entry>[] _byStat;
+    private readonly Dictionary<EffectSource, List<SourceRef>> _bySource = new();
     private readonly Dictionary<ulong, CachedAnswer> _cache = [];
     private IModifierEnvironment _environment = DetachedEnvironment.Instance;
 
@@ -119,6 +120,42 @@ internal sealed class ModifierIndex
         }
 
         entries.Insert(index, entry);
+        if (!_bySource.TryGetValue(entry.Source, out List<SourceRef>? refs))
+        {
+            refs = [];
+            _bySource[entry.Source] = refs;
+        }
+
+        refs.Add(new SourceRef((int)modifier.Stat, entry));
+        _cache.Clear();
+    }
+
+    /// <summary>
+    /// Removes every registered modifier of a source, for example when a tradition is unslotted. The reverse index
+    /// finds the source's entries, which are cut out of their stat lists by reference, so only that source's modifiers
+    /// go and every other source keeps its order and its place.
+    /// </summary>
+    /// <param name="source">The source whose modifiers are removed.</param>
+    public void RemoveSource(EffectSource source)
+    {
+        if (!_bySource.Remove(source, out List<SourceRef>? refs))
+        {
+            return;
+        }
+
+        foreach (SourceRef reference in refs)
+        {
+            List<Entry> entries = _byStat[reference.Stat];
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (ReferenceEquals(entries[i], reference.Entry))
+                {
+                    entries.RemoveAt(i);
+                    break;
+                }
+            }
+        }
+
         _cache.Clear();
     }
 
@@ -329,6 +366,11 @@ internal sealed class ModifierIndex
         int Percent,
         Condition? When,
         WhenKind WhenKind);
+
+    /// <summary>Where one indexed modifier lives: its stat list and the entry itself, for the source reverse index.</summary>
+    /// <param name="Stat">The index into the per-stat lists.</param>
+    /// <param name="Entry">The indexed entry.</param>
+    private readonly record struct SourceRef(int Stat, Entry Entry);
 
     private readonly record struct CachedAnswer(int Fixed, Entry[]? Dynamic);
 

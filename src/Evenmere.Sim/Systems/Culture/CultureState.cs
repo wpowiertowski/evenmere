@@ -1,6 +1,8 @@
+using Evenmere.Content;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Sim.Persistence;
+using Evenmere.Sim.Systems.Culture.Traditions;
 using MessagePack;
 
 namespace Evenmere.Sim.Systems.Culture;
@@ -49,11 +51,21 @@ public sealed class CultureState
     [Key(6)]
     public Amount PointsPerDay { get; set; }
 
+    /// <summary>
+    /// Gets or sets the slotted tradition cards, sorted by (slot type, index). Slot counts stay in
+    /// <see cref="Progression.ProgressionState.TraditionSlots"/>; the cards ride the version-2 save with load-safe
+    /// defaults (no slot is slotted), so no migration class is needed. (M2-07.)
+    /// </summary>
+    [Key(7)]
+    [ContentValued(ContentKind.Tradition)]
+    public SlottedTradition[] Slotted { get; set; } = [];
+
     /// <summary>Grows the progress array and the bitsets to the loaded content's civic count, keeping any values a loaded state already holds.</summary>
     /// <param name="civicCount">The number of civics in the content.</param>
     internal void EnsureSlots(int civicCount)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(civicCount);
+        Slotted ??= [];
         if (Progress.Length < civicCount)
         {
             var grown = new Amount[civicCount];

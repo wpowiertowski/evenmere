@@ -70,4 +70,14 @@ public interface IProgressionQueries
     /// <param name="condition">The condition.</param>
     /// <returns><see langword="true"/> if it holds.</returns>
     bool Evaluate(Condition condition);
+
+    /// <summary>Tests whether a tradition card has been unlocked. (M2-07.)</summary>
+    /// <param name="tradition">The tradition.</param>
+    /// <returns><see langword="true"/> if it is unlocked.</returns>
+    bool IsTraditionUnlocked(TraditionId tradition);
+
+    /// <summary>Counts the tradition slots of a type that effects have granted. (M2-07.)</summary>
+    /// <param name="slot">The slot type.</param>
+    /// <returns>The number of slots; zero or more.</returns>
+    int TraditionSlotCount(TraditionSlotType slot);
 }

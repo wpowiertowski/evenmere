@@ -250,6 +250,24 @@
       "6": {
         "Member": "property PointsPerDay",
         "Type": "Evenmere.Core.Numerics.Amount"
+      },
+      "7": {
+        "Member": "property Slotted",
+        "Type": "Evenmere.Sim.Systems.Culture.Traditions.SlottedTradition[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Culture.Traditions.SlottedTradition": {
+      "0": {
+        "Member": "property Slot",
+        "Type": "Evenmere.Content.Definitions.TraditionSlotType"
+      },
+      "1": {
+        "Member": "property Index",
+        "Type": "System.Int32"
+      },
+      "2": {
+        "Member": "property Tradition",
+        "Type": "Evenmere.Core.Ids.TraditionId"
       }
     },
     "Evenmere.Sim.Systems.Logistics.LogisticsState": {

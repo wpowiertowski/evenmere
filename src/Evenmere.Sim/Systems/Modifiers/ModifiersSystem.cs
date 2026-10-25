@@ -87,6 +87,35 @@ internal sealed class ModifiersSystem : ISimSystem
     /// <param name="environment">The environment.</param>
     internal void Attach(IModifierEnvironment environment) => Index.Attach(environment);
 
+    /// <summary>
+    /// Removes every modifier of a source from the state and the index, for example when a tradition is unslotted.
+    /// Sources that never applied anything change nothing. (M2-07.)
+    /// </summary>
+    /// <param name="source">The source whose modifiers are removed.</param>
+    public void RemoveSource(EffectSource source)
+    {
+        Index.RemoveSource(source);
+
+        ActiveModifier[] active = _state.Active;
+        int kept = 0;
+        for (int i = 0; i < active.Length; i++)
+        {
+            // The kept prefix sits at the front of the same array and never passes the entry being read, so compacting
+            // in place is safe: active[kept] is written only after active[i] has been checked.
+            if (!active[i].Source.Equals(source))
+            {
+                active[kept++] = active[i];
+            }
+        }
+
+        if (kept != active.Length)
+        {
+            var shrunk = new ActiveModifier[kept];
+            Array.Copy(active, shrunk, kept);
+            _state.Active = shrunk;
+        }
+    }
+
     private static ActiveModifier Describe(EffectSource source, ModifierEffect effect)
     {
         var record = new ActiveModifier

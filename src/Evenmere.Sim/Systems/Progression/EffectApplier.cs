@@ -65,6 +65,22 @@ internal sealed class EffectApplier : IProgressionService, IBindsContext
         }
     }
 
+    /// <inheritdoc />
+    void IProgressionService.RemoveSource(EffectSource source)
+    {
+        EffectSource[] applied = _state.AppliedSources;
+        int at = Array.BinarySearch(applied, source, Comparer<EffectSource>.Create(ProgressionState.Compare));
+        if (at >= 0)
+        {
+            var shrunk = new EffectSource[applied.Length - 1];
+            Array.Copy(applied, shrunk, at);
+            Array.Copy(applied, at + 1, shrunk, at, shrunk.Length - at);
+            _state.AppliedSources = shrunk;
+        }
+
+        _modifiers.RemoveSource(source);
+    }
+
     private bool TryRecord(EffectSource source)
     {
         EffectSource[] applied = _state.AppliedSources;

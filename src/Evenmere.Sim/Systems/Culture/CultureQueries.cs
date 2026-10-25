@@ -1,8 +1,10 @@
 using System.Collections.Immutable;
 using Evenmere.Content;
+using Evenmere.Content.Definitions;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Systems.Culture.Traditions;
 
 namespace Evenmere.Sim.Systems.Culture;
 
@@ -52,6 +54,68 @@ internal sealed class CultureQueries : ICultureQueries
 
     /// <inheritdoc />
     public bool IsInspired(CivicId civic) => CultureMath.IsInspired(_state, _content, civic);
+
+    /// <inheritdoc />
+    ImmutableArray<TraditionSlotView> ICultureQueries.Slots()
+    {
+        IProgressionQueries progression = _queries().Progression;
+        ImmutableArray<TraditionSlotView>.Builder builder = ImmutableArray.CreateBuilder<TraditionSlotView>();
+        foreach (TraditionSlotType slot in Enum.GetValues<TraditionSlotType>())
+        {
+            int count = progression.TraditionSlotCount(slot);
+            for (int index = 0; index < count; index++)
+            {
+                builder.Add(new TraditionSlotView(slot, index, TraditionSlots.Find(_state.Slotted, slot, index)));
+            }
+        }
+
+        return builder.ToImmutable();
+    }
+
+    /// <inheritdoc />
+    ImmutableArray<TraditionId> ICultureQueries.UnlockedTraditions()
+    {
+        IProgressionQueries progression = _queries().Progression;
+        ImmutableArray<TraditionId>.Builder builder = ImmutableArray.CreateBuilder<TraditionId>();
+        for (int i = 0; i < _content.Traditions.Count; i++)
+        {
+            var tradition = TraditionId.From(checked((ushort)i));
+            if (progression.IsTraditionUnlocked(tradition))
+            {
+                builder.Add(tradition);
+            }
+        }
+
+        return builder.ToImmutable();
+    }
+
+    /// <inheritdoc />
+    TraditionId? ICultureQueries.ActiveStyle()
+    {
+        foreach (SlottedTradition entry in _state.Slotted)
+        {
+            if ((uint)entry.Tradition.Value < (uint)_content.Traditions.Count
+                && HasTag(_content.Get(entry.Tradition).Tags, TraditionSlots.StyleTag))
+            {
+                return entry.Tradition;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool HasTag(ImmutableArray<string> tags, string tag)
+    {
+        foreach (string candidate in tags)
+        {
+            if (string.Equals(candidate, tag, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private int EraOrder()
     {
