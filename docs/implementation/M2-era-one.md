@@ -64,7 +64,7 @@ file per card as listed; never edit another card's file.
 | ID | Title | Lane | Depends on | Status |
 | --- | --- | --- | --- | --- |
 | M2-00 | Kickoff: refine M2 cards against the code | sim | M1 gate | done |
-| M2-01 | Island generator: heightmap, coast and biomes | sim | M2-00 | todo |
+| M2-01 | Island generator: heightmap, coast and biomes | sim | M2-00 | done |
 | M2-02a | Rivers, fertility and deposits | sim | M2-01 | todo |
 | M2-02b | Regions, discoveries, start guarantee and generated new games | sim | M2-02a | todo |
 | M2-03 | Map generation preview CLI and seed gallery | tools | M2-02b | todo |
