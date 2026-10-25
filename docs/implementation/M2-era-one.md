@@ -17,6 +17,7 @@ From M2 onward, every task lands through a **PR with green CI**.
 - [ ] **Migrations:** the M1 save fixture loads through the migration framework.
 - [ ] **Playtest:** the developer plays a generated island to Era II and signs off on calmness, pacing and clarity.
 - [ ] **Lint:** EVL010 (the staffing rule) passes on all content.
+- [ ] **Gamepad:** the build is playable with a gamepad at 1280 × 800. This is carried over from the M1 gate, where it was waived for lack of a controller.
 
 **Waves:**
 

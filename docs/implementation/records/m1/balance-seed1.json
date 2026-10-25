@@ -1,0 +1,277 @@
+{
+  "deterministic": {
+    "script": "slice",
+    "seed": 1,
+    "ticks": 8408,
+    "minutes": 35.03333333333333,
+    "target": {
+      "tier": "villagers",
+      "residents": 100,
+      "reached": true,
+      "reachedTick": 8406
+    },
+    "milestones": {
+      "tier": "villagers",
+      "firstTick": 975,
+      "fiftyTick": 7599,
+      "hundredTick": 8406
+    },
+    "goals": [
+      {
+        "index": 0,
+        "kind": "research",
+        "target": "cultivation",
+        "status": "done",
+        "ticks": 1080
+      },
+      {
+        "index": 1,
+        "kind": "civic",
+        "target": "hearth_and_shrine",
+        "status": "done",
+        "ticks": 1440
+      },
+      {
+        "index": 2,
+        "kind": "build",
+        "target": "market x1",
+        "status": "done",
+        "ticks": 2
+      },
+      {
+        "index": 3,
+        "kind": "build",
+        "target": "settler_house x7",
+        "status": "done",
+        "ticks": 21
+      },
+      {
+        "index": 4,
+        "kind": "lockHouses",
+        "target": "7 locked",
+        "status": "done",
+        "ticks": 118
+      },
+      {
+        "index": 5,
+        "kind": "build",
+        "target": "fishing_hut x1",
+        "status": "done",
+        "ticks": 2
+      },
+      {
+        "index": 6,
+        "kind": "build",
+        "target": "woodcutters_hut x2",
+        "status": "done",
+        "ticks": 4
+      },
+      {
+        "index": 7,
+        "kind": "build",
+        "target": "sawpit x2",
+        "status": "done",
+        "ticks": 4
+      },
+      {
+        "index": 8,
+        "kind": "build",
+        "target": "settler_house x8",
+        "status": "done",
+        "ticks": 3
+      },
+      {
+        "index": 9,
+        "kind": "build",
+        "target": "grain_farm x1",
+        "status": "done",
+        "ticks": 921
+      },
+      {
+        "index": 10,
+        "kind": "build",
+        "target": "settler_house x9",
+        "status": "done",
+        "ticks": 3
+      },
+      {
+        "index": 11,
+        "kind": "build",
+        "target": "shrine x1",
+        "status": "done",
+        "ticks": 355
+      },
+      {
+        "index": 12,
+        "kind": "build",
+        "target": "settler_house x10",
+        "status": "done",
+        "ticks": 3
+      },
+      {
+        "index": 13,
+        "kind": "build",
+        "target": "sheep_farm x1",
+        "status": "done",
+        "ticks": 715
+      },
+      {
+        "index": 14,
+        "kind": "build",
+        "target": "settler_house x11",
+        "status": "done",
+        "ticks": 3
+      },
+      {
+        "index": 15,
+        "kind": "build",
+        "target": "settler_house x12",
+        "status": "done",
+        "ticks": 3
+      },
+      {
+        "index": 16,
+        "kind": "build",
+        "target": "windmill x1",
+        "status": "done",
+        "ticks": 3351
+      },
+      {
+        "index": 17,
+        "kind": "build",
+        "target": "settler_house x13",
+        "status": "done",
+        "ticks": 3
+      },
+      {
+        "index": 18,
+        "kind": "build",
+        "target": "settler_house x14",
+        "status": "done",
+        "ticks": 3
+      },
+      {
+        "index": 19,
+        "kind": "build",
+        "target": "bakery x1",
+        "status": "done",
+        "ticks": 2
+      },
+      {
+        "index": 20,
+        "kind": "build",
+        "target": "settler_house x15",
+        "status": "done",
+        "ticks": 3
+      },
+      {
+        "index": 21,
+        "kind": "build",
+        "target": "settler_house x16",
+        "status": "done",
+        "ticks": 3
+      },
+      {
+        "index": 22,
+        "kind": "build",
+        "target": "weavers_cottage x1",
+        "status": "done",
+        "ticks": 1540
+      },
+      {
+        "index": 23,
+        "kind": "build",
+        "target": "settler_house x17",
+        "status": "done",
+        "ticks": 3
+      },
+      {
+        "index": 24,
+        "kind": "wait",
+        "target": "tick 3600",
+        "status": "done",
+        "ticks": 0
+      },
+      {
+        "index": 25,
+        "kind": "build",
+        "target": "settler_house x19",
+        "status": "done",
+        "ticks": 6
+      },
+      {
+        "index": 26,
+        "kind": "build",
+        "target": "shrine x2",
+        "status": "done",
+        "ticks": 2
+      },
+      {
+        "index": 27,
+        "kind": "housesUntil",
+        "target": "100 villagers",
+        "status": "done",
+        "ticks": 1308
+      }
+    ],
+    "stalls": [],
+    "issued": {
+      "PlaceBuilding": 40,
+      "PlaceRoad": 5,
+      "SetCivicTarget": 1,
+      "SetHouseUpgradeLock": 7,
+      "SetResearchQueue": 1,
+      "SetResearchTarget": 1
+    },
+    "rejected": {},
+    "residents": {
+      "settlers": 66,
+      "villagers": 100
+    },
+    "stock": {
+      "bread": 12.22,
+      "fish": 55.732,
+      "flour": 16,
+      "grain": 0,
+      "homespun": 4.83,
+      "timber": 30,
+      "wood": 7.174,
+      "wool": 36
+    },
+    "notes": [
+      "OutsideStorehouseReach for fishing_hut #10: connecting a road.",
+      "OutsideStorehouseReach persists for #10: adding storehouse.",
+      "no unlocked producer for bread (needed for bread).",
+      "no unlocked producer for homespun (needed for homespun).",
+      "OutsideStorehouseReach for grain_farm #30: connecting a road.",
+      "OutsideStorehouseReach persists for #30: adding storehouse.",
+      "no unlocked producer for bread (needed for bread).",
+      "no unlocked producer for homespun (needed for homespun).",
+      "no unlocked producer for bread (needed for bread).",
+      "no unlocked producer for homespun (needed for homespun).",
+      "wood short: adding woodcutters_hut.",
+      "house #55 lacks Market coverage: adding market at (18, 91).",
+      "no unlocked producer for bread (needed for bread).",
+      "no unlocked producer for homespun (needed for homespun).",
+      "no unlocked producer for bread (needed for bread).",
+      "no unlocked producer for homespun (needed for homespun).",
+      "no unlocked producer for bread (needed for bread).",
+      "no unlocked producer for homespun (needed for homespun).",
+      "no unlocked producer for bread (needed for bread).",
+      "no unlocked producer for homespun (needed for homespun).",
+      "no unlocked producer for bread (needed for bread).",
+      "no unlocked producer for homespun (needed for homespun).",
+      "bread short: adding windmill.",
+      "no unlocked producer for homespun (needed for homespun).",
+      "wood short: adding woodcutters_hut.",
+      "no unlocked producer for homespun (needed for homespun).",
+      "homespun short: a weavers_cottage is already being built."
+    ],
+    "hash": "8a20cb582e71ef02"
+  },
+  "timings": {
+    "ticksRun": 8408,
+    "meanMsPerTick": 0.012805419600380591,
+    "peakMsPerTick": 6.0043750000000005
+  }
+}
