@@ -8,6 +8,7 @@ using Evenmere.Sim.Queries;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Services;
 using Evenmere.Sim.Systems.Culture.Commands;
+using Evenmere.Sim.Systems.Culture.Traditions;
 using Evenmere.Sim.Systems.Progression;
 using Evenmere.Sim.Systems.Research;
 
@@ -64,6 +65,9 @@ internal sealed class CultureSystem : ISimSystem
 
         router.Register(new SetCivicTargetHandler(_state, _content));
         router.Register(new SetCivicQueueHandler(_state, _content));
+
+        // traditions (M2-07)
+        router.Register(new SetTraditionHandler(_state, _content));
     }
 
     /// <inheritdoc />

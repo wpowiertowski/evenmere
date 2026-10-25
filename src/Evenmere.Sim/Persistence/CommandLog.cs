@@ -3,6 +3,7 @@ using Evenmere.Core.Ids;
 using Evenmere.Sim.Systems.Advisors.Commands;
 using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
+using Evenmere.Sim.Systems.Culture.Traditions.Commands;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
 using Evenmere.Sim.Systems.Research.Commands;
@@ -253,6 +254,17 @@ public sealed class CommandLogReader
                     }
 
                     return queue with { Queue = [.. kept] };
+                }
+
+            case SetTradition tradition:
+                {
+                    if (tradition.Tradition is not { } card)
+                    {
+                        return tradition;
+                    }
+
+                    int mapped = _tables.MapTradition(card.Value);
+                    return mapped < 0 ? null : tradition with { Tradition = TraditionId.From(checked((ushort)mapped)) };
                 }
 
             default:

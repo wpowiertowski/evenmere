@@ -157,12 +157,12 @@ public sealed class SaveRemapSliceTests
 
     private static (ISimulation Simulation, SaveReport Report) ReadFixture(ContentDb content)
     {
-        if (!File.Exists(SaveFixtureTests.FixturePath))
+        if (!File.Exists(SaveFixtureTests.CurrentFixturePath))
         {
-            Assert.Fail($"The save fixture is missing: run with EVENMERE_UPDATE_GOLDEN=1 to generate {SaveFixtureTests.FixturePath}.");
+            Assert.Fail($"The save fixture is missing: run with EVENMERE_UPDATE_GOLDEN=1 to generate {SaveFixtureTests.CurrentFixturePath}.");
         }
 
-        using FileStream stream = File.OpenRead(SaveFixtureTests.FixturePath);
+        using FileStream stream = File.OpenRead(SaveFixtureTests.CurrentFixturePath);
         return SaveGame.Read(stream, content);
     }
 }

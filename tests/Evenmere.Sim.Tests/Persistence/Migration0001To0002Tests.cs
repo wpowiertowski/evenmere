@@ -8,9 +8,10 @@ using Evenmere.Sim.Tests.Integration;
 namespace Evenmere.Sim.Tests.Persistence;
 
 /// <summary>
-/// M2-15: the version-1 to version-2 migration (ADR-0018). The committed v1 slice fixture loads through the migration
+/// M2-15: the version-1 to version-2 migration (ADR-0018). The frozen v1 slice fixture loads through the migration
 /// chain and continues to the same hash as an uninterrupted run, and every fixture in <c>tests/fixtures/saves/</c>
-/// steps to the current version.
+/// steps to the current version. Older fixtures pin migration, not bytes: their stored v1 hashes cannot equal the
+/// migrated state, since migration adds keys by design.
 /// </summary>
 public sealed class Migration0001To0002Tests
 {
@@ -70,15 +71,33 @@ public sealed class Migration0001To0002Tests
 
         foreach (string fixture in fixtures)
         {
+            ushort version = SaveFixtureFormat.ReadEnvelopeVersion(fixture);
+            version.ShouldBeLessThanOrEqualTo(SaveFormat.CurrentVersion);
+
             using FileStream stream = File.OpenRead(fixture);
             (ISimulation simulation, SaveReport report) = SaveGame.Read(stream, SiteFinder.Content);
             simulation.CurrentTick.ShouldBeGreaterThan(0);
 
-            stream.Position = 0;
-            SaveGame.ReadStateHash(stream).ShouldBe(simulation.ComputeStateHash());
+            if (version < SaveFormat.CurrentVersion)
+            {
+                // An older save cannot pin the migrated bytes, so it pins the migration instead: it must load cleanly.
+                report.IsClean.ShouldBeTrue();
+            }
+            else
+            {
+                stream.Position = 0;
+                SaveGame.ReadStateHash(stream).ShouldBe(simulation.ComputeStateHash());
+            }
 
             // The v1 slice fixture migrates silently: its tables match the content, so nothing is remapped or dropped.
             if (Path.GetFileName(fixture) == "v1-slice.evsave")
+            {
+                version.ShouldBe((ushort)1);
+                simulation.CurrentTick.ShouldBe(20_000);
+                report.IsClean.ShouldBeTrue();
+            }
+
+            if (Path.GetFileName(fixture) == "slice-20000.evsave")
             {
                 simulation.CurrentTick.ShouldBe(20_000);
                 report.IsClean.ShouldBeTrue();

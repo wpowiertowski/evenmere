@@ -30,4 +30,16 @@ public enum RejectReason
 
     /// <summary>The target may not be changed this way, such as demolishing the Founders' Hall.</summary>
     Protected = 7,
+
+    /// <summary>A tradition card is not unlocked, or the content does not define it. (M2-07.)</summary>
+    TraditionNotUnlocked = 8,
+
+    /// <summary>A tradition card does not fit the slot, or the slot does not exist. (M2-07.)</summary>
+    SlotMismatch = 9,
+
+    /// <summary>A tradition card is already slotted in another slot. (M2-07.)</summary>
+    AlreadySlotted = 10,
+
+    /// <summary>A style card is already slotted, and only one style may be active at a time. (M2-07.)</summary>
+    StyleAlreadySlotted = 11,
 }

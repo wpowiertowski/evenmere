@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Evenmere.Content;
+using Evenmere.Content.Definitions;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Sim.Queries.Types;
@@ -33,6 +34,7 @@ internal static class ScenarioJson
             new EntityIdJsonConverter(),
             new TileCoordJsonConverter(),
             new RotationJsonConverter(),
+            new TraditionSlotTypeJsonConverter(),
             new ContentIdJsonConverterFactory(content),
         },
     };
@@ -128,6 +130,26 @@ internal static class ScenarioJson
 
         public override void Write(Utf8JsonWriter writer, Rotation value, JsonSerializerOptions options) =>
             writer.WriteNumberValue((int)value);
+    }
+
+    /// <summary>
+    /// Reads a <see cref="TraditionSlotType"/> from its snake_case name (<c>hearth</c>, <c>craft</c>, <c>heritage</c>,
+    /// <c>wild</c>), case-insensitively. Added for <c>SetTradition</c> (M2-07): without it System.Text.Json would only
+    /// accept the enum's numbers.
+    /// </summary>
+    private sealed class TraditionSlotTypeJsonConverter : JsonConverter<TraditionSlotType>
+    {
+        /// <inheritdoc />
+        public override TraditionSlotType Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+            reader.TokenType == JsonTokenType.String
+            && Enum.TryParse<TraditionSlotType>(reader.GetString(), ignoreCase: true, out TraditionSlotType slot)
+            && Enum.IsDefined(slot)
+                ? slot
+                : throw new JsonException("A tradition slot type is one of \"hearth\", \"craft\", \"heritage\" or \"wild\".");
+
+        /// <inheritdoc />
+        public override void Write(Utf8JsonWriter writer, TraditionSlotType value, JsonSerializerOptions options) =>
+            writer.WriteStringValue(value.ToString().ToLowerInvariant());
     }
 
     /// <summary>Makes a converter for each content ID type (<c>GoodId</c>, <c>BuildingTypeId</c> and so on) that reads the item's string id.</summary>

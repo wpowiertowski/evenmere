@@ -1,0 +1,9 @@
+{
+  "id": "test_style_b",
+  "slot": "heritage",
+  "effects": [
+    { "modifier": { "stat": "attractiveness", "percent": 7 } }
+  ],
+  "tags": ["style"],
+  "style": "test_b"
+}

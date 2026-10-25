@@ -1,8 +1,10 @@
+using Evenmere.Content.Definitions;
 using Evenmere.Core.Ids;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Advisors.Commands;
 using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
+using Evenmere.Sim.Systems.Culture.Traditions.Commands;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
 using Evenmere.Sim.Systems.Research.Commands;
@@ -99,6 +101,13 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
                 }
 
                 break;
+            case SetTradition tradition:
+                writer.WriteArrayHeader(4);
+                writer.Write((byte)tradition.Slot);
+                writer.Write(tradition.Index);
+                writer.Write(tradition.Tradition.HasValue);
+                writer.Write(tradition.Tradition is { } card ? card.Value : (ushort)0);
+                break;
             case DismissAdvice dismiss:
                 writer.WriteArrayHeader(1);
                 writer.Write(dismiss.AdviceId);
@@ -144,6 +153,7 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
                 nameof(SetResearchQueue) => ReadSetResearchQueue(ref reader),
                 nameof(SetCivicTarget) => ReadSetCivicTarget(ref reader),
                 nameof(SetCivicQueue) => ReadSetCivicQueue(ref reader),
+                nameof(SetTradition) => ReadSetTradition(ref reader),
                 nameof(DismissAdvice) => ReadDismissAdvice(ref reader),
                 _ => throw new MessagePackSerializationException($"The command log names an unknown command type '{name}'."),
             };
@@ -295,6 +305,21 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
         }
 
         return new SetCivicQueue(queue);
+    }
+
+    private static SetTradition ReadSetTradition(ref MessagePackReader reader)
+    {
+        ExpectFields(ref reader, 4);
+        var slot = (TraditionSlotType)reader.ReadByte();
+        int index = reader.ReadInt32();
+        bool slotted = reader.ReadBoolean();
+        ushort value = reader.ReadUInt16();
+        if (!Enum.IsDefined(slot))
+        {
+            throw new InvalidOperationException($"A logged SetTradition names no tradition slot type ({(byte)slot}).");
+        }
+
+        return new SetTradition(slot, index, slotted ? TraditionId.From(value) : null);
     }
 
     private static DismissAdvice ReadDismissAdvice(ref MessagePackReader reader)

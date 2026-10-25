@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Systems.Culture.Traditions;
 
 namespace Evenmere.Sim.Tests.Fakes;
 
@@ -78,6 +79,15 @@ internal sealed class FakeCultureQueries : ICultureQueries
     private readonly HashSet<CivicId> _available = [];
     private readonly HashSet<CivicId> _inspired = [];
 
+    /// <summary>Gets or sets the granted tradition slots with their slotted cards, as <see cref="ICultureQueries.Slots"/> returns them.</summary>
+    public ImmutableArray<TraditionSlotView> SlotViews { get; set; } = [];
+
+    /// <summary>Gets or sets the unlocked tradition cards, in ascending ID order.</summary>
+    public ImmutableArray<TraditionId> Unlocked { get; set; } = [];
+
+    /// <summary>Gets or sets the slotted style card, or <see langword="null"/> when none is slotted.</summary>
+    public TraditionId? Style { get; set; }
+
     /// <inheritdoc />
     public CivicId? Target { get; set; }
 
@@ -119,6 +129,15 @@ internal sealed class FakeCultureQueries : ICultureQueries
 
     /// <inheritdoc />
     public bool IsInspired(CivicId civic) => _inspired.Contains(civic);
+
+    /// <inheritdoc />
+    ImmutableArray<TraditionSlotView> ICultureQueries.Slots() => SlotViews;
+
+    /// <inheritdoc />
+    ImmutableArray<TraditionId> ICultureQueries.UnlockedTraditions() => Unlocked;
+
+    /// <inheritdoc />
+    TraditionId? ICultureQueries.ActiveStyle() => Style;
 
     private static void Set(HashSet<CivicId> set, CivicId civic, bool member)
     {

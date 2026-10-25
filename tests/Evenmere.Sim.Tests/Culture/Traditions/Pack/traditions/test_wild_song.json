@@ -1,0 +1,8 @@
+{
+  "id": "test_wild_song",
+  "slot": "wild",
+  "effects": [
+    { "modifier": { "stat": "productivity", "percent": 10 } }
+  ],
+  "tags": []
+}

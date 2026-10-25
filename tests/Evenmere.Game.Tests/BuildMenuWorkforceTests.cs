@@ -138,5 +138,9 @@ public sealed class BuildMenuWorkforceTests
         public long Counter(CounterKey key) => 0;
 
         public bool Evaluate(Condition condition) => true;
+
+        bool IProgressionQueries.IsTraditionUnlocked(TraditionId tradition) => true;
+
+        int IProgressionQueries.TraditionSlotCount(TraditionSlotType slot) => 1;
     }
 }

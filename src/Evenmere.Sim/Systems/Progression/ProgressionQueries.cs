@@ -69,6 +69,12 @@ internal sealed class ProgressionQueries : IProgressionQueries
         (uint)slot < (uint)_state.TraditionSlots.Length ? _state.TraditionSlots[(int)slot] : 0;
 
     /// <inheritdoc />
+    bool IProgressionQueries.IsTraditionUnlocked(TraditionId tradition) => IsUnlocked(tradition);
+
+    /// <inheritdoc />
+    int IProgressionQueries.TraditionSlotCount(TraditionSlotType slot) => TraditionSlots(slot);
+
+    /// <inheritdoc />
     public bool HasAccess(TerrainAccess access) => ((int)access is >= 0 and < 64) && (_state.TerrainAccessFlags & (1UL << (int)access)) != 0;
 
     /// <inheritdoc />
