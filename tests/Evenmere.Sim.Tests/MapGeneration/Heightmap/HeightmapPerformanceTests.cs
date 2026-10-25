@@ -7,6 +7,7 @@ namespace Evenmere.Sim.Tests.MapGeneration.Heightmap;
 
 /// <summary>The M2-01 performance and purity gates: a 320-tile island generates in well under 500 ms, and the
 /// generation folder holds no floating-point <c>Math</c> call, float/double/decimal use, or framework RNG.</summary>
+[Collection("Timing")]
 public sealed class HeightmapPerformanceTests
 {
     [Fact]
