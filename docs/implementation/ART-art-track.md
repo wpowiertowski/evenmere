@@ -31,7 +31,7 @@ The art track runs in parallel with M2–M4 and has no gate of its own. Every ta
 | ART-01 | Art bible: style guide, palette and asset briefs | art (docs) | ADR-0013 | done |
 | ART-02 | Icon set: goods, buildings, tiers and UI | art | ART-01 | todo |
 | ART-03 | Building kit: stylized Era I buildings | art | ART-01 | done |
-| ART-04 | Textures for the hand-drawn look | art | ART-01 | todo |
+| ART-04 | Textures for the hand-drawn look | art | ART-01 | done |
 
 Later cards (Era II buildings, terrain and water textures, a UI theme skin, props and life) are written after ART-01, from its briefs.
 
