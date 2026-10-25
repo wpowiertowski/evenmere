@@ -50,16 +50,16 @@ Goods are in **units per 1,000 residents per day**. Services are buildings withi
 | Tier | Basic goods | Basic services | Comfort goods |
 | --- | --- | --- | --- |
 | Settlers | Fish 4 · Wood 3 | Market | — |
-| Villagers | Fish 3 · Homespun 2 · Bread 4 | Market · Shrine | Cider 2 · Pottery 1.5 |
-| Townsfolk | Bread 4 · Cheese 3 · Linen 2 · Pottery 2 | Market · Shrine · Tavern | Beer 2.5 · Candles 1.5 |
-| Artisans | Bread 3.5 · Cheese 3 · Linen 2.5 · Candles 2 | Market · Tavern · School | Wine 2 · Beer 2 |
-| Scholars | Bread 3 · Cheese 2.5 · Tea 2 · Books 1.5 | Market · School · Theatre | Spectacles 1 · Wine 2 |
-| Patrons | Tea 2.5 · Fine garments 1.5 · Pastries 2.5 · Wine 2 | Market · Theatre · Concert Hall | Jewellery 0.75 · Pocket watches 0.75 |
+| Villagers | Fish 3 · Homespun 3 · Bread 5 | Market · Shrine | Cider 2 · Pottery 1.5 |
+| Townsfolk | Bread 5 · Cheese 4 · Linen 2.5 · Pottery 2.5 | Market · Shrine · Tavern | Beer 2.5 · Candles 1.5 |
+| Artisans | Bread 5.5 · Cheese 4.5 · Linen 4 · Candles 3 | Market · Tavern · School | Wine 2 · Beer 2 |
+| Scholars | Bread 6.5 · Cheese 5.5 · Tea 4.5 · Books 3.5 | Market · School · Theatre | Spectacles 1 · Wine 2 |
+| Patrons | Tea 7 · Fine garments 4 · Pastries 6.5 · Wine 5.5 | Market · Theatre · Concert Hall | Jewellery 0.75 · Pocket watches 0.75 |
 
 ### How needs work
 
 - **Market first.** A house can draw goods only while it is inside a Market's coverage, and that Market must be road-connected to a storehouse.
-- **Occupancy.** Target occupancy = max(1, capacity × basic needs met ÷ basic needs total). Residents move one step per day toward the target.
+- **Occupancy.** Target occupancy = max(1, capacity × basic needs met ÷ basic needs total). A house of a tier with an `advanceFrom` tier and any basic need unmet holds no more than the lower tier's capacity: `target = max(1, min(capacity × met ÷ total, capacityAt(lower)))`, where `capacityAt(lower)` is the house's scaled capacity at that lower tier. Residents move one step per day toward the target.
 - **Advance.** All basic needs met for 6 consecutive days, plus the next tier unlocked, plus upgrade materials in the pool, plus the house not locked by the player → the house advances and the materials are consumed.
 - **Stepping down (ADR-0016).** Each tier staffs its own workplaces first; then, from the lowest tier up, unfilled jobs draw idle workers from the next higher tier, then the one above. Same-tier workers are always used first, the nearest higher tier goes first, and high-priority buildings still fill first.
 - **Morale (ADR-0016).** Higher-tier workers doing lower-tier jobs are not satisfied by that work: their houses carry the underemployment (the first houses most) and show a morale below 100%. A house with morale below 100% may not advance, which also keeps the post-Villager tiers from unlocking while Villagers are still covering Settler jobs. Morale never causes decline; it only blocks advancement, and the view shows it.
@@ -71,6 +71,7 @@ Goods are in **units per 1,000 residents per day**. Services are buildings withi
   - Decline is one step at a time, never below Settlers, and never to an empty house.
   - Festivals pause every timer while they run.
 - **Design rule.** The goods and services a tier needs are produced and staffed by **lower** tiers. A tier's workers are never required to make its own basic needs, which avoids deadlocks when a tier first appears.
+- **Higher tiers need more.** A tier's basic goods per resident total more than the tier it advances from (lint EVL011), and its houses fill past the lower tier's capacity only with every basic need met.
 
 ## Goods catalogue
 

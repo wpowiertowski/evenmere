@@ -1,0 +1,5 @@
+{
+  "explain.house.occupancy.capped": "Holding {0} of {2} residents (heading to {1}, {3} of {4} needs met): a {5}' house with a basic need unmet holds no more than a {6}' house.",
+  "explain.house.occupancy.capped.missing.good": "Missing: {0}.",
+  "explain.house.occupancy.capped.missing.service": "Missing: {0}."
+}

@@ -5,6 +5,7 @@
   "capacity": 15,
   "advanceFrom": "villagers",
   "basicNeeds": {
+    "goods": { "fish": 9 },
     "services": ["market"]
   }
 }

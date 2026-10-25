@@ -78,6 +78,7 @@
 | M1-35 | Window: resizable, maximized start and fullscreen toggle | game | M1-18 | done |
 | M1-36 | Workforce stepping down, morale, a stricter hold and slower advancing | sim | M1-33 | done |
 | M1-37 | Show stepping down and morale in the HUD, the build menu and the inspector | game | M1-31, M1-36 | done |
+| M1-38 | Higher tiers need more: rising consumption and a full-needs occupancy cap | sim | M1-36 | done |
 
 ---
 
@@ -1120,7 +1121,7 @@
 
 **Findings to triage, collected during implementation:**
 
-- **Homespun is optional for the slice target (from M1-16).** On seed 1 the balance bot reaches 100 Villagers at 26.9 game minutes, against a target of 45, without ever producing homespun. Villager houses sit at 8 of 10 residents on fish, bread and the shrine alone. Decide whether homespun should matter more for Villagers, for example through its share of the needs or the occupancy rule, or whether the faster pace is fine.
+- **Homespun is optional for the slice target (from M1-16).** On seed 1 the balance bot reaches 100 Villagers at 26.9 game minutes, against a target of 45, without ever producing homespun. Villager houses sit at 8 of 10 residents on fish, bread and the shrine alone. Decide whether homespun should matter more for Villagers, for example through its share of the needs or the occupancy rule, or whether the faster pace is fine. **Decided (developer, M1 playtest):** both parts of the proposal were chosen, in M1-38: Villager basic goods rise to fish 3 · homespun 3 · bread 5, and a house with any basic need unmet caps at the lower tier's capacity.
 - **Settlers run out as houses advance (from M1-22).** In the `--demo-buildings` world, every house advances to Villagers, so no Settlers are left to staff the Settler-workforce producers, and the economy stalls. Players have to lock some houses to keep a Settler workforce. Decide whether the slice needs a clearer cue, through the advisors, the build menu or the tutorial, or a design change, such as Villagers also filling Settler jobs. **Decided (developer, M1 playtest):** automatic upgrades stay, and the upgrade lock remains the player's tool. M1-31 adds a per-tier workers-and-jobs indicator to the HUD and the build menu. M1-33 holds a house at its tier while advancing would leave that tier's jobs unstaffed. In the longer term, upgrade lines (M2-30) move jobs up the tiers. **Revised (developer, second playtest):** Villagers still sat idle while Settler jobs went short, so M1-36 lets idle higher-tier workers fill lower-tier jobs, blocks their houses from advancing on morale, counts construction sites and a 20% reserve in the hold, and slows advancing to six days; M1-37 shows all of this in the HUD, the build menu and the inspector. **Confirmed in play (2026-10-24):** population growth with jobs filled across tiers works well.
 - **Camera (developer playtests).** M1-32 set a 30° yaw offset, M1-34 lowered the pitch to 30–50°, and M1-35 made the window resizable, maximized at start and toggleable to fullscreen. **Confirmed in play (2026-10-24):** the current camera works well. M2-29 keeps it as the baseline when it compares 30° and 45° yaw.
 - **Carts are hard to see at island zoom (from M1-22).** Carts are about 12 px at zoom 40 and blend into the dirt roads. Consider brighter cart bodies or a light outline before real art.
@@ -1293,6 +1294,28 @@
 - `scripts/verify.sh` passes and the smoke hash is unchanged (the sim is untouched).
 
 **Out of scope:** `src/**`, other content, and other game folders.
+
+### M1-38 · Higher tiers need more: rising consumption and a full-needs occupancy cap
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| sim | M1-36 | `content/tiers/villagers.json` (the `basicNeeds.goods` amounts only); `src/Evenmere.Sim/Systems/Population/**` and its tests under `tests/Evenmere.Sim.Tests/`; `src/Evenmere.Sim/Explain/ExplainService.cs` (the house occupancy line only) with a new `content/locale/en/explain-tier-needs.json`; `src/Evenmere.Content/Lint/**` (a new rule EVL011) and its tests in `tests/Evenmere.Content.Tests/`; `tests/fixtures/content/minimal/tiers/villagers.json` (only to satisfy EVL011); `tools/bots/slice.json` (the wool → homespun chain); slice scenario scripts in `tests/fixtures/scenarios/` (scripts only, never expectations); re-baselines (golden hash lines, `tests/fixtures/saves/*.evsave`, `tests/fixtures/smoke/*`, `tests/fixtures/saves/state-keys.json` only if keys change); `docs/design/progression.md`, `docs/design/architecture.md` (the EVL011 row), and this file (the M1-38 row and card) |
+
+**Reads:** AGENTS.md and `docs/design/progression.md` (§Population tiers, §Needs, §How needs work); the Population system (`PopulationSystem.cs`, `CapacityOf`); the content lint (`LintCodes`, the lint table); the explain service's house lines; `tools/bots/slice.json` and the slice scenarios.
+
+**Goal:** higher tiers need more per resident, and their houses fill past the lower tier's capacity only with every basic need met (developer's playtest decision).
+
+**Steps:**
+
+1. Villager basic goods become fish 3 · homespun 3 · bread 5 (Settlers stay at 7); later tiers are re-tuned in the design docs only.
+2. Occupancy cap: for a tier with `AdvanceFrom = B` and any basic need unmet, `target = max(1, min(capacity × met ÷ total, capacityAt(B)))`.
+3. Explain the capped house with typed arguments naming the lower tier and every missing need.
+4. New lint rule EVL011: each tier with `advanceFrom` must need strictly more basic goods than that tier.
+5. Teach the slice bot the sheep farm and the weaver's cottage; keep all four slice scenarios green and re-baseline golden hashes.
+
+**Acceptance:** Villager houses hold 6 of 10 without homespun and fill to 10 once it arrives; EVL011 passes on real and minimal content and fails when the higher tier eats less or the same; the balance bot still reaches 100 Villagers within 45 minutes.
+
+**Out of scope:** content numbers beyond the Villager amounts; `game/**`.
 
 ## Gate record
 

@@ -67,7 +67,7 @@ public sealed class TierNeedsRuleTests
                   "building.bakery.name": "Bakery", "building.bakery.desc": "Bakes.", "building.mill.name": "Mill", "building.mill.desc": "Grinds."
                 }
                 """);
-            content.Replace(Villagers, "\"goods\": { \"fish\": 3 }", "\"goods\": { \"fish\": 3, \"bread\": 1 }");
+            content.Replace(Villagers, "\"goods\": { \"fish\": 4, \"wood\": 4 }", "\"goods\": { \"fish\": 4, \"wood\": 4, \"bread\": 1 }");
         });
 
         diagnostics.WithCode(LintCodes.Evl006).ShouldBeExactly(
@@ -150,7 +150,8 @@ public sealed class TierNeedsRuleTests
         ImmutableArray<ContentDiagnostic> diagnostics = LintVariants.Lint(content =>
         {
             content.Write("tiers/townsfolk.json", """
-                { "id": "townsfolk", "order": 3, "era": 1, "capacity": 15, "advanceFrom": "villagers", "start": true }
+                { "id": "townsfolk", "order": 3, "era": 1, "capacity": 15, "advanceFrom": "villagers",
+                  "basicNeeds": { "goods": { "fish": 9 } }, "start": true }
                 """);
             content.Write("techs/brick_laying.json", """
                 { "id": "brick_laying", "era": 2, "cost": 100, "requires": ["town_charter"], "effects": [ { "unlockTier": "townsfolk" } ] }
@@ -179,7 +180,8 @@ public sealed class TierNeedsRuleTests
             content.Write("techs/natural_philosophy.json", """{ "id": "natural_philosophy", "era": 2, "cost": 400, "requires": ["town_charter"], "gateway": true }""");
             content.Write("civics/humanism.json", """{ "id": "humanism", "era": 2, "cost": 400, "requires": ["village_moot"], "gateway": true }""");
             content.Write("tiers/townsfolk.json", """
-                { "id": "townsfolk", "order": 3, "era": 3, "capacity": 15, "advanceFrom": "villagers", "start": true }
+                { "id": "townsfolk", "order": 3, "era": 3, "capacity": 15, "advanceFrom": "villagers",
+                  "basicNeeds": { "goods": { "fish": 9 } }, "start": true }
                 """);
             content.Write("locale/en/extra.json", """
                 {
@@ -200,7 +202,7 @@ public sealed class TierNeedsRuleTests
         content.Write("tiers/townsfolk.json", $$"""
             {
               "id": "townsfolk", "order": 3, "era": {{declaredEra}}, "capacity": 15, "advanceFrom": "villagers",
-              "basicNeeds": { "services": ["school"] }
+              "basicNeeds": { "goods": { "fish": 9 }, "services": ["school"] }
             }
             """);
         content.Write("buildings/school.json", School());

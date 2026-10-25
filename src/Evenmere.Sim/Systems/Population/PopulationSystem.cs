@@ -23,7 +23,9 @@ namespace Evenmere.Sim.Systems.Population;
 /// <para>For a house on its bucket tick, in this order (progression.md, How needs work):</para>
 /// <list type="number">
 /// <item><b>Occupancy:</b> <c>target = max(1, capacity × basic needs met ÷ basic needs total)</c>, with <c>capacity</c> the
-/// tier's capacity scaled by the <c>capacity</c> modifiers. Residents move one step towards it.</item>
+/// tier's capacity scaled by the <c>capacity</c> modifiers. A tier with an <c>advanceFrom</c> tier and any basic need
+/// unmet is capped at that lower tier's scaled capacity: <c>target = max(1, min(capacity × met ÷ total, capacityAt(lower)))</c>.
+/// Residents move one step towards it.</item>
 /// <item><b>Outputs:</b> the tier's knowledge and culture per 1,000 residents are credited to the points ledger.</item>
 /// <item><b>Advance:</b> every basic need met for <c>advanceStreakDays</c> days in a row, the next tier unlocked, the house
 /// not locked and the upgrade materials in the pool: the materials are taken and the tier changes.</item>
@@ -247,8 +249,16 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
         int metCount = BitOperations.PopCount(met);
 
         // Occupancy: one step a day towards the target. A tier with no basic needs is always fully served.
+        // A tier with an advanceFrom tier and any basic need unmet holds no more than the lower tier's capacity:
+        // target = max(1, min(capacity × met ÷ total, capacityAt(lower))). With all needs met, or for the lowest
+        // tier, the rule is unchanged (progression.md, How needs work).
         int capacity = CapacityOf(ctx, id, in house, tier);
         int target = total == 0 ? capacity : (int)Math.Max(1L, (long)capacity * metCount / total);
+        if (total != 0 && metCount < total && tier.AdvanceFrom is { } lowerId)
+        {
+            int lowerCap = CapacityAt(ctx, id, in house, lowerId);
+            target = Math.Max(1, Math.Min(target, lowerCap));
+        }
         int before = house.Residents;
         int after = before < target ? before + 1 : before > target ? before - 1 : before;
         house.Capacity = capacity;
@@ -428,11 +438,25 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
         return AdvanceBlocker.None;
     }
 
-    private static int CapacityOf(SimContext ctx, EntityId id, in HouseRecord house, TierDef tier)
+    private static int CapacityOf(SimContext ctx, EntityId id, in HouseRecord house, TierDef tier) =>
+        ScaledCapacity(ctx, house.Type, id, tier.Id, tier.Capacity);
+
+    /// <summary>Computes the capacity a house would have at another tier, the same way as <see cref="CapacityOf"/>.</summary>
+    /// <param name="ctx">The simulation context.</param>
+    /// <param name="id">The house's entity ID.</param>
+    /// <param name="house">The house record.</param>
+    /// <param name="tierId">The tier to evaluate.</param>
+    /// <returns>The scaled capacity at that tier, at least 1.</returns>
+    private int CapacityAt(SimContext ctx, EntityId id, in HouseRecord house, TierId tierId) =>
+        ScaledCapacity(ctx, house.Type, id, tierId, _content.Get(tierId).Capacity);
+
+    // One formula for every capacity: the tier's base capacity scaled by the capacity modifiers for that tier.
+    // ContextOf(id, house) builds the same context as below with the house's own tier, so CapacityOf and the cap agree.
+    private static int ScaledCapacity(SimContext ctx, BuildingTypeId? type, EntityId id, TierId tierId, int baseCapacity)
     {
-        ModifierContext context = ContextOf(id, in house);
+        var context = new ModifierContext(type, id, tierId, null);
         int percent = ctx.Queries.Progression.BonusPercent(Stat.Capacity, in context);
-        long scaled = (long)tier.Capacity * Ratio.FromBonusPercent(percent).PerMille / 1000;
+        long scaled = (long)baseCapacity * Ratio.FromBonusPercent(percent).PerMille / 1000;
         return (int)Math.Max(1L, scaled);
     }
 

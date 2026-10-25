@@ -23,4 +23,7 @@ public static class LintCodes
 
     /// <summary>EVL008: an era gateway is missing or wrong, or a node requires a node of a later era.</summary>
     public const string Evl008 = "EVL008";
+
+    /// <summary>EVL011: a tier with an advanceFrom tier must need strictly more basic goods per resident than that tier.</summary>
+    public const string Evl011 = "EVL011";
 }

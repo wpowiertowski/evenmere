@@ -393,6 +393,7 @@ All game content is data, not code: adding a good, building, tech or tradition m
 | EVL008 | Era gateways exist (one tech and one civic per era transition), and every era's nodes need only that era or earlier |
 | EVL009 | Era I buildings declare no `upkeepCoin` (added in M3) |
 | EVL010 | A tier's basic goods and services are produced and staffed only by lower tiers (added in M2) |
+| EVL011 | A tier with an advanceFrom tier needs strictly more basic goods per resident than that tier |
 
 ## Presentation layer
 

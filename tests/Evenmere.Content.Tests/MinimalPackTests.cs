@@ -76,7 +76,7 @@ public sealed class MinimalPackTests
         settlers.BasicServices.ShouldBe([ServiceKind.Market]);
 
         TierDef villagers = db.Get(db.IdOf<TierId>("villagers"));
-        villagers.BasicGoods.ShouldBe([new GoodAmount(fish, Amount.FromUnits(3))]);
+        villagers.BasicGoods.ShouldBe([new GoodAmount(fish, Amount.FromUnits(4)), new GoodAmount(wood, Amount.FromUnits(4))]);
         villagers.AdvanceFrom.ShouldBe(db.Required.Settlers);
         villagers.Outputs.Knowledge.ShouldBe(Amount.FromUnits(10));
     }

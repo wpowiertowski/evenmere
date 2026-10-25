@@ -6,7 +6,7 @@
   "advanceFrom": "settlers",
   "upgradeCost": { "timber": 2 },
   "basicNeeds": {
-    "goods": { "fish": 3, "bread": 1 },
+    "goods": { "fish": 4, "wood": 4, "bread": 1 },
     "services": ["market"]
   },
   "outputs": { "knowledge": 10 },

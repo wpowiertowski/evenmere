@@ -6,7 +6,7 @@
   "advanceFrom": "villagers",
   "upgradeCost": { "timber": 2 },
   "basicNeeds": {
-    "goods": { "bread": 4 },
+    "goods": { "bread": 9 },
     "services": ["market"]
   }
 }

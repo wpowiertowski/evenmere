@@ -77,7 +77,7 @@ internal sealed class ExplainService(ContentDb content, Func<ISimQueries> querie
             children.Add(NeedLine(in need));
         }
 
-        children.Add(OccupancyLine(in info, in needs));
+        children.Add(OccupancyLine(house, in info, in needs));
         children.Add(AdvanceLine(house, in info));
         if (MoraleLine(in info) is { } morale)
         {
@@ -616,8 +616,60 @@ internal sealed class ExplainService(ContentDb content, Func<ISimQueries> querie
             : new ExplanationLine("explain.house.need.service.missing", [ExplainArg.Of(service)], [], []);
     }
 
-    private static ExplanationLine OccupancyLine(in HouseInfo info, in HouseNeedsInfo needs)
+    private ExplanationLine OccupancyLine(EntityId house, in HouseInfo info, in HouseNeedsInfo needs)
     {
+        // A house of a tier with an advanceFrom tier and any basic need unmet holds no more than the lower tier's
+        // capacity. When that cap binds, the line says why and names every missing basic need.
+        if (info.Tier.Value < _content.Tiers.Count
+            && _content.Get(info.Tier).AdvanceFrom is { } lower
+            && needs.BasicTotal > 0
+            && needs.BasicMet < needs.BasicTotal)
+        {
+            ISimQueries q = _queries();
+            BuildingTypeId? type = q.Map.TryGetBuilding(house, out BuildingInfo building) ? building.Type : null;
+            var lowerContext = new ModifierContext(type, house, lower, null);
+            int percent = q.Progression.BonusPercent(Stat.Capacity, in lowerContext);
+            long scaled = (long)_content.Get(lower).Capacity * Ratio.FromBonusPercent(percent).PerMille / 1000;
+            int lowerCap = (int)Math.Max(1L, scaled);
+            int proportional = (int)Math.Max(1L, (long)info.Capacity * needs.BasicMet / needs.BasicTotal);
+            if (proportional > lowerCap)
+            {
+                var missing = new List<ExplanationLine>();
+                var subjects = new List<SubjectLink> { SubjectLink.ForTier(info.Tier), SubjectLink.ForTier(lower) };
+                foreach (NeedStatus need in needs.Needs)
+                {
+                    if (need.Class != NeedClass.Basic || need.Met)
+                    {
+                        continue;
+                    }
+
+                    if (need.Good.HasValue)
+                    {
+                        missing.Add(new ExplanationLine(
+                            "explain.house.occupancy.capped.missing.good",
+                            [ExplainArg.Of(need.Good.Value)],
+                            [SubjectLink.ForGood(need.Good.Value)],
+                            []));
+                        subjects.Add(SubjectLink.ForGood(need.Good.Value));
+                    }
+                    else if (need.Service.HasValue)
+                    {
+                        missing.Add(new ExplanationLine(
+                            "explain.house.occupancy.capped.missing.service",
+                            [ExplainArg.Of(need.Service.Value)],
+                            [],
+                            []));
+                    }
+                }
+
+                return new ExplanationLine(
+                    "explain.house.occupancy.capped",
+                    [ExplainArg.Of(info.Residents), ExplainArg.Of(info.TargetResidents), ExplainArg.Of(info.Capacity), ExplainArg.Of(needs.BasicMet), ExplainArg.Of(needs.BasicTotal), ExplainArg.Of(info.Tier), ExplainArg.Of(lower)],
+                    [.. subjects],
+                    [.. missing]);
+            }
+        }
+
         return new ExplanationLine(
             "explain.house.occupancy",
             [ExplainArg.Of(info.Residents), ExplainArg.Of(info.TargetResidents), ExplainArg.Of(info.Capacity), ExplainArg.Of(needs.BasicMet), ExplainArg.Of(needs.BasicTotal)],
