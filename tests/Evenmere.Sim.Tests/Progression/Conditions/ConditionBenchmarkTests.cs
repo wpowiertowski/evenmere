@@ -15,6 +15,7 @@ namespace Evenmere.Sim.Tests.Progression.Conditions;
 /// development Mac. The mix covers every condition kind over several goods, tiers, buildings, terrains and thresholds,
 /// arranged over a small island so count scans stay short.
 /// </summary>
+[Collection("Timing")]
 public sealed class ConditionBenchmarkTests
 {
     private const int ConditionCount = 300;
