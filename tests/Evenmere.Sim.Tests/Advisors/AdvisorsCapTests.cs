@@ -96,6 +96,7 @@ public sealed class AdvisorsCapTests
 
         // Research idleness shows at once; the reach problem outranks it by kind, not by age.
         h.Sim.Queries.Research.PointsPerDay = Amount.FromUnits(4);
+        h.Sim.Queries.Research.SetTech(h.Content.IdOf<TechId>("net_weaving"), Amount.FromUnits(50), available: true);
         EntityId hut = h.Add("woodcutters_hut", 0, 0);
         h.Sim.Queries.Roads.GrantRoadAccess(hut);
 

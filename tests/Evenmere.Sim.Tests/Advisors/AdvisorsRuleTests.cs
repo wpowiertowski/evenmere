@@ -217,6 +217,7 @@ public sealed class AdvisorsRuleTests
     {
         var h = AdvisorsHarness.Create();
         h.Sim.Queries.Research.PointsPerDay = Amount.FromUnits(4);
+        h.Sim.Queries.Research.SetTech(h.Content.IdOf<TechId>("net_weaving"), Amount.FromUnits(50), available: true);
 
         h.Run();
 
@@ -238,6 +239,7 @@ public sealed class AdvisorsRuleTests
     {
         var h = AdvisorsHarness.Create();
         h.Sim.Queries.Culture.PointsPerDay = Amount.FromUnits(2);
+        h.Sim.Queries.Culture.SetCivic(h.Content.IdOf<CivicId>("village_moot"), Amount.FromUnits(140), available: true);
 
         h.Run();
 
