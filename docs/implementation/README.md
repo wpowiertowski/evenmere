@@ -125,6 +125,8 @@ A few files are touched by many tasks. Each card names the section it may edit.
 
 ## Milestone overview and critical path
 
+The [art track](ART-art-track.md) runs alongside M2–M4: the art bible, icons and a building kit in the hand-drawn direction of ADR-0013, delivered through `game/data/visuals/` without touching game logic.
+
 ```mermaid
 flowchart LR
     subgraph M0
