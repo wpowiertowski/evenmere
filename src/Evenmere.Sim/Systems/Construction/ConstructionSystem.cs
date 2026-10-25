@@ -28,6 +28,13 @@ namespace Evenmere.Sim.Systems.Construction;
 /// <c>buildDays × 120 × 1000</c>, so a site at +25% takes <c>ceil(buildDays × 120 × 1000 / 1250)</c> ticks, and a bonus that
 /// arrives mid-build speeds up only the rest of the work.
 /// </para>
+/// <para>
+/// A monument or wonder (a <c>Build</c> site whose type a <c>MonumentDef</c> names, M2-10) builds in stages: each stage
+/// draws its own bill in ten steps and takes its share of the build time, and the site's <c>StageIndex</c> says which
+/// stage is under construction. The <c>materialCost</c> modifier scales every stage bill. When a stage completes the
+/// system emits <c>MonumentStageCompleted</c>; when the last stage completes it applies the monument's effects through
+/// <c>IProgressionService</c> (source <c>monument:&lt;id&gt;</c>) and the site finishes like any other building.
+/// </para>
 /// </remarks>
 /// <param name="state">The construction state, normally <c>WorldState.Construction</c>.</param>
 /// <param name="content">The immutable content.</param>
@@ -120,6 +127,12 @@ internal sealed class ConstructionSystem(ConstructionState state, ContentDb cont
         int bonus = ctx.Queries.Progression.BonusPercent(Stat.ConstructionSpeed, ModifierContext.ForBuilding(id, site.Target));
         long budget = SiteMath.SpeedFor(bonus);
 
+        // A monument builds in stages with its own bills (M2-10); every other site draws the type's bill.
+        if (ctx.Content.TryGetMonumentOf(site.Target, out MonumentId monument) && site.Kind == SiteKind.Build)
+        {
+            return AdvanceMonument(ctx, id, ref site, workTotal, budget, monument);
+        }
+
         site.Stall = StallReason.None;
         site.WaitingFor = default;
         while (site.StepsDone < SiteMath.Steps)
@@ -173,6 +186,90 @@ internal sealed class ConstructionSystem(ConstructionState state, ContentDb cont
         }
 
         // TODO(M3-01): charge CostSpec.Coin once the coin economy exists; Era I buildings cost goods only.
+        site.StepsDrawn = step;
+        return true;
+    }
+
+    // A monument works through one stage at a time: each stage draws its own bill in ten steps for its share of the
+    // build time, then the site moves to the next stage. The tick's leftover budget carries across stages, so a fast
+    // site can finish several stages (or a whole instant monument) in one tick. Returns true when the last stage is done.
+    private static bool AdvanceMonument(SimContext ctx, EntityId id, ref SiteRecord site, long workTotal, long budget, MonumentId monument)
+    {
+        MonumentDef def = ctx.Content.Get(monument);
+        int stageCount = def.Stages.Length;
+        int materialBonus = ctx.Queries.Progression.BonusPercent(Stat.MaterialCost, ModifierContext.ForBuilding(id, site.Target));
+
+        site.Stall = StallReason.None;
+        site.WaitingFor = default;
+        while (true)
+        {
+            long stageWork = MonumentStages.StageWorkTotal(workTotal, site.StageIndex, stageCount);
+            CostSpec stage = def.Stages[site.StageIndex];
+            while (site.StepsDone < SiteMath.Steps)
+            {
+                int step = site.StepsDone + 1;
+                if (site.StepsDrawn < step && !TryDrawMonument(ctx, stage, materialBonus, step, ref site))
+                {
+                    site.Stall = StallReason.MissingMaterial;
+                    return false;
+                }
+
+                // What is left of the tick carries into the next step, so the total time is exact however the steps round.
+                long needed = SiteMath.StepBoundary(stageWork, step) - site.Work;
+                if (needed > budget)
+                {
+                    site.Work += budget;
+                    return false;
+                }
+
+                site.Work += needed;
+                budget -= needed;
+                site.StepsDone = step;
+                if (step < SiteMath.Steps)
+                {
+                    ctx.BuildingRegistry.SetStage(id, step);
+                }
+            }
+
+            int finished = site.StageIndex;
+            ctx.Events.Emit(new MonumentStageCompleted(ctx.Tick, id, monument, finished));
+            if (finished == stageCount - 1)
+            {
+                ctx.ProgressionService.ApplyEffects(EffectSource.ForMonument(monument), def.Effects);
+                return true;
+            }
+
+            site.StageIndex = finished + 1;
+            site.Work = 0;
+            site.StepsDrawn = 0;
+            site.StepsDone = 0;
+            ctx.BuildingRegistry.SetStage(id, 0);
+        }
+    }
+
+    // Takes one step's share of one monument stage bill, scaled by the materialCost bonus, or nothing: the first good
+    // the pool lacks is remembered for the inspector.
+    private static bool TryDrawMonument(SimContext ctx, CostSpec stage, int materialBonus, int step, ref SiteRecord site)
+    {
+        IStorageService storage = ctx.Storage;
+        foreach (GoodAmount line in stage.Goods)
+        {
+            if (storage.Get(line.Good) < MonumentStages.StepAmount(line.Amount, step, materialBonus))
+            {
+                site.WaitingFor = line.Good;
+                return false;
+            }
+        }
+
+        foreach (GoodAmount line in stage.Goods)
+        {
+            if (!storage.TryTake(line.Good, MonumentStages.StepAmount(line.Amount, step, materialBonus)))
+            {
+                throw new InvalidOperationException($"The pool held the goods for step {step} a moment ago but could not give them.");
+            }
+        }
+
+        // TODO(M3-01): charge CostSpec.Coin once the coin economy exists; Era I monuments cost goods only.
         site.StepsDrawn = step;
         return true;
     }

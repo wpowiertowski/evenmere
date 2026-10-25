@@ -56,6 +56,14 @@ public struct SiteRecord
     /// <summary>Gets or sets the good the next step lacked; meaningful only when <see cref="Stall"/> is <see cref="StallReason.MissingMaterial"/>.</summary>
     [Key(7)]
     public GoodId WaitingFor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the 0-based monument stage under construction. Only a <see cref="SiteKind.Build"/> site whose type a
+    /// <c>MonumentDef</c> names builds in stages; every other site stays at 0. Added in save version 2 (ADR-0018): older
+    /// saves load with the default 0, which is the first stage.
+    /// </summary>
+    [Key(8)]
+    public int StageIndex { get; set; }
 }
 
 /// <summary>

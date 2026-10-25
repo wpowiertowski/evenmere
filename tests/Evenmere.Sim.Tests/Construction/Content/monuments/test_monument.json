@@ -1,0 +1,6 @@
+{
+  "id": "test_monument",
+  "building": "test_monument_hall",
+  "stages": [{ "timber": 3 }, { "wood": 2 }],
+  "effects": [{ "modifier": { "stat": "output.culture", "percent": 10 } }]
+}

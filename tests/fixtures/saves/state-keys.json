@@ -220,6 +220,10 @@
       "7": {
         "Member": "property WaitingFor",
         "Type": "Evenmere.Core.Ids.GoodId"
+      },
+      "8": {
+        "Member": "property StageIndex",
+        "Type": "System.Int32"
       }
     },
     "Evenmere.Sim.Systems.Culture.CultureState": {
