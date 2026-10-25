@@ -161,7 +161,8 @@ flowchart LR
 | Before M0 | Install the .NET 10 SDK and Godot 4.7 .NET on the development Mac. |
 | M1-29 | Enable branch protection on `main` (required status checks, PRs required), or grant the agent permission to do it. |
 | M1-30, M2, M3 gates | Playtest the build and sign off on calmness and pacing. |
-| M2 gate | Check gamepad play at 1280 × 800 (waived at the M1 gate for lack of a controller). |
+| M2-17b | Confirm or move the provisional 90–120 minute Era II pacing window from the M2-17a report, before any content tuning. |
+| Before the first beta (M4) | Hand-test gamepad play with a controller on the Mac (M4-06 and the M4 gate's Steam Deck checklist). Until then the automated focus walk (M2-26) stands in. |
 | Before M4-09 | Provide an Apple Developer ID certificate and notarisation credentials as CI secrets. |
 | Before M4-11 | Provide a Steamworks partner account and app ID. |
 | M4-14 | Decide the art source: own Blender work, asset packs or commissioned. |

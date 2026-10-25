@@ -504,7 +504,7 @@ Agents work best when they can prove their change works without a human opening 
 
 ## Performance budgets
 
-These are targets on a Steam Deck–class CPU (Zen 2, four cores) at the scale target.
+These are targets on a Steam Deck–class CPU (Zen 2, four cores) at the scale target. Until M4 measures on real hardware, the M2 gate uses a fixed Mac→Deck factor of 3.0: the development-Mac average × 3.0 is the Deck-equivalent figure the gate binds on.
 
 | System | Average per tick |
 | --- | --- |
