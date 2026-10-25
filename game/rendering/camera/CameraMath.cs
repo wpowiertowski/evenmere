@@ -11,6 +11,45 @@ public static class CameraMath
 {
     private const float HalfPi = MathF.PI / 2f;
 
+    /// <summary>
+    /// The window height in logical points the reference view is framed for: at this height the vertical field of
+    /// view is <see cref="ReferenceVerticalFovDegrees"/> and the view looks exactly as it did before M2-31.
+    /// </summary>
+    public const float ReferenceViewportHeight = 900f;
+
+    /// <summary>The vertical field of view in degrees at <see cref="ReferenceViewportHeight"/> points of window height.</summary>
+    public const float ReferenceVerticalFovDegrees = 45f;
+
+    /// <summary>The smallest vertical field of view in degrees, for short windows.</summary>
+    public const float MinVerticalFovDegrees = 30f;
+
+    /// <summary>The largest vertical field of view in degrees, for tall windows.</summary>
+    public const float MaxVerticalFovDegrees = 75f;
+
+    /// <summary>
+    /// Gets the vertical field of view for a window height in logical points. At a given zoom one tile covers the
+    /// same number of logical points at any window size, so a bigger window shows more island: the half-angle's
+    /// tangent scales with the height (<c>tan(fov / 2) = tan(22.5°) × windowPointsH / 900</c>), clamped to
+    /// <see cref="MinVerticalFovDegrees"/>–<see cref="MaxVerticalFovDegrees"/>.
+    /// </summary>
+    /// <param name="windowPointsH">The window height in logical points.</param>
+    /// <returns>The vertical field of view in degrees.</returns>
+    public static float VerticalFovDegrees(float windowPointsH)
+    {
+        float referenceHalf = (ReferenceVerticalFovDegrees / 2f) * (MathF.PI / 180f);
+        float half = MathF.Atan(MathF.Tan(referenceHalf) * (windowPointsH / ReferenceViewportHeight));
+        return Math.Clamp(half * 2f * (180f / MathF.PI), MinVerticalFovDegrees, MaxVerticalFovDegrees);
+    }
+
+    /// <summary>
+    /// Decides whether a pointer zoom (the wheel, a trackpad scroll or a pinch) reaches the camera: only when the
+    /// pointer is over no blocking control. Scrolling over any panel never zooms, even at the end of a list's range;
+    /// gamepad and keyboard zoom are unaffected and handled separately.
+    /// </summary>
+    /// <param name="pointerOverBlockingControl"><see langword="true"/> when the pointer is over a blocking control.</param>
+    /// <returns><see langword="true"/> when the camera should zoom.</returns>
+    public static bool ShouldPointerZoom(bool pointerOverBlockingControl) => !pointerOverBlockingControl;
+
     /// <summary>Gets a quarter turn in radians, the size of one camera rotation step.</summary>
     public static float QuarterTurn => HalfPi;
 
