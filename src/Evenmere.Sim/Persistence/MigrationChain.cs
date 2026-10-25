@@ -9,8 +9,8 @@ namespace Evenmere.Sim.Persistence;
 /// </summary>
 public static class MigrationChain
 {
-    /// <summary>Gets the migrations the game ships, in no particular order; empty until the first format change.</summary>
-    public static IReadOnlyList<IMigration> All { get; } = [];
+    /// <summary>Gets the migrations the game ships, in no particular order; version 1 to 2 is the first format change.</summary>
+    public static IReadOnlyList<IMigration> All { get; } = [new Migration_0001_to_0002()];
 
     /// <summary>Runs the chain from a version up to the current format.</summary>
     /// <param name="fromVersion">The save's format version.</param>

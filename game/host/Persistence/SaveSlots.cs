@@ -86,8 +86,57 @@ public static class SaveSlots
     /// <summary>The list-metadata sidecar extension.</summary>
     public const string MetaExtension = ".evmeta";
 
-    /// <summary>The slot the autosave writes to.</summary>
+    /// <summary>The slot the autosave writes to: always the newest of the rotation.</summary>
     public const string AutosaveSlot = "autosave";
+
+    /// <summary>How many rotating autosave slots the game keeps: the newest autosave plus two older generations.</summary>
+    public const int AutosaveSlotCount = 3;
+
+    private static readonly string[] _autosaveSlotIds = BuildAutosaveSlotIds();
+
+    /// <summary>Gets every autosave slot ID, newest first, for listing and cleanup.</summary>
+    public static IReadOnlyList<string> AutosaveSlotIds => _autosaveSlotIds;
+
+    /// <summary>
+    /// Gets the autosave slot ID for an age: age 0 is the newest (<see cref="AutosaveSlot"/>), older generations gain
+    /// a numeric suffix (<c>autosave-1</c>, <c>autosave-2</c>).
+    /// </summary>
+    /// <param name="age">The generation age, from 0 (newest) to <see cref="AutosaveSlotCount"/> minus one.</param>
+    /// <returns>The slot ID holding that generation.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="age"/> is outside the kept generations.</exception>
+    public static string AutosaveSlotAt(int age)
+    {
+        if (age < 0 || age >= AutosaveSlotCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(age), $"Autosave age runs 0 (newest) to {AutosaveSlotCount - 1}.");
+        }
+
+        return age == 0 ? AutosaveSlot : AutosaveSlot + "-" + age;
+    }
+
+    /// <summary>
+    /// Rotates the autosave slots in the saves folder: drops the oldest generation and shifts the rest one age older,
+    /// so the caller can write the fresh autosave into <see cref="AutosaveSlot"/> afterwards. Missing files are skipped,
+    /// so a fresh folder rotates silently. Old single-slot <c>autosave.*</c> files simply join the rotation.
+    /// </summary>
+    public static void RotateAutosaves() => RotateAutosavesIn(SavesDirectory);
+
+    /// <summary>
+    /// Rotates the autosave slots in a folder: drops the oldest generation and shifts the rest one age older, moving each
+    /// generation's save, log and sidecar together. Takes the folder explicitly so tests can drive rotation without the
+    /// engine; the game always passes <see cref="SavesDirectory"/> through <see cref="RotateAutosaves"/>.
+    /// </summary>
+    /// <param name="directory">The folder holding the save files.</param>
+    /// <exception cref="ArgumentException"><paramref name="directory"/> is empty.</exception>
+    public static void RotateAutosavesIn(string directory)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(directory);
+
+        for (int age = AutosaveSlotCount - 2; age >= 0; age--)
+        {
+            MoveSlotFiles(directory, AutosaveSlotAt(age), AutosaveSlotAt(age + 1));
+        }
+    }
 
     private const int MaxSlotIdLength = 48;
 
@@ -282,6 +331,53 @@ public static class SaveSlots
             if (!exists(candidate))
             {
                 return candidate;
+            }
+        }
+    }
+
+    private static string[] BuildAutosaveSlotIds()
+    {
+        string[] ids = new string[AutosaveSlotCount];
+        for (int age = 0; age < ids.Length; age++)
+        {
+            ids[age] = AutosaveSlotAt(age);
+        }
+
+        return ids;
+    }
+
+    private static void MoveSlotFiles(string directory, string fromSlotId, string toSlotId)
+    {
+        // Clear the target first: a generation missing its log (a crash, an older build) must not inherit the stale
+        // log of the generation it replaces, or replay would apply the wrong commands (ADR-0007).
+        DeleteSlotFiles(directory, toSlotId);
+        string[] extensions = [SaveExtension, LogExtension, MetaExtension];
+        foreach (string extension in extensions)
+        {
+            string source = Path.Combine(directory, fromSlotId + extension);
+            if (File.Exists(source))
+            {
+                File.Move(source, Path.Combine(directory, toSlotId + extension), overwrite: true);
+            }
+        }
+    }
+
+    private static void DeleteSlotFiles(string directory, string slotId)
+    {
+        string[] extensions = [SaveExtension, LogExtension, MetaExtension];
+        foreach (string extension in extensions)
+        {
+            try
+            {
+                File.Delete(Path.Combine(directory, slotId + extension));
+            }
+            catch (IOException)
+            {
+                // Best effort: a locked file fails the move below, and the autosave reports it like any write error.
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Same as above: best effort cleanup only.
             }
         }
     }

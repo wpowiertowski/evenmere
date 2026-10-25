@@ -6,8 +6,8 @@ namespace Evenmere.Sim.Persistence;
 /// <summary>
 /// One step of the save format's migration chain: rewrites a world state from <see cref="FromVersion"/> to
 /// <see cref="ToVersion"/>. Migrations run in order at load, before the ID remap, so each one sees the shape its
-/// version wrote. There are no migrations yet; the framework exists so the first format change only adds a class and
-/// a fixture save.
+/// version wrote. The first step is <see cref="Migration_0001_to_0002"/>; later M2 additions that only append keys
+/// ride version 2 with no new class (ADR-0018).
 /// </summary>
 public interface IMigration
 {

@@ -6,6 +6,7 @@ using Evenmere.Sim.Persistence;
 using Evenmere.Game.Rendering.Camera;
 using Evenmere.Game.Rendering.Terrain;
 using Evenmere.Game.Ui.Menus;
+using Evenmere.Game.Ui.Tools;
 using Godot;
 
 namespace Evenmere.Game.Host;
@@ -57,6 +58,12 @@ public sealed partial class Main : Node3D
             pause.Recorder = _recorder;
             pause.QuitToMenuRequested += () => ShowMenu(host, pause);
             pause.FullscreenToggleRequested += ToggleFullscreen;
+        }
+
+        ToolController? tools = GetNodeOrNull<ToolController>("Tools");
+        if (tools is not null)
+        {
+            tools.Recorder = _recorder;
         }
 
         if (LaunchOptions.RequestsSmoke(args))
