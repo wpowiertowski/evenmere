@@ -1,4 +1,5 @@
 using Evenmere.Content;
+using Evenmere.Core.Time;
 using Evenmere.Sim.Commands;
 using Evenmere.Sim.Diagnostics;
 using Evenmere.Sim.NewGame;
@@ -6,6 +7,7 @@ using Evenmere.Sim.Pipeline;
 using Evenmere.Sim.Queries;
 using Evenmere.Sim.Serialization;
 using Evenmere.Sim.State;
+using Evenmere.Sim.Systems.Production.Seasons;
 
 namespace Evenmere.Sim;
 
@@ -116,8 +118,15 @@ public sealed class Simulation : ISimulation, IProfilerReadout
     {
         // Step 0: advance the clock. Systems see the new tick, so the first tick they run is tick 1.
         long start = SimProfiler.Start();
+        Season season = _world.Clock.Season;
         _world.Clock = _world.Clock.Advance();
         _profiler.Stop(_clockSlot, start);
+
+        // A season boundary is a calendar fact, so the simulation announces it before any system runs on the new tick.
+        if (_world.Clock.Season != season)
+        {
+            _events.Emit(new SeasonChanged(_world.Clock.Tick, _world.Clock.Season));
+        }
 
         // Step 1: apply the commands queued before this tick began, in enqueue order.
         start = SimProfiler.Start();
