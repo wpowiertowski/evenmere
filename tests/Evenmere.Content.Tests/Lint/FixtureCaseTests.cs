@@ -68,6 +68,8 @@ public sealed class FixtureCaseTests
         ["EVL008-three-eras-ok"] = [],
         ["EVL008-unreferenced-gateway"] = [E.Error(LintCodes.Evl008, "techs/second_gate.json", "/gateway", "no era requires it")],
 
+        ["EVL010-comfort-ok"] = [],
+        ["EVL010-same-tier"] = [E.Error(LintCodes.Evl010, Villagers, "/basicNeeds/goods/bread", "'windmill' is staffed by 'villagers'")],
         ["EVL011-less-or-equal"] = [E.Error(LintCodes.Evl011, Villagers, "/basicNeeds/goods", "tier 'villagers' needs 3")],
         ["EVL011-ok"] = [],
     };

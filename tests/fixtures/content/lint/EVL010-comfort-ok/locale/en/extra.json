@@ -1,0 +1,14 @@
+{
+  "good.cider.name": "Cider",
+  "good.cider.desc": "Pressed apples.",
+  "good.apples.name": "Apples",
+  "good.apples.desc": "Orchard fruit.",
+  "recipe.grow_apples.name": "Grow apples",
+  "recipe.grow_apples.desc": "Pick orchard fruit.",
+  "recipe.press_cider.name": "Press cider",
+  "recipe.press_cider.desc": "Turn apples into cider.",
+  "building.orchard.name": "Orchard",
+  "building.orchard.desc": "Grows apples.",
+  "building.cider_press.name": "Cider press",
+  "building.cider_press.desc": "Presses cider."
+}
