@@ -949,7 +949,7 @@ file per card as listed; never edit another card's file.
 | --- | --- | --- |
 | game | M1 gate | `game/rendering/look/**`, `game/rendering/camera/**` (projection and yaw offset), `game/data/visuals/palette.tres` |
 
-**Reads:** [ADR-0013](../adr/0013-art-direction.md); architecture.md (§Rendering); the M2-31 card (the window-size rule: a bigger window shows more map at the same tile size, in logical points); the reference screenshots at [permit.petercai.com](https://permit.petercai.com).
+**Reads:** [ADR-0013](../adr/0013-art-direction.md); the art bible from [ART-01](ART-art-track.md) (`docs/art/style-guide.md` and `docs/art/palette.md`; `palette.tres` takes its tokens) and ART-04's painted textures (paper grain, watercolour wash, water strokes), when they have landed; architecture.md (§Rendering); the M2-31 card (the window-size rule: a bigger window shows more map at the same tile size, in logical points); the reference screenshots at [permit.petercai.com](https://permit.petercai.com).
 
 **Goal:** prove the hand-drawn isometric look on the existing placeholder meshes, early, so later rendering work builds toward it.
 
