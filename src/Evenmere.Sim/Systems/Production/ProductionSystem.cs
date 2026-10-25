@@ -4,6 +4,7 @@ using Evenmere.Content.Definitions;
 using Evenmere.Core.Collections;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
+using Evenmere.Core.Time;
 using Evenmere.Sim.Commands;
 using Evenmere.Sim.Pipeline;
 using Evenmere.Sim.Queries;
@@ -35,6 +36,7 @@ internal sealed class ProductionSystem : ISimSystem, IBuildingLifecycleListener
     private readonly ProductionState _state;
     private readonly ContentDb _content;
     private readonly SiteEvaluator _sites;
+    private readonly int[] _seasonFactors;
 
     /// <summary>Initializes a new instance of the <see cref="ProductionSystem"/> class.</summary>
     /// <param name="state">The production state to run over; a state read from a save continues where it left off.</param>
@@ -47,6 +49,7 @@ internal sealed class ProductionSystem : ISimSystem, IBuildingLifecycleListener
         _state = state;
         _content = content;
         _sites = new SiteEvaluator(content);
+        _seasonFactors = Seasons.SeasonCurve.BuildTable(content);
         state.EnsureGoodSlots(content.Goods.Count);
         Queries = new ProductionQueries(state, content);
         Buffers = new ProductionBuffers(state, content);
@@ -60,6 +63,13 @@ internal sealed class ProductionSystem : ISimSystem, IBuildingLifecycleListener
 
     /// <summary>Gets Production's buffers as Logistics sees them; the composition root hands this to the write services.</summary>
     public IProductionBuffers Buffers { get; }
+
+    /// <summary>Gets the season factor the tick uses for a building type in a season, in per-mille; the tests read it to pin the table.</summary>
+    /// <param name="type">The building type.</param>
+    /// <param name="season">The season.</param>
+    /// <returns>The precomputed factor, the same value <see cref="Seasons.SeasonCurve"/> builds the table from.</returns>
+    internal int SeasonFactorFor(BuildingTypeId type, Season season) =>
+        _seasonFactors[type.Value * GameTime.SeasonsPerYear + (int)season];
 
     /// <inheritdoc />
     public void Register(CommandRouter router)
@@ -213,6 +223,7 @@ internal sealed class ProductionSystem : ISimSystem, IBuildingLifecycleListener
         bool inputsReady = ProductionMath.HasInputs(record, recipe);
         int bonus = ctx.Queries.Progression.BonusPercent(Stat.Productivity, ModifierContext.ForBuilding(id, building.Type))
             + record.SiteBonusPercent;
+        int season = _seasonFactors[building.Type.Value * GameTime.SeasonsPerYear + (int)ctx.Clock.Season];
 
         // The reasons are checked in priority order: the first that holds is the one the player is told.
         StallReason reason;
@@ -243,7 +254,10 @@ internal sealed class ProductionSystem : ISimSystem, IBuildingLifecycleListener
 
         // A working building can still make no progress if its area yields nothing or its penalties cancel its bonuses;
         // there is no stall reason for that, so the explain queries show it through the area yield and bonus factors.
-        long productivity = reason == StallReason.None ? ProductionMath.Productivity(fill, record.AreaYield, bonus) : 0;
+        // The season factor applies after the M1-08 productivity terms, in per-mille, rounded down once at the end.
+        long productivity = reason == StallReason.None
+            ? ProductionMath.Productivity(fill, record.AreaYield, bonus) * season / ProductionMath.One
+            : 0;
 
         record.WorkforceFill = fill;
         record.InputsReady = inputsReady;

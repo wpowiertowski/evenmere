@@ -1,3 +1,5 @@
+using Evenmere.Core.Time;
+using Evenmere.Sim.Systems.Production.Seasons;
 using Evenmere.Sim.Tests.Fixtures;
 using static Evenmere.Sim.Tests.Scenarios.ScenarioText;
 
@@ -303,7 +305,20 @@ public sealed class ScenarioRunnerTests
 
         result.Passed.ShouldBeTrue(result.Report);
         result.ExpectedHash.ShouldNotBeNull();
-        result.Events.ShouldBeEmpty();
+
+        // Ten thousand ticks cross eight season boundaries, and the calendar announces each one: nothing else happens.
+        result.Events.ShouldAllBe(static e => e is SeasonChanged);
+        result.Events.OfType<SeasonChanged>().Select(static e => (e.Tick, e.Season)).ShouldBe(
+        [
+            (1200L, Season.Summer),
+            (2400L, Season.Autumn),
+            (3600L, Season.Winter),
+            (4800L, Season.Spring),
+            (6000L, Season.Summer),
+            (7200L, Season.Autumn),
+            (8400L, Season.Winter),
+            (9600L, Season.Spring),
+        ]);
     }
 
     [Fact]

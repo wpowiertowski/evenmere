@@ -6,5 +6,8 @@
   "advanceStreakDays": 6,
   "inspirationDiscountPerMille": 400,
   "marketGating": true,
+  "seasons": {
+    "seasonal": { "spring": 1000, "summer": 1200, "autumn": 1100, "winter": 700 }
+  },
   "workforceReservePercent": 20
 }
