@@ -17,10 +17,14 @@ Each file records one decision: its context, the decision itself and its consequ
 | [0009](0009-economy-staging.md) | Goods-only Era I; coin introduced by Coinage | Accepted |
 | [0010](0010-progression-gating.md) | Dual era gateways, alternating tier unlocks, decline always on | Accepted |
 | [0011](0011-m1-simulation-contract.md) | The M1 simulation contract | Accepted |
-| [0013](0013-art-direction.md) | Art direction: hand-drawn isometric, through a non-photorealistic pass over low-poly 3D | Accepted |
+| 0012 | Cheat commands and the cheats flag (M2-26) | Reserved for M2-26 |
 | [0014](0014-workforce-hold.md) | Workforce hold on house advancement | Accepted |
-| 0015 | Reserved for M2-30 | — |
+| [0013](0013-art-direction.md) | Art direction: hand-drawn isometric, through a non-photorealistic pass over low-poly 3D | Accepted |
+| [0015](0015-crew-stat.md) | Crew stat: modifiers that reduce a building's required workers | Proposed (M2-30) |
 | [0016](0016-workforce-stepping-down-and-morale.md) | Workforce stepping down, morale, a stricter hold and slower advancing | Accepted |
+| [0017](0017-m2-simulation-contract.md) | M2 simulation contract addendum: queries, services, commands and events | Accepted |
+| [0018](0018-save-format-version-2.md) | Save format version 2: M2 state and the migration framework in use | Accepted |
+| [0019](0019-generated-islands.md) | Generated islands: the generator contract and MapDef discoveries | Accepted |
 
 ## Template
 
