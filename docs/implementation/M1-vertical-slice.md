@@ -79,6 +79,7 @@
 | M1-36 | Workforce stepping down, morale, a stricter hold and slower advancing | sim | M1-33 | done |
 | M1-37 | Show stepping down and morale in the HUD, the build menu and the inspector | game | M1-31, M1-36 | done |
 | M1-38 | Higher tiers need more: rising consumption and a full-needs occupancy cap | sim | M1-36 | done |
+| M1-39 | Idle advisors only when there is a choice to make | sim | M1-15 | done |
 
 ---
 
@@ -695,7 +696,7 @@
    - `GoodShortage` (fulfilment below 80% for 2 days)
    - `HouseCannotAdvance` (all needs met but materials missing, or the tier is locked by research)
    - `NoWorkforce` (demand exceeds supply for a tier for 2 days)
-   - `ResearchIdle` and `CivicIdle` (no target while points accrue)
+   - `ResearchIdle` and `CivicIdle` (no target while points accrue and something can be chosen; M1-39)
 2. **Advice records:**
    - Each record has a stable ID (a deterministic counter), its kind, its subject (building, good or tier), first-seen and last-seen ticks, and an explanation reference into `IExplainQueries`.
    - Advice is cleared when its condition stops, which emits `AdviceRaised` or `AdviceCleared`.
@@ -1316,6 +1317,26 @@
 **Acceptance:** Villager houses hold 6 of 10 without homespun and fill to 10 once it arrives; EVL011 passes on real and minimal content and fails when the higher tier eats less or the same; the balance bot still reaches 100 Villagers within 45 minutes.
 
 **Out of scope:** content numbers beyond the Villager amounts; `game/**`.
+
+### M1-39 · Idle advisors only when there is a choice to make
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| sim | M1-15 | `src/Evenmere.Sim/Systems/Advisors/AdvisorsSystem.cs` (the `EvaluateIdle` rule only) and its tests under `tests/Evenmere.Sim.Tests/Advisors/`; re-baselines (golden hash lines, `tests/fixtures/saves/*.evsave`, `tests/fixtures/smoke/*`); this file (the M1-39 row and card) |
+
+**Reads:** the developer's playtest note (idle prompts with the tree fully developed).
+
+**Goal:** `ResearchIdle` and `CivicIdle` fire only when there is something to choose.
+
+**Steps:**
+
+1. Each idle rule also requires an available tech or civic (`IResearchQueries.IsAvailable` / `ICultureQueries.IsAvailable`), checked in ascending ID order with an early stop.
+2. When nothing is available the points stay banked and no note appears; a live note clears once its condition ends.
+3. Tests for firing with a choice, silence with the tree done (including no return after a season), clearing when availability ends, and the slice end state over two seasons; re-baseline the slice golden hashes and save fixtures.
+
+**Acceptance:** no idle note in the slice end state over two seasons; `scripts/verify.sh` passes.
+
+**Out of scope:** `game/**`, content numbers, other advisor rules.
 
 ## Gate record
 

@@ -270,18 +270,50 @@ internal sealed class AdvisorsSystem : ISimSystem
         }
     }
 
-    // Knowledge or culture is accruing with nowhere to go. No streak: idleness shows on the first day.
+    // Knowledge or culture is accruing with nothing left to choose. No streak: idleness shows on the first day.
+    // When every tech or civic is done or locked, the points stay banked and no note appears; the sweep below
+    // clears a live note the same way once its condition ends.
     private void EvaluateIdle(SimContext ctx)
     {
-        if (ctx.Queries.Research.Target is null && ctx.Queries.Research.PointsPerDay > Amount.Zero)
+        if (ctx.Queries.Research.Target is null && ctx.Queries.Research.PointsPerDay > Amount.Zero && HasAvailableTech(ctx))
         {
             Confirm(ctx, AdviceKind.ResearchIdle, SubjectLink.None);
         }
 
-        if (ctx.Queries.Culture.Target is null && ctx.Queries.Culture.PointsPerDay > Amount.Zero)
+        if (ctx.Queries.Culture.Target is null && ctx.Queries.Culture.PointsPerDay > Amount.Zero && HasAvailableCivic(ctx))
         {
             Confirm(ctx, AdviceKind.CivicIdle, SubjectLink.None);
         }
+    }
+
+    // Whether any tech can be chosen now, in ascending ID order, stopping at the first available one.
+    private bool HasAvailableTech(SimContext ctx)
+    {
+        int count = _content.Techs.Count;
+        for (int i = 0; i < count; i++)
+        {
+            if (ctx.Queries.Research.IsAvailable(TechId.From(checked((ushort)i))))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Whether any civic can be chosen now, in ascending ID order, stopping at the first available one.
+    private bool HasAvailableCivic(SimContext ctx)
+    {
+        int count = _content.Civics.Count;
+        for (int i = 0; i < count; i++)
+        {
+            if (ctx.Queries.Culture.IsAvailable(CivicId.From(checked((ushort)i))))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Confirms a live problem: touches the record's last-seen tick, or adds an unshowing record when the pair is
