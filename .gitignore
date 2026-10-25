@@ -45,3 +45,4 @@ game/content/
 
 # Local operator notes (not part of the project)
 RPC-STEERING.md
+.DS_Store
