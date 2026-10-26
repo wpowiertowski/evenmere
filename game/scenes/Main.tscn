@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3]
+[gd_scene load_steps=27 format=3]
 
 [ext_resource type="Script" uid="uid://bub5wqwnne33" path="res://host/Main.cs" id="1_main"]
 [ext_resource type="Script" uid="uid://dcmhwhll1gsvl" path="res://host/SimHost.cs" id="2_host"]
@@ -15,6 +15,8 @@
 [ext_resource type="PackedScene" path="res://ui/menus/PauseMenu.tscn" id="14_pause"]
 [ext_resource type="Script" path="res://ui/inspector/InspectorPanel.cs" id="14_inspector"]
 [ext_resource type="Script" path="res://ui/chains/ChainViewer.cs" id="20_chains"]
+[ext_resource type="Script" uid="uid://m227fppanel11" path="res://ui/events/FestivalPanel.cs" id="24_festivals"]
+[ext_resource type="Script" uid="uid://m227hddialg11" path="res://ui/events/HappeningDialog.cs" id="25_happenings"]
 [ext_resource type="Script" path="res://ui/notifications/NotificationFeed.cs" id="15_feed"]
 [ext_resource type="Script" path="res://ui/build_menu/BuildMenu.cs" id="16_buildmenu"]
 [ext_resource type="Script" path="res://rendering/life/LifeRenderer.cs" id="16_life"]
@@ -82,6 +84,12 @@ script = ExtResource("14_inspector")
 
 [node name="ChainViewer" type="PanelContainer" parent="."]
 script = ExtResource("20_chains")
+
+[node name="FestivalPanel" type="PanelContainer" parent="."]
+script = ExtResource("24_festivals")
+
+[node name="HappeningDialog" type="PanelContainer" parent="."]
+script = ExtResource("25_happenings")
 
 [node name="BuildMenu" type="PanelContainer" parent="."]
 script = ExtResource("16_buildmenu")

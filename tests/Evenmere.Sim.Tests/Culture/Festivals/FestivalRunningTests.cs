@@ -26,6 +26,20 @@ public sealed class FestivalRunningTests
     }
 
     [Fact]
+    public void View_ActiveFestivalView_MirrorsRun()
+    {
+        var h = FestivalsHarness.Create();
+        h.Queries.ActiveFestivalView().ShouldBeNull();
+
+        FestivalsHarness running = Running();
+        running.State.Active.ShouldNotBeNull();
+        running.Queries.ActiveFestivalView().ShouldBe(new FestivalRunView(
+            running.Festival("test_harvest"),
+            running.State.Active!.Value.Ground,
+            running.State.Active!.Value.DaysLeft));
+    }
+
+    [Fact]
     public void Run_EachDay_CreditsCultureAndCountsDown()
     {
         FestivalsHarness h = Running();

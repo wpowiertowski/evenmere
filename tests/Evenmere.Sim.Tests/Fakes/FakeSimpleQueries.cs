@@ -346,6 +346,9 @@ internal sealed class FakeHappeningsQueries : IHappeningsQueries
     /// <summary>Gets or sets the pending happening, as <see cref="IHappeningsQueries.PendingHappening"/> reports it.</summary>
     public PendingHappening? Pending { get; set; }
 
+    /// <summary>Gets or sets the pending happening as the view sees it, as <see cref="IHappeningsQueries.PendingView"/> reports it.</summary>
+    public PendingHappeningView? PendingView { get; set; }
+
     /// <summary>Sets whether a happening is cooling down.</summary>
     /// <param name="happening">The happening.</param>
     /// <param name="coolingDown">Whether it is on cooldown.</param>
@@ -366,6 +369,9 @@ internal sealed class FakeHappeningsQueries : IHappeningsQueries
 
     /// <inheritdoc />
     PendingHappening? IHappeningsQueries.PendingHappening() => Pending;
+
+    /// <inheritdoc />
+    PendingHappeningView? IHappeningsQueries.PendingView() => PendingView;
 
     /// <inheritdoc />
     bool IHappeningsQueries.IsOnCooldown(HappeningId happening) => _coolingDown.Contains(happening);

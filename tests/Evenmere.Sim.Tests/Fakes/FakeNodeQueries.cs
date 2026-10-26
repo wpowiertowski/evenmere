@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Culture.Festivals;
 using Evenmere.Sim.Systems.Culture.Traditions;
 
@@ -95,6 +96,9 @@ internal sealed class FakeCultureQueries : ICultureQueries
     /// <summary>Gets or sets the running festival, as <see cref="ICultureQueries.ActiveFestival"/> reports it.</summary>
     public FestivalRun? RunningFestival { get; set; }
 
+    /// <summary>Gets or sets the running festival as the view sees it, as <see cref="ICultureQueries.ActiveFestivalView"/> reports it.</summary>
+    public FestivalRunView? RunningFestivalView { get; set; }
+
     /// <summary>Gets or sets the last-held years by festival ID, as <see cref="ICultureQueries.FestivalsHeldInYear"/> reads them.</summary>
     public Dictionary<FestivalId, int> LastHeldYear { get; } = [];
 
@@ -154,6 +158,9 @@ internal sealed class FakeCultureQueries : ICultureQueries
 
     /// <inheritdoc />
     FestivalRun? ICultureQueries.ActiveFestival() => RunningFestival;
+
+    /// <inheritdoc />
+    FestivalRunView? ICultureQueries.ActiveFestivalView() => RunningFestivalView;
 
     /// <inheritdoc />
     int ICultureQueries.FestivalsHeldInYear(FestivalId festival, int year) =>

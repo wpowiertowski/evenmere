@@ -5,6 +5,8 @@ using Evenmere.Core.Ids;
 using Evenmere.Game.Controls;
 using Evenmere.Game.Host;
 using Evenmere.Game.Ui.Chains;
+using Evenmere.Game.Ui.Events;
+using Evenmere.Game.Ui.Monuments;
 using Evenmere.Game.Rendering.Camera;
 using Evenmere.Game.Ui.Common;
 using Evenmere.Game.Ui.Explain;
@@ -63,8 +65,10 @@ public sealed partial class InspectorPanel : PanelContainer
     private Button? _priorityButton;
     private Button? _demolishButton;
     private Button? _upgradeButton;
+    private Button? _festivalsButton;
     private Button? _lockButton;
     private Button? _chainButton;
+    private MonumentSection? _monumentSection;
     private ConfirmationDialog? _demolishConfirm;
 
     /// <summary>Gets or sets the path to the <see cref="SimHost"/> node, relative to this node.</summary>
@@ -82,6 +86,10 @@ public sealed partial class InspectorPanel : PanelContainer
     /// <summary>Gets or sets the path to the chain viewer, opened for a producer's output good.</summary>
     [Export]
     public NodePath ChainPath { get; set; } = new("../ChainViewer");
+
+    /// <summary>Gets or sets the path to the festival panel, opened for a festival ground.</summary>
+    [Export]
+    public NodePath FestivalPath { get; set; } = new("../FestivalPanel");
 
     /// <summary>Gets or sets the path to the research panel, hidden while the inspector is open.</summary>
     [Export]
@@ -303,6 +311,11 @@ public sealed partial class InspectorPanel : PanelContainer
         _explain.BuildingLinkActivated += OnLinkBuilding;
         top.AddChild(_explain);
 
+        // The monument section reads as part of the building's information, above the actions: hidden for
+        // anything but a monument, so a normal building's inspector is unchanged.
+        _monumentSection = new MonumentSection { Visible = false };
+        top.AddChild(_monumentSection);
+
         var buttons = new HBoxContainer();
         buttons.AddThemeConstantOverride("separation", 8);
         top.AddChild(buttons);
@@ -326,6 +339,10 @@ public sealed partial class InspectorPanel : PanelContainer
         _upgradeButton = new Button { FocusMode = Control.FocusModeEnum.All };
         _upgradeButton.Pressed += DoUpgrade;
         second.AddChild(_upgradeButton);
+
+        _festivalsButton = new Button { FocusMode = Control.FocusModeEnum.All };
+        _festivalsButton.Pressed += OpenFestivals;
+        second.AddChild(_festivalsButton);
 
         _lockButton = new Button { FocusMode = Control.FocusModeEnum.All };
         _lockButton.Pressed += ToggleLock;
@@ -398,7 +415,8 @@ public sealed partial class InspectorPanel : PanelContainer
             }
 
             _explain.Clear();
-            SetButtonsVisible(pause: false, priority: false, demolish: false, upgrade: false, lockToggle: false, chain: false);
+            SetButtonsVisible(pause: false, priority: false, demolish: false, upgrade: false, festivals: false, lockToggle: false, chain: false);
+            _monumentSection?.HideSection();
             return;
         }
 
@@ -489,6 +507,10 @@ public sealed partial class InspectorPanel : PanelContainer
         _explain.ShowRoot(explanation);
 
         UpdateButtons(host, strings, content, building, isHouse, house);
+        if (_monumentSection is { Visible: true })
+        {
+            _monumentSection.Refresh();
+        }
         GD.Print($"[Evenmere] Inspector: refreshed {_target.Value} ({content.NameOf(building.Type)}) state={building.State}.");
     }
 
@@ -591,9 +613,51 @@ public sealed partial class InspectorPanel : PanelContainer
             _chainButton.Text = strings.Get("ui.chains.open");
             _chainButton.TooltipText = strings.Get("ui.chains.open.tip");
         }
+
+        // Festival grounds open the festival panel by category tag, never by content ID: any finished
+        // building the tags mark as a ground qualifies, whatever the trees add later.
+        bool isGround = !isSite && HasTag(content.Get(building.Type).Tags, "festival_ground");
+        if (_festivalsButton is not null)
+        {
+            _festivalsButton.Visible = isGround;
+            _festivalsButton.Text = strings.Get("ui.events.inspector.festivals");
+            _festivalsButton.TooltipText = strings.Get("ui.events.inspector.festivals.tip");
+        }
+
+        // Monument sites and finished monuments show the stage section; anything else hides it.
+        // A monument's explanation has nothing to say (no production, no house), so its view collapses
+        // and the section takes the expanding slot instead: the section follows the building's information
+        // directly and the actions stay at the bottom. Anything else keeps the expanding explanation.
+        bool isMonument = content.TryGetMonumentOf(building.Type, out _);
+        if (_explain is not null)
+        {
+            _explain.SizeFlagsVertical = isMonument
+                ? Control.SizeFlags.Fill
+                : Control.SizeFlags.ExpandFill;
+        }
+
+        if (_monumentSection is not null)
+        {
+            _monumentSection.SizeFlagsVertical = isMonument
+                ? Control.SizeFlags.ExpandFill
+                : Control.SizeFlags.Fill;
+            if (host is not null)
+            {
+                _monumentSection.Setup(host);
+            }
+
+            if (isMonument)
+            {
+                _monumentSection.ShowFor(_target);
+            }
+            else
+            {
+                _monumentSection.HideSection();
+            }
+        }
     }
 
-    private void SetButtonsVisible(bool pause, bool priority, bool demolish, bool upgrade, bool lockToggle, bool chain)
+    private void SetButtonsVisible(bool pause, bool priority, bool demolish, bool upgrade, bool festivals, bool lockToggle, bool chain)
     {
         if (_pauseButton is not null)
         {
@@ -613,6 +677,11 @@ public sealed partial class InspectorPanel : PanelContainer
         if (_upgradeButton is not null)
         {
             _upgradeButton.Visible = upgrade;
+        }
+
+        if (_festivalsButton is not null)
+        {
+            _festivalsButton.Visible = festivals;
         }
 
         if (_lockButton is not null)
@@ -721,7 +790,33 @@ public sealed partial class InspectorPanel : PanelContainer
         _secondsSinceRefresh = double.MaxValue;
     }
 
-    /// <summary>Opens the chain viewer on this building's first output good (the handler behind the Production chain button).</summary>
+    /// <summary>Opens the festival panel on the inspected ground (the handler behind the Festivals button).</summary>
+    private void OpenFestivals()
+    {
+        if (!_hasTarget)
+        {
+            return;
+        }
+
+        if (GetNodeOrNull<FestivalPanel>(FestivalPath) is { } festivals)
+        {
+            festivals.Open(_target);
+            GD.Print($"[Evenmere] Inspector: opened festivals on ground {_target.Value}.");
+        }
+    }
+
+    private static bool HasTag(System.Collections.Immutable.ImmutableArray<string> tags, string tag)
+    {
+        foreach (string candidate in tags)
+        {
+            if (string.Equals(candidate, tag, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
     private void OpenChain()
     {
         if (_host is not { IsRunning: true } host || !_hasTarget)

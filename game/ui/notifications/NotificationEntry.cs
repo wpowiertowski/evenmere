@@ -5,7 +5,8 @@ namespace Evenmere.Game.Ui.Notifications;
 
 /// <summary>
 /// Which history filter chip a notification belongs to. Building covers construction, People covers tier moves,
-/// Progress covers research, civics and inspirations, and Advice covers advisor notes.
+/// Progress covers research, civics and inspirations, Advice covers advisor notes, and Events covers festivals,
+/// monuments and happenings (M2-27).
 /// </summary>
 public enum NotificationCategory : byte
 {
@@ -20,6 +21,9 @@ public enum NotificationCategory : byte
 
     /// <summary>An advisor note was raised.</summary>
     Advice = 3,
+
+    /// <summary>A festival, monument or happening moment (M2-27).</summary>
+    Events = 4,
 }
 
 /// <summary>
@@ -36,6 +40,7 @@ public enum NotificationCategory : byte
 /// <param name="Tech">The tech, for research entries; otherwise <see langword="null"/>.</param>
 /// <param name="Civic">The civic, for civic entries; otherwise <see langword="null"/>.</param>
 /// <param name="Count">How many happenings the entry batches; 1 for a single.</param>
+/// <param name="Happening">The happening, for happening entries; otherwise <see langword="null"/>.</param>
 public sealed record NotificationEntry(
     int Id,
     long Tick,
@@ -45,7 +50,8 @@ public sealed record NotificationEntry(
     SubjectLink Subject,
     TechId? Tech,
     CivicId? Civic,
-    int Count)
+    int Count,
+    HappeningId? Happening = null)
 {
     /// <summary>Creates a single (unbatched) entry.</summary>
     /// <param name="id">The entry's number.</param>
@@ -56,6 +62,7 @@ public sealed record NotificationEntry(
     /// <param name="subject">What it is about.</param>
     /// <param name="tech">The tech, for research entries.</param>
     /// <param name="civic">The civic, for civic entries.</param>
+    /// <param name="happening">The happening, for happening entries.</param>
     /// <returns>The entry.</returns>
     public static NotificationEntry Create(
         int id,
@@ -65,5 +72,6 @@ public sealed record NotificationEntry(
         string? note,
         SubjectLink subject,
         TechId? tech = null,
-        CivicId? civic = null) => new(id, tick, category, title, note, subject, tech, civic, 1);
+        CivicId? civic = null,
+        HappeningId? happening = null) => new(id, tick, category, title, note, subject, tech, civic, 1, happening);
 }

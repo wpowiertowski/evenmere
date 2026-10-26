@@ -4,6 +4,7 @@ using Evenmere.Content.Definitions;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Culture.Festivals;
 using Evenmere.Sim.Systems.Culture.Traditions;
 
@@ -110,6 +111,10 @@ internal sealed class CultureQueries : ICultureQueries
 
     /// <inheritdoc />
     FestivalRun? ICultureQueries.ActiveFestival() => _state.Active;
+
+    /// <inheritdoc />
+    FestivalRunView? ICultureQueries.ActiveFestivalView() =>
+        _state.Active is { } run ? new FestivalRunView(run.Festival, run.Ground, run.DaysLeft) : null;
 
     /// <inheritdoc />
     int ICultureQueries.FestivalsHeldInYear(FestivalId festival, int year) =>
