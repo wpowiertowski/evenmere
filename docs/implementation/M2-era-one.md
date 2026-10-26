@@ -68,7 +68,7 @@ file per card as listed; never edit another card's file.
 | M2-02a | Rivers, fertility and deposits | sim | M2-01 | todo |
 | M2-02b | Regions, discoveries, start guarantee and generated new games | sim | M2-02a | todo |
 | M2-03 | Map generation preview CLI and seed gallery | tools | M2-02b | todo |
-| M2-04 | Bridges and river crossing | sim | M2-00 | todo |
+| M2-04 | Bridges and river crossing | sim | M2-00 | done |
 | M2-05 | Seasons | sim | M2-00 | done |
 | M2-06 | Exploration: fog, expeditions and discoveries | sim | M2-02b, M2-10 | todo |
 | M2-07 | Traditions and slots | sim | M2-00 | done |

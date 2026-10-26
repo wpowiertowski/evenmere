@@ -45,6 +45,12 @@ public enum PlacementIssue : byte
     /// <summary>Error: the building must stand beside a river.</summary>
     NeedsRiverside = 11,
 
+    /// <summary>Error: the river crossing is longer than the bridge type's span.</summary>
+    BridgeTooLong = 12,
+
+    /// <summary>Error: the river crossing bends; a bridge must be one straight run.</summary>
+    BridgeNotStraight = 13,
+
     /// <summary>Warning: no road touches the footprint, so the building cannot work until one is built.</summary>
     NoRoadAccess = 100,
 
