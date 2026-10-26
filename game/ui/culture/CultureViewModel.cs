@@ -5,9 +5,11 @@ using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Game.Ui.Common;
 using Evenmere.Game.Ui.Progress;
+using Evenmere.Game.Ui.Research;
 using Evenmere.Sim;
 using Evenmere.Sim.Queries;
 using Evenmere.Sim.Systems.Culture.Commands;
+using Evenmere.Sim.Systems.Culture.Traditions.Commands;
 
 namespace Evenmere.Game.Ui.Culture;
 
@@ -19,6 +21,7 @@ public sealed class CultureViewModel : TreeViewModel<CivicId>
 {
     private readonly ICultureQueries _culture;
     private readonly IProgressionQueries _progression;
+    private List<CivicId> _graphIds = new();
 
     /// <summary>Initializes a new instance of the <see cref="CultureViewModel"/> class.</summary>
     /// <param name="content">The content database.</param>
@@ -100,7 +103,29 @@ public sealed class CultureViewModel : TreeViewModel<CivicId>
 
     /// <inheritdoc />
     protected override bool OwnsCommand(Command command) =>
-        command is SetCivicTarget or SetCivicQueue;
+        command is SetCivicTarget or SetCivicQueue or SetTradition;
+
+    /// <summary>
+    /// Builds the cards the <see cref="CivicsTreeView"/> shows: one per visible civic in content order, plus the
+    /// layout inputs in the same order. The bulk of the formatting lives in <see cref="CivicGraphBuilder"/>.
+    /// </summary>
+    /// <param name="iconFor">The placeholder glyph for a content building ID, or <see langword="null"/> when it has none.</param>
+    /// <returns>The cards and their layout inputs.</returns>
+    public TreeGraph BuildGraph(Func<string, string?> iconFor)
+    {
+        ArgumentNullException.ThrowIfNull(iconFor);
+        TreeGraph graph = CivicGraphBuilder.Build(Content, Strings, Snapshot, iconFor, out List<CivicId> ids);
+        _graphIds = ids;
+        return graph;
+    }
+
+    /// <summary>Gets the civic behind a graph card.</summary>
+    /// <param name="index">The card's index in the last <see cref="BuildGraph"/> answer.</param>
+    /// <returns>The civic.</returns>
+    public CivicId GraphId(int index) => _graphIds[index];
+
+    /// <summary>Gets how many cards the last <see cref="BuildGraph"/> answer held.</summary>
+    public int GraphCount => _graphIds.Count;
 
     private string EraName(int order)
     {
