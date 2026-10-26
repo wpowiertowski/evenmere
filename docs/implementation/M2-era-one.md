@@ -1109,6 +1109,29 @@ file per card as listed; never edit another card's file.
 
 ---
 
+## Follow-ups found in review
+
+Small issues found while reviewing M2 tasks, each with the card or lane it belongs to. A card picks its item up when it touches the code anyway. Items with no home card are listed for a polish pass before the M2-28 playtest.
+
+| Found in | Follow-up | Home |
+| --- | --- | --- |
+| M2-16 | The advisors system spikes to 248 ms on some ticks on `perf-20k` (Deck p99 7.6 ms, over the 6 ms budget); its average is also over budget there. Not gating (the M2 gate binds on `perf-2k`), but it must be fixed before 20k-scale play. | New sim task before M3 |
+| M2-19 | The inspector names tradition, festival, happening and monument sources "from 0": `ExplainService.SourceArg` and `ExplainFormat` have no arms for them. | M2-13b (first real traditions) |
+| M2-19 | Completion toasts overlap right-docked panels (research, civics, statistics, overlays, inspector). | Polish pass |
+| M2-19 | `CivicGraphBuilder.DescribeEffects` duplicates the unlock formatting in `ResearchViewModel`; one shared formatter. | Polish pass |
+| M2-22/M2-33 | The statistics panel's "Day N" axis and hover labels are hardcoded English. | Polish pass |
+| M2-27 | Happening options have no label: the happenings schema allows only `effects` and `durationDays` per option. Adding labels changes a frozen schema (ADR). | M2-13b |
+| M2-02b | Generated region names (`region.generated.N`) and discovery names have no locale text. | M2-13b |
+| M2-02b | `MapState` doesn't keep `SubSeed` or `Discoveries`; exploration needs them. | M2-06 |
+| M2-13a | `bridge_building`'s inspiration (complete 1 expedition) can't fire until the expeditions counter exists. | M2-06 |
+| M2-13a | `RemapNeeds` fills `Fulfilment` with 0 for new goods nobody needs, where `FairShares` documents 1000; it corrects itself at the next day boundary. | Polish pass |
+| M2-02a | A few generated rivers still read as long, nearly straight lines at overview scale, though each passes the 12-step rule. | M2-03 (seed gallery) |
+| M2-20 | `OverlayRenderer.AfterLookPriority` belongs in `LookPost`, so the camera and tools don't depend on the overlay namespace. | Polish pass |
+| M2-32 | Lit forest's red channel sits 3.8 points outside the ±8% calibration band; no single light fits every biome. | Look track |
+| M2-24 | Blossom pink is hardcoded; a `flower.blossom` palette token. Snow on roofs needs building visuals. | ART track |
+| M2-26 | `evenmere run` could take `--cheats` to replay logs that contain cheat commands. | Polish pass |
+| ART-02 | Clicking a HUD goods chip could open the chain viewer for that good. | Polish pass |
+
 ## Gate record
 
 _Filled in when M2 closes._
