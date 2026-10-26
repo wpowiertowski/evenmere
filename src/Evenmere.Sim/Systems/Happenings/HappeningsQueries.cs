@@ -1,6 +1,7 @@
 using Evenmere.Core.Ids;
 using Evenmere.Core.Time;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Queries.Types;
 
 namespace Evenmere.Sim.Systems.Happenings;
 
@@ -32,6 +33,17 @@ internal sealed class HappeningsQueries : IHappeningsQueries
 
         // A damaged state (or content that shrank without a remap) names nothing the content defines; report none.
         return IsKnown(pending.Happening) ? pending : null;
+    }
+
+    /// <inheritdoc />
+    PendingHappeningView? IHappeningsQueries.PendingView()
+    {
+        if (_state.Pending is not { } pending)
+        {
+            return null;
+        }
+
+        return IsKnown(pending.Happening) ? new PendingHappeningView(pending.Happening, pending.RaisedTick) : null;
     }
 
     /// <inheritdoc />

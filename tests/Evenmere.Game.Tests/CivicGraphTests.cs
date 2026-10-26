@@ -26,6 +26,16 @@ namespace Evenmere.Game.Tests;
 public sealed class CivicGraphTests
 {
     [Fact]
+    public void StatName_HumanizesContentSpelling()
+    {
+        CivicGraphBuilder.StatName(Stat.OutputCulture).ShouldBe("culture output");
+        CivicGraphBuilder.StatName(Stat.OutputKnowledge).ShouldBe("knowledge output");
+        CivicGraphBuilder.StatName(Stat.ConstructionSpeed).ShouldBe("construction speed");
+        CivicGraphBuilder.StatName(Stat.Productivity).ShouldBe("productivity");
+        CivicGraphBuilder.StatName(Stat.FestivalCost).ShouldBe("festival cost");
+    }
+
+    [Fact]
     public void BuildGraph_MapsCivicState()
     {
         (CultureViewModel model, CivicId civic, string name) = ModelWith(available: true);
@@ -180,6 +190,7 @@ public sealed class CivicGraphTests
         public TraditionId? ActiveStyle() => null;
         public bool IsFestivalRunning() => false;
         public FestivalRun? ActiveFestival() => null;
+        public FestivalRunView? ActiveFestivalView() => null;
         public int FestivalsHeldInYear(FestivalId festival, int year) => 0;
     }
 

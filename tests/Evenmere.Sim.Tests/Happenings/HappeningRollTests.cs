@@ -1,4 +1,5 @@
 using Evenmere.Core.Ids;
+using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Happenings;
 using Evenmere.Sim.Systems.Happenings.Commands;
 
@@ -18,6 +19,18 @@ public sealed class HappeningRollTests
         h.State.Pending.ShouldBe(new PendingHappening(h.Happening("test_feast"), 0));
         h.Queries.PendingHappening().ShouldBe(new PendingHappening(h.Happening("test_feast"), 0));
         h.Queries.IsOnCooldown(h.Happening("test_feast")).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Queries_PendingView_MirrorsPending()
+    {
+        HappeningsHarness empty = HappeningsHarness.Create().EligibleOnly();
+        empty.Queries.PendingView().ShouldBeNull();
+
+        HappeningsHarness h = HappeningsHarness.Create().EligibleOnly("test_feast");
+        h.Run();
+
+        h.Queries.PendingView().ShouldBe(new PendingHappeningView(h.Happening("test_feast"), 0));
     }
 
     [Fact]

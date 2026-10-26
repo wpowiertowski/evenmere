@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
+using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Culture.Festivals;
 using Evenmere.Sim.Systems.Culture.Traditions;
 
@@ -79,6 +80,12 @@ public interface ICultureQueries
     /// </summary>
     /// <returns>The run with its ground and days left, or <see langword="null"/> when none runs.</returns>
     FestivalRun? ActiveFestival();
+
+    /// <summary>
+    /// Gets the running festival as the view sees it, without touching the culture state. (M2-27.)
+    /// </summary>
+    /// <returns>The run with its ground and days left, or <see langword="null"/> when none runs.</returns>
+    FestivalRunView? ActiveFestivalView();
 
     /// <summary>
     /// Counts how often a festival type was held in a year. Each type may be held once per year, so this is 1

@@ -174,7 +174,7 @@ public static class CivicGraphBuilder
                 case ModifierEffect modifier:
                     unlocks.Add(new GraphUnlock(
                         string.Empty,
-                        $"+{modifier.Percent}% {ContentNames.NameOf(modifier.Stat)}"));
+                        $"+{modifier.Percent}% {StatName(modifier.Stat)}"));
                     break;
 
                 case GrantGoodsEffect granted:
@@ -207,6 +207,41 @@ public static class CivicGraphBuilder
         }
 
         return unlocks;
+    }
+
+    /// <summary>
+    /// Humanizes a modifier stat's JSON name for display: the content spelling (<c>output.culture</c>,
+    /// <c>constructionSpeed</c>) reads as calm words (<c>culture output</c>, <c>construction speed</c>).
+    /// Output stats name what they make first, so the good comes first.
+    /// </summary>
+    /// <param name="stat">The stat.</param>
+    /// <returns>The display name, all lowercase to sit inside effect lines.</returns>
+    public static string StatName(Stat stat)
+    {
+        string raw = ContentNames.NameOf(stat);
+        const string OutputPrefix = "output.";
+        string reordered = raw.StartsWith(OutputPrefix, StringComparison.Ordinal)
+            ? raw[OutputPrefix.Length..] + " output"
+            : raw;
+        var words = new System.Text.StringBuilder(reordered.Length + 4);
+        foreach (char letter in reordered)
+        {
+            if (letter is '_' or '.' or ' ')
+            {
+                words.Append(' ');
+            }
+            else if (char.IsUpper(letter))
+            {
+                words.Append(' ');
+                words.Append(char.ToLowerInvariant(letter));
+            }
+            else
+            {
+                words.Append(letter);
+            }
+        }
+
+        return words.ToString().TrimStart(' ');
     }
 
     /// <summary>

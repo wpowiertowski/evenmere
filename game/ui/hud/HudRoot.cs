@@ -41,6 +41,8 @@ public sealed partial class HudRoot : Control
     private UiStrings? _tipStrings;
     private PanelContainer? _workforceTipPopup;
     private Label? _workforceTipLabel;
+    private Label? _festivalBadge;
+    private UiStrings? _strings;
     private string _debugWorkforceTier = string.Empty;
     private Button[] _speedButtons = [];
     private SimHost? _host;
@@ -297,6 +299,7 @@ public sealed partial class HudRoot : Control
         BuildSpeedButtons(strings);
         BuildChips(host, strings, _viewModel);
         _viewModel.Refreshed += OnRefreshed;
+        BuildFestivalBadge(host, strings);
     }
 
     private void ClearBuilt()
@@ -339,6 +342,8 @@ public sealed partial class HudRoot : Control
         _speedButtons = [];
         _knowledgeChip = null;
         _cultureChip = null;
+        _festivalBadge = null;
+        _strings = null;
     }
 
     private void BuildSpeedButtons(UiStrings strings)
@@ -556,6 +561,32 @@ public sealed partial class HudRoot : Control
             _goodChips[i].SetValue(good.Name, good.Stock, good.Tooltip);
             _goodChips[i].SetTrend(good.Trend);
         }
+
+        RefreshFestivalBadge();
+    }
+
+    // Reads the running festival through the culture queries each refresh; hidden when none runs.
+    private void RefreshFestivalBadge()
+    {
+        if (_festivalBadge is null || _strings is null || _host is not { IsRunning: true } host)
+        {
+            return;
+        }
+
+        if (host.Query.Culture.ActiveFestivalView() is { } run
+            && (uint)run.Festival.Value < (uint)host.Content.Festivals.Count)
+        {
+            string name = host.Content.Festivals.NameOf(run.Festival);
+            string key = $"festival.{name}.name";
+            string text = _strings.Get(key);
+            string display = string.Equals(text, key, StringComparison.Ordinal) ? name : text;
+            _festivalBadge.Visible = true;
+            _festivalBadge.Text = _strings.Format("ui.events.hud.festival", ("name", display));
+        }
+        else
+        {
+            _festivalBadge.Visible = false;
+        }
     }
 
     /// <summary>Changes the game speed. Choosing pause while already paused resumes the speed the game had before.</summary>
@@ -576,6 +607,18 @@ public sealed partial class HudRoot : Control
         // Show it at once; the view-model catches up on its next refresh (at most a quarter of a second later).
         ShowSpeed(_host.Speed);
         _viewModel?.MarkDirty();
+    }
+
+    // The quiet festival-running badge (M2-27): a small label at the end of the stats row, visible only
+    // while a festival runs. Houses pause their decline timers while it shows.
+    private void BuildFestivalBadge(SimHost host, UiStrings strings)
+    {
+        _strings = strings;
+        var badge = new Label { Visible = false };
+        badge.TooltipText = strings.Get("ui.events.hud.festival.tip");
+        GetNode<HFlowContainer>("%StatsFlow").AddChild(badge);
+        _festivalBadge = badge;
+        _ = host;
     }
 
     private void ShowSpeed(SimSpeed speed)

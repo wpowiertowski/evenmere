@@ -4,6 +4,7 @@ using Evenmere.Core.Time;
 using Evenmere.Game.Host;
 using Evenmere.Game.Rendering.Camera;
 using Evenmere.Game.Ui.Common;
+using Evenmere.Game.Ui.Events;
 using Evenmere.Game.Ui.Explain;
 using Evenmere.Game.Ui.Inspector;
 using Evenmere.Game.Ui.Progress;
@@ -13,6 +14,7 @@ using Evenmere.Sim.Systems.Advisors;
 using Evenmere.Sim.Systems.Advisors.Commands;
 using Evenmere.Sim.Systems.Construction;
 using Evenmere.Sim.Systems.Culture;
+using Evenmere.Sim.Systems.Happenings;
 using Evenmere.Sim.Systems.Population;
 using Evenmere.Sim.Systems.Research;
 using Godot;
@@ -42,7 +44,7 @@ public sealed partial class NotificationFeed : Control
     private readonly List<ToastView> _toasts = new();
     private readonly Dictionary<int, PanelContainer> _pins = new();
     private readonly HashSet<int> _shownAdvice = new();
-    private readonly List<string> _filters = ["all", "building", "people", "progress", "advice"];
+    private readonly List<string> _filters = ["all", "building", "people", "progress", "advice", "events"];
 
     private SimHost? _host;
     private CameraRig? _rig;
@@ -106,6 +108,10 @@ public sealed partial class NotificationFeed : Control
     /// <summary>Gets or sets the path to the build menu, which the feed yields to while it is open.</summary>
     [Export]
     public NodePath BuildMenuPath { get; set; } = new("../BuildMenu");
+
+    /// <summary>Gets or sets the path to the happening dialog, reopened from a pending-happening entry.</summary>
+    [Export]
+    public NodePath HappeningDialogPath { get; set; } = new("../HappeningDialog");
 
     /// <inheritdoc />
     public override void _Ready()
@@ -296,6 +302,15 @@ public sealed partial class NotificationFeed : Control
                 case AdviceCleared cleared:
                     ClearPin(cleared.AdviceId);
                     break;
+                case MonumentStageCompleted staged:
+                    AddMonumentStage(staged.Tick, staged.Building, staged.Monument, staged.Stage);
+                    break;
+                case HappeningPending pending:
+                    AddHappeningPending(pending.Tick, pending.Happening);
+                    break;
+                case HappeningResolved resolved:
+                    ResolveHappening(resolved.Tick, resolved.Happening, resolved.OptionIndex);
+                    break;
             }
         }
 
@@ -375,9 +390,9 @@ public sealed partial class NotificationFeed : Control
         }
     }
 
-    private void AddSingle(long tick, NotificationCategory category, string title, string? note, SubjectLink subject, TechId? tech = null, CivicId? civic = null)
+    private void AddSingle(long tick, NotificationCategory category, string title, string? note, SubjectLink subject, TechId? tech = null, CivicId? civic = null, HappeningId? happening = null)
     {
-        PushEntry(NotificationEntry.Create(_nextId++, tick, category, title, note, subject, tech, civic));
+        PushEntry(NotificationEntry.Create(_nextId++, tick, category, title, note, subject, tech, civic, happening));
     }
 
     private void AddInspiration(InspirationTriggered inspiration)
@@ -397,6 +412,79 @@ public sealed partial class NotificationFeed : Control
             string name = CivicDisplayName(civic);
             AddSingle(inspiration.Tick, NotificationCategory.Progress, _strings.Format("ui.notifications.inspiration.civic", ("name", name)), note: null, SubjectLink.None, civic: civic);
         }
+    }
+
+    // A monument finished one of its stages: a quiet toast naming the stage (stages are 0-based in the sim).
+    private void AddMonumentStage(long tick, EntityId building, MonumentId monument, int stage)
+    {
+        if (_strings is null)
+        {
+            return;
+        }
+
+        AddSingle(
+            tick,
+            NotificationCategory.Events,
+            _strings.Format(
+                "ui.events.feed.monument.stage",
+                ("name", MonumentDisplayName(monument)),
+                ("stage", (stage + 1).ToString())),
+            note: null,
+            SubjectLink.ForBuilding(building));
+    }
+
+    // A happening waits for a choice: one entry that stays until it resolves and reopens the dialog on click.
+    private void AddHappeningPending(long tick, HappeningId happening)
+    {
+        if (_strings is null)
+        {
+            return;
+        }
+
+        PushEntry(NotificationEntry.Create(
+            _nextId++,
+            tick,
+            NotificationCategory.Events,
+            _strings.Format("ui.events.feed.happening", ("name", HappeningDisplayName(happening))),
+            _strings.Get("ui.events.feed.happening.note"),
+            SubjectLink.None,
+            happening: happening));
+    }
+
+    // The pending happening was answered or timed out: rename its entry so nothing stale asks for a decision.
+    private void ResolveHappening(long tick, HappeningId happening, int optionIndex)
+    {
+        if (_strings is null)
+        {
+            return;
+        }
+
+        _ = optionIndex;
+        for (int i = 0; i < _entries.Count; i++)
+        {
+            if (_entries[i].Happening == happening)
+            {
+                NotificationEntry updated = _entries[i] with
+                {
+                    Tick = tick,
+                    Title = _strings.Format(
+                        "ui.events.feed.happening.resolved",
+                        ("name", HappeningDisplayName(happening))),
+                    Note = null,
+                };
+                ReplaceEntry(updated);
+                RefreshToast(updated);
+                return;
+            }
+        }
+
+        AddSingle(
+            tick,
+            NotificationCategory.Events,
+            _strings.Format("ui.events.feed.happening.resolved", ("name", HappeningDisplayName(happening))),
+            note: null,
+            SubjectLink.None,
+            happening: happening);
     }
 
     private void AddAdvice(AdviceRaised raised)
@@ -554,6 +642,32 @@ public sealed partial class NotificationFeed : Control
         return string.Equals(text, key, StringComparison.Ordinal) ? content.NameOf(type) : text;
     }
 
+    private string MonumentDisplayName(MonumentId monument)
+    {
+        UiStrings strings = _strings!;
+        ContentDb content = _content!;
+        string name = content.NameOf(monument);
+        string key = $"monument.{name}.name";
+        string text = strings.Get(key);
+        if (!string.Equals(text, key, StringComparison.Ordinal))
+        {
+            return text;
+        }
+
+        return (uint)monument.Value < (uint)content.Monuments.Count
+            ? BuildingDisplayName(content.Get(monument).Building)
+            : name;
+    }
+
+    private string HappeningDisplayName(HappeningId happening)
+    {
+        UiStrings strings = _strings!;
+        ContentDb content = _content!;
+        string key = $"happening.{content.NameOf(happening)}.name";
+        string text = strings.Get(key);
+        return string.Equals(text, key, StringComparison.Ordinal) ? content.NameOf(happening) : text;
+    }
+
     private string TechDisplayName(TechId tech)
     {
         UiStrings strings = _strings!;
@@ -655,6 +769,13 @@ public sealed partial class NotificationFeed : Control
         {
             OpenPanel(CulturePath, ResearchPath);
             GD.Print($"[Evenmere] Notifications: subject link civic {host.Content.NameOf(entry.Civic.Value)} followed; civics panel opened.");
+            return;
+        }
+
+        if (entry.Happening is not null)
+        {
+            GetNodeOrNull<HappeningDialog>(HappeningDialogPath)?.ShowPending();
+            GD.Print($"[Evenmere] Notifications: happening entry '{entry.Title}' reopened the dialog.");
             return;
         }
 
@@ -1155,7 +1276,7 @@ public sealed partial class NotificationFeed : Control
             _historyClose.TooltipText = _strings.Get("ui.notifications.close.tip");
         }
 
-        string[] keys = ["ui.notifications.filter.all", "ui.notifications.filter.building", "ui.notifications.filter.people", "ui.notifications.filter.progress", "ui.notifications.filter.advice"];
+        string[] keys = ["ui.notifications.filter.all", "ui.notifications.filter.building", "ui.notifications.filter.people", "ui.notifications.filter.progress", "ui.notifications.filter.advice", "ui.notifications.filter.events"];
         for (int i = 0; i < _filterButtons.Length && i < keys.Length; i++)
         {
             _filterButtons[i].Text = _strings.Get(keys[i]);
@@ -1352,6 +1473,7 @@ public sealed partial class NotificationFeed : Control
         "people" => entry.Category == NotificationCategory.People,
         "progress" => entry.Category == NotificationCategory.Progress,
         "advice" => entry.Category == NotificationCategory.Advice,
+        "events" => entry.Category == NotificationCategory.Events,
         _ => true,
     };
 

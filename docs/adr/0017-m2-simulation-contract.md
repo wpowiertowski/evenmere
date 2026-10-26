@@ -60,6 +60,23 @@ asks about no discovery, so every existing call site is unaffected.
 - No existing query signature changes, so M1 saves, fakes and the view keep compiling;
   new fakes implement the new members explicitly.
 
+## Addendum (2026-10-26)
+
+Two view-safe twins landed after the M2 cards were refined, because the game boundary
+(ADR-0006) forbids view code from touching the MessagePack state records the M2-08 and
+M2-12 queries return:
+
+- `ICultureQueries.ActiveFestivalView() → FestivalRunView?` (M2-27): the running festival
+  with its ground and days left, mirroring `FestivalRun` without the culture state.
+- `IHappeningsQueries.PendingView() → PendingHappeningView?` (M2-27): the pending happening
+  with its raised tick, mirroring `PendingHappening` without the happenings state.
+- `IStatisticsQueries.SeasonalSeries(StatKey, Span<long>) → (int Written, long Seasons)`
+  (M2-33): the per-season series beside the 40-day ring. It already landed and was missing
+  from this addendum.
+
+Both view records live in `Evenmere.Sim.Queries.Types`, which the boundary check allows;
+both members are plain additive members with explicit implementations and fake coverage.
+
 ## Alternatives
 
 One ADR per system (seven small ADRs): rejected as noise, because every change is
