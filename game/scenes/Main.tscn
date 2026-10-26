@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3]
+[gd_scene load_steps=25 format=3]
 
 [ext_resource type="Script" uid="uid://bub5wqwnne33" path="res://host/Main.cs" id="1_main"]
 [ext_resource type="Script" uid="uid://dcmhwhll1gsvl" path="res://host/SimHost.cs" id="2_host"]
@@ -21,6 +21,8 @@
 [ext_resource type="Script" path="res://rendering/overlays/OverlayRenderer.cs" id="22_overlays"]
 [ext_resource type="Script" path="res://rendering/overlays/OverlayPanel.cs" id="23_overlaypanel"]
 [ext_resource type="Script" path="res://ui/stats/StatsPanel.cs" id="21_stats"]
+[ext_resource type="Script" uid="uid://m2season24a01" path="res://rendering/seasons/SeasonRenderer.cs" id="24_season"]
+[ext_resource type="Script" uid="uid://m2smoke24b02x" path="res://rendering/effects/SmokeRenderer.cs" id="25_smoke"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_mode = 1
@@ -95,3 +97,9 @@ script = ExtResource("22_overlays")
 
 [node name="OverlayPanel" type="PanelContainer" parent="."]
 script = ExtResource("23_overlaypanel")
+
+[node name="Seasons" type="Node3D" parent="."]
+script = ExtResource("24_season")
+
+[node name="Smoke" type="Node3D" parent="."]
+script = ExtResource("25_smoke")
