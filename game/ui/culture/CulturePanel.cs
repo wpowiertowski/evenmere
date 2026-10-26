@@ -9,6 +9,7 @@ using Evenmere.Game.Ui.Common;
 using Evenmere.Game.Ui.Progress;
 using Evenmere.Game.Ui.Research;
 using Evenmere.Sim;
+using Evenmere.Sim.Queries;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Culture.Commands;
 using Evenmere.Sim.Systems.Culture.Traditions;
@@ -41,6 +42,7 @@ public sealed partial class CulturePanel : PanelContainer
 
     private SimHost? _host;
     private ContentDb? _builtFor;
+    private ISimQueries? _builtForQueries;
     private CultureViewModel? _model;
     private UiStrings? _strings;
     private Dictionary<string, string>? _glyphs;
@@ -51,6 +53,7 @@ public sealed partial class CulturePanel : PanelContainer
     private Label? _teaser;
     private CivicsTreeView? _tree;
     private TraditionsBoard? _board;
+    private DebugScript? _debug;
     private IReadOnlyList<ProbedBonus> _beforeSwap = [];
     private IReadOnlyList<BonusProbe> _pendingProbes = [];
     private IReadOnlyList<string> _summaryLines = [];
@@ -78,6 +81,7 @@ public sealed partial class CulturePanel : PanelContainer
 
         BuildChrome();
         _host.EventsDrained += OnEvents;
+        _debug = DebugScript.Parse();
         Visible = false;
     }
 
@@ -105,12 +109,13 @@ public sealed partial class CulturePanel : PanelContainer
 
         SyncToToggles();
 
-        if (_model is null || !ReferenceEquals(_builtFor, host.Content))
+        if (_model is null || NeedsRebuild(host))
         {
             RebuildModel(host);
         }
 
         _model?.Advance(delta);
+        _debug?.Tick(this);
     }
 
     /// <inheritdoc />
@@ -188,6 +193,7 @@ public sealed partial class CulturePanel : PanelContainer
 
         _strings = new UiStrings(host.Locale);
         _builtFor = host.Content;
+        _builtForQueries = host.Query;
         _glyphs = LoadGlyphs(host.Content);
         _model = new CultureViewModel(
             host.Content,
@@ -198,6 +204,12 @@ public sealed partial class CulturePanel : PanelContainer
         _model.MarkDirty();
         Retitle();
     }
+
+    // The content object outlives a save load (the host loads it once and reuses it), so the content
+    // identity alone never notices a new world: the queries object is tracked too, and the simulation
+    // creates it fresh with every game. Without this a loaded save keeps showing the old world's answers.
+    private bool NeedsRebuild(SimHost host) =>
+        !ReferenceEquals(_builtFor, host.Content) || !ReferenceEquals(_builtForQueries, host.Query);
 
     private void OnEvents(IReadOnlyList<SimEvent> events)
     {
@@ -504,5 +516,80 @@ public sealed partial class CulturePanel : PanelContainer
         }
 
         return glyphs;
+    }
+
+    // Staged screenshots (debug builds only): --civics=show opens the panel once the world is running,
+    // and --civics-zoom=<factor> multiplies the graph zoom once (0.5 for the Era I overview still), the
+    // same pattern as the research panel's own debug script.
+    private sealed class DebugScript
+    {
+        private readonly bool _show;
+        private readonly float _zoom;
+        private bool _zoomed;
+        private bool _done;
+
+        private DebugScript(bool show, float zoom)
+        {
+            _show = show;
+            _zoom = zoom;
+        }
+
+        public static DebugScript? Parse()
+        {
+            if (!OS.IsDebugBuild())
+            {
+                return null;
+            }
+
+            bool show = false;
+            float zoom = 1f;
+            bool seen = false;
+            foreach (string arg in OS.GetCmdlineUserArgs())
+            {
+                if (arg == "--civics=show")
+                {
+                    show = true;
+                    seen = true;
+                }
+                else if (arg.StartsWith("--civics-zoom=", StringComparison.Ordinal)
+                    && float.TryParse(
+                        arg["--civics-zoom=".Length..],
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out float parsed)
+                    && parsed > 0f)
+                {
+                    zoom = parsed;
+                    seen = true;
+                }
+            }
+
+            return seen ? new DebugScript(show, zoom) : null;
+        }
+
+        public void Tick(CulturePanel panel)
+        {
+            if (_done || panel._model is null || panel._host is not { IsRunning: true })
+            {
+                return;
+            }
+
+            if (_show && !panel.Visible)
+            {
+                panel.Toggle();
+            }
+
+            if (!_zoomed)
+            {
+                if (_zoom != 1f)
+                {
+                    panel._tree?.ZoomBy(_zoom);
+                }
+
+                _zoomed = true;
+            }
+
+            _done = true;
+        }
     }
 }
