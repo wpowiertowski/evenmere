@@ -22,6 +22,7 @@ The scenes are 3D models drawn with a non-photorealistic pass, which suits Evenm
   - The default is an **orthographic** camera with a fixed yaw offset and a moderate downward angle, about 30°.
   - Rotation keeps 90° steps from that offset.
   - The offset is a single setting. M1-32 sets it to 30° at the developer's request. The look-development task (M2-29) compares 30° with the reference's 45° and the developer picks.
+  - Decided (developer, M2-29): the comparison picked **both** — the shipped look is hand-drawn and orthographic by default, and the yaw offset blends from 30° at street zoom to 45° at island zoom (like the pitch blend), with 90° rotation steps on top. `--look=classic` keeps the M1 perspective camera, materials and neutral sun available.
   - Zoom maps to the orthographic size. Street-level close-ups may keep a gentle perspective blend if the prototype shows that orthographic feels flat up close.
 - **Rendering pass:**
   - **Outlines:** ink outlines from a screen-space edge detection over depth and normals, with a little noise-driven wobble and per-object line weight.

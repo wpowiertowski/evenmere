@@ -1,6 +1,7 @@
 using Evenmere.Core.Ids;
 using Evenmere.Game.Data.Visuals;
 using Evenmere.Game.Host;
+using Evenmere.Game.Rendering.Look;
 using Evenmere.Sim;
 using Evenmere.Sim.Queries;
 using Evenmere.Sim.Queries.Types;
@@ -27,6 +28,7 @@ public sealed partial class RoadRenderer : Node3D
     private readonly Dictionary<ChunkCoord, MeshInstance3D> _chunks = new();
     private readonly Dictionary<string, Color> _roadColours = new(StringComparer.Ordinal);
     private readonly StandardMaterial3D _roadMaterial;
+    private readonly StandardMaterial3D _roadMaterialHand;
 
     private SimHost? _host;
     private bool _initialised;
@@ -34,9 +36,18 @@ public sealed partial class RoadRenderer : Node3D
     /// <summary>Initializes a new instance of the <see cref="RoadRenderer"/> class.</summary>
     public RoadRenderer()
     {
+        // Classic keeps the M1 smooth shading; the hand-drawn material bands the key light like the terrain pass.
+        // Vertex colours stay linear in both, since the builder linearises the palette fills before writing them.
         _roadMaterial = new StandardMaterial3D
         {
             VertexColorUseAsAlbedo = true,
+            Roughness = 1f,
+            Metallic = 0f,
+        };
+        _roadMaterialHand = new StandardMaterial3D
+        {
+            VertexColorUseAsAlbedo = true,
+            DiffuseMode = BaseMaterial3D.DiffuseModeEnum.Toon,
             Roughness = 1f,
             Metallic = 0f,
         };
@@ -307,7 +318,7 @@ public sealed partial class RoadRenderer : Node3D
 
         ArrayMesh mesh = new();
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-        mesh.SurfaceSetMaterial(0, _roadMaterial);
+        mesh.SurfaceSetMaterial(0, LookSettings.ActiveLook == LookMode.HandDrawn ? _roadMaterialHand : _roadMaterial);
         return mesh;
     }
 }

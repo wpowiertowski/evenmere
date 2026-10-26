@@ -401,8 +401,8 @@ Godot renders a stylised, low-poly 3D island and hosts all UI. It reads simulati
 
 ### Rendering
 
-- **Camera:** smooth zoom from street level to a whole-island view. It pans by keys, edge scrolling, drag and the gamepad stick, and rotates in 90° steps from a fixed yaw offset (an isometric-style starting angle). M1 uses a tilted perspective; the target is an orthographic isometric view (ADR-0013, prototyped in M2-29).
-- **Look:** a non-photorealistic pass over every mesh draws the hand-drawn style: ink outlines from depth and normal edges with a slight wobble, banded lighting with a warm key light and soft long shadows, paper and watercolour grain, and painterly water (ADR-0013).
+- **Camera:** smooth zoom from street level to a whole-island view. It pans by keys, edge scrolling, drag and the gamepad stick, and rotates in 90° steps from a yaw offset that blends from 30° at street zoom to 45° at island zoom (like the 30–50° pitch blend). The view is orthographic by default, so a bigger window shows more island at the same tile size; `--look=classic` restores the M1 perspective camera.
+- **Look:** a non-photorealistic pass over every mesh draws the hand-drawn style: ink outlines from depth and normal edges with a slight wobble, banded lighting with a warm key light and soft long shadows, paper and watercolour grain, and painterly water (ADR-0013, M2-29). `--look=classic` restores the M1 materials and neutral sun.
 - **Terrain:** generated meshes in 32 × 32 tile chunks, a splat shader for biomes, and roads as strip meshes.
 - **Water:** one animated shader plane with shoreline foam from a distance field. Rivers are flat animated strips.
 - **Buildings and trees:** one `MultiMeshInstance3D` per building type per chunk. A chunk rebuilds only when the sim marks it dirty.

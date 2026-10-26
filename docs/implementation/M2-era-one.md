@@ -39,7 +39,7 @@ gamepad hand check.
 | A | M2-01, M2-05, M2-07, M2-09, M2-10, M2-14, M2-15, M2-29, M2-30 | Sim foundations + content-infra + look + upgrades design; no two cards share a file (M2-07 owns the traditions lines of the shared registration points) |
 
 M2-31 is done (M1 playtest polish); it is not scheduled in any wave.
-| B | M2-02a, M2-04, M2-08, M2-11, M2-12, M2-18, M2-19, M2-20, M2-21, M2-22, M2-26 | Map terrain; bridges; festivals; eras; happenings; tree/overlay/chain/stats views; cheats (M2-26 moved here so its `SaveHeader` line never meets M2-15) |
+| B | M2-02a, M2-04, M2-08, M2-11, M2-12, M2-18, M2-19, M2-20, M2-21, M2-22, M2-26, M2-32 | Map terrain; bridges; festivals; eras; happenings; tree/overlay/chain/stats views; cheats (M2-26 moved here so its `SaveHeader` line never meets M2-15) |
 | C | M2-02b, M2-13a, M2-16, M2-24 | Regions/discoveries/guarantee; Era I production content; perf harness; season visuals |
 | D | M2-03, M2-06, M2-25, M2-27 | Mapgen CLI; exploration; new-game UI; culture-moment UI |
 | E | M2-13b, M2-23 | Trees content; fog/expedition UI |
@@ -95,9 +95,10 @@ file per card as listed; never edit another card's file.
 | M2-26 | Debug overlay and cheat console | game + sim | M2-00 | todo |
 | M2-27 | Festivals, monuments and happenings UI | game | M2-08, M2-10, M2-12 | todo |
 | M2-28 | Era I playtest and gate review | human | all M2 tasks | todo |
-| M2-29 | Look development: hand-drawn rendering prototype | game | M1 gate | todo |
+| M2-29 | Look development: hand-drawn rendering prototype | game | M1 gate | done |
 | M2-30 | Upgrade lines: design pass, crew stat and Era I upgrades | human + content | M2-00 | todo |
 | M2-31 | Window and input polish from the M1 playtest | game | M1 gate | done |
+| M2-32 | Look tuning: water strokes, terrain calibration, coast and map edge | game | M2-29 | todo |
 
 ---
 
@@ -1036,6 +1037,27 @@ file per card as listed; never edit another card's file.
 - A log line or test shows a wheel event over the build menu leaving the zoom unchanged.
 - Godot-free tests cover the scale policy, the FOV formula, the zoom guard and the button labels.
 
+
+---
+
+### M2-32 · Look tuning: water strokes, terrain calibration, coast and map edge
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| game | M2-29 | `game/rendering/look/**`, `game/rendering/terrain/**`, `game/rendering/water/**` (shaders and material setup only) |
+
+**Reads:** ADR-0013 (the developer's decisions under Camera); docs/art/style-guide.md and briefs/terrain.md; M2-29's report (its measurement protocol).
+
+**Goal:** finish the hand-drawn look that M2-29 made the default (developer, 2026-10-25: "remaining tuning continues as follow-up tasks").
+
+**Steps:**
+
+1. **Water strokes:** ripple strokes and broken foam that read at the default and overview zoom, not only at street zoom.
+2. **Terrain calibration:** lit terrain within ±8% of its palette tokens (plains, forest, hills, highlands), using M2-29's ground-truth protocol with denser sampling.
+3. **Coast:** a soft, inked coastline instead of the stepped tile edge, and smooth beach transitions.
+4. **Map edge:** at overview zoom the island sits in open sea with no visible square sea-plane edge.
+
+**Acceptance:** before-and-after screenshots at street, default and overview zoom; the measurements; the bench unchanged; `scripts/verify.sh` passes.
 ---
 
 ### M2-28 · Era I playtest and gate review

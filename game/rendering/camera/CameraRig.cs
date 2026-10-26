@@ -1,5 +1,6 @@
 using System.Globalization;
 using Evenmere.Game.Controls;
+using Evenmere.Game.Rendering.Look;
 using Evenmere.Game.Ui.Common;
 using Godot;
 using SysVector3 = System.Numerics.Vector3;
@@ -7,7 +8,8 @@ using SysVector3 = System.Numerics.Vector3;
 namespace Evenmere.Game.Rendering.Camera;
 
 /// <summary>
-/// The player's view of the island: a tilted perspective camera that orbits a focus point on the ground. It pans with
+/// The player's view of the island: a camera that orbits a focus point on the ground, in perspective (the default)
+/// or in the orthographic prototype. It pans with
 /// WASD, the arrows, the left stick, the screen edge (optional) and middle-drag; zooms with the wheel, = and -, a
 /// pinch and the triggers; and turns in 90° steps with Q and E or the shoulder buttons. All motion is eased and uses
 /// closed-form integrators (<see cref="CameraMath"/>), so it feels the same at any frame rate.
@@ -45,6 +47,7 @@ public sealed partial class CameraRig : Node3D
     private float _yaw;
     private float _yawVelocity;
     private int _rotationSteps;
+    private float? _yawFixed;
 
     private bool _dragging;
     private Vector2 _pointer;
@@ -90,9 +93,24 @@ public sealed partial class CameraRig : Node3D
     [Export(PropertyHint.Range, "10,89,0.5,suffix:°")]
     public float IslandPitchDegrees { get; set; } = 50f;
 
-    /// <summary>Gets or sets the isometric-style starting angle, in degrees. Rotation still turns in 90° steps from it.</summary>
+    /// <summary>Gets or sets the isometric-style starting angle at street zoom, in degrees. The offset blends toward
+    /// island view with zoom, and rotation still turns in 90° steps from it.</summary>
     [Export(PropertyHint.Range, "0,90,0.5,suffix:°")]
     public float YawOffsetDegrees { get; set; } = 30f;
+
+    /// <summary>The camera's projection: the M1 perspective view, or the orthographic isometric view.</summary>
+    public enum CameraProjection
+    {
+        /// <summary>The M1 look: perspective with the M2-31 height-driven field of view (<c>--look=classic</c>).</summary>
+        Perspective = 0,
+
+        /// <summary>The hand-drawn look: an orthographic view whose span scales with the window height. This is the default.</summary>
+        Orthographic = 1,
+    }
+
+    /// <summary>Gets or sets the camera's projection. Orthographic is the default; classic runs switch to perspective.</summary>
+    [Export]
+    public CameraProjection Projection { get; set; } = CameraProjection.Orthographic;
 
     /// <summary>Gets or sets how fast a full pan input moves the focus, in zoom distances per second. Panning is slower when zoomed in and faster when zoomed out.</summary>
     [Export(PropertyHint.Range, "0.05,3,0.05")]
@@ -175,6 +193,16 @@ public sealed partial class CameraRig : Node3D
         _tracker = GetNode<InputModeTracker>("InputModeTracker");
         _cursor = GetNodeOrNull<VirtualCursor>("VirtualCursor");
 
+        // The launch look decides the projection; debug experiment switches may override both afterwards.
+        LookMode activeLook = LookSettings.ActiveLook;
+        if (activeLook == LookMode.Classic)
+        {
+            Projection = CameraProjection.Perspective;
+        }
+
+        LookSettings.ApplyCameraOverrides(this);
+        GD.Print($"[Evenmere] Look: {activeLook} look, {Projection} projection.");
+
         _tracker.ModeChanged += OnModeChanged;
         OnModeChanged(_tracker.Mode);
 
@@ -183,18 +211,18 @@ public sealed partial class CameraRig : Node3D
         window.MouseExited += OnMouseExited;
         window.FocusEntered += OnFocusEntered;
         window.FocusExited += OnFocusExited;
-        window.SizeChanged += ApplyFov;
+        window.SizeChanged += ApplyProjection;
 
         (float centerX, float centerZ) = Bounds.Center();
         _focus = new Vector2(centerX, centerZ);
         (float minZoom, float maxZoom) = ZoomRange();
         _logZoom = _targetLogZoom = MathF.Log(Math.Clamp(InitialZoom, minZoom, maxZoom));
-        _yaw = CameraMath.TargetYawRadians(_rotationSteps, YawOffsetDegrees);
+        _yaw = CameraMath.TargetYawRadians(_rotationSteps, CurrentYawOffsetDegrees());
         _yawVelocity = 0f;
         _focusHeight = FocusGroundHeight();
         _lastFovSize = GetWindow().Size;
         _lastFovScreen = DisplayServer.ScreenGetScale((int)DisplayServer.ScreenOfMainWindow);
-        ApplyFov();
+        ApplyProjection();
 
         // Debug evidence only: --check-zoom=sx,sy warps the pointer there, injects one wheel-up through the real
         // input path and logs the hovered control and the zoom before and after (M2-31).
@@ -204,6 +232,17 @@ public sealed partial class CameraRig : Node3D
         }
 
         ApplyTransform(minZoom, maxZoom);
+
+        if (_camera is not null)
+        {
+            LookPost.AttachIfEnabled(_camera, activeLook);
+        }
+
+        // The hand-drawn scene light (warm key, matched ambient); classic runs skip it and keep the M1 sun.
+        if (GetTree().CurrentScene is not null)
+        {
+            LookScene.ApplyIfEnabled(GetTree().CurrentScene, activeLook);
+        }
     }
 
     /// <inheritdoc />
@@ -218,13 +257,14 @@ public sealed partial class CameraRig : Node3D
         window.MouseExited -= OnMouseExited;
         window.FocusEntered -= OnFocusEntered;
         window.FocusExited -= OnFocusExited;
-        window.SizeChanged -= ApplyFov;
+        window.SizeChanged -= ApplyProjection;
     }
 
     /// <inheritdoc />
     public override void _Process(double delta)
     {
         CheckFovScale();
+        RefreshOrthoSize();
         if (_checkZoomStage != 0)
         {
             TickCheckZoom();
@@ -487,16 +527,37 @@ public sealed partial class CameraRig : Node3D
         }
     }
 
+    /// <summary>Locks the yaw offset to one angle, skipping the zoom blend. Debug experiments use it.</summary>
+    /// <param name="fixedDegrees">The fixed offset in degrees.</param>
+    public void OverrideYawOffset(float fixedDegrees)
+    {
+        YawOffsetDegrees = fixedDegrees;
+        _yawFixed = fixedDegrees;
+    }
+
+    // The yaw offset the rotation spring aims at: the zoom blend from the street angle toward island view, or the
+    // locked angle when a debug experiment set one. It follows the smoothed zoom, so smooth zooming never jitters.
+    private float CurrentYawOffsetDegrees()
+    {
+        if (_yawFixed is { } locked)
+        {
+            return locked;
+        }
+
+        (float minZoom, float maxZoom) = ZoomRange();
+        return CameraMath.BlendedYawOffsetDegrees(Zoom, minZoom, maxZoom, YawOffsetDegrees, YawOffsetDegrees + (CameraMath.IslandYawDegrees - CameraMath.StreetYawDegrees));
+    }
+
     private void UpdateRotation(float dt)
     {
-        float target = CameraMath.TargetYawRadians(_rotationSteps, YawOffsetDegrees);
+        float target = CameraMath.TargetYawRadians(_rotationSteps, CurrentYawOffsetDegrees());
         CameraMath.SpringStep(ref _yaw, ref _yawVelocity, target, RotationResponse, dt);
 
         if (MathF.Abs(_yaw - target) < SettleDistance && MathF.Abs(_yawVelocity) < SettleVelocity)
         {
             // At rest: fold whole turns away so the angle never grows without bound.
             _rotationSteps = RotationQuadrant;
-            _yaw = CameraMath.SettledYawRadians(_rotationSteps, YawOffsetDegrees);
+            _yaw = CameraMath.SettledYawRadians(_rotationSteps, CurrentYawOffsetDegrees());
             _yawVelocity = 0f;
         }
     }
@@ -572,25 +633,62 @@ public sealed partial class CameraRig : Node3D
     }
 
     /// <summary>
-    /// Sets the vertical field of view from the window's height in logical points, so one tile covers the same number
-    /// of points at any window size and a bigger window shows more island (<see cref="CameraMath.VerticalFovDegrees"/>).
-    /// It runs on ready and on every resize; the 1600 x 900-point view keeps its 45-degree look.
+    /// Sets the projection from the window's height in logical points, so one tile covers the same number of points
+    /// at any window size and a bigger window shows more island. Perspective sets the vertical field of view
+    /// (<see cref="CameraMath.VerticalFovDegrees"/>); orthographic sets the span
+    /// (<see cref="CameraMath.OrthographicSize"/>), which <see cref="RefreshOrthoSize"/> then follows every frame
+    /// as the zoom eases. It runs on ready and on every resize; the 1600 x 900-point view keeps its 45-degree look.
     /// </summary>
-    private void ApplyFov()
+    private void ApplyProjection()
     {
         if (_camera is null || !IsInsideTree())
         {
             return;
         }
 
-        // Window.Size counts physical pixels (backing store); the formula works in logical points.
+        // Window.Size counts physical pixels (backing store); the formulas work in logical points.
         float screen = DisplayServer.ScreenGetScale((int)DisplayServer.ScreenOfMainWindow);
         float pointsH = UiScale.PointsFromPixels(GetWindow().Size.Y, screen);
-        float fov = CameraMath.VerticalFovDegrees(pointsH);
-        if (MathF.Abs(_camera.Fov - fov) > 0.01f)
+        if (Projection == CameraProjection.Orthographic)
         {
-            _camera.Fov = fov;
+            _camera.Projection = Camera3D.ProjectionType.Orthogonal;
+            float size = CameraMath.OrthographicSize(Zoom, pointsH);
+            if (MathF.Abs(_camera.Size - size) > 0.001f)
+            {
+                _camera.Size = size;
+            }
         }
+        else
+        {
+            _camera.Projection = Camera3D.ProjectionType.Perspective;
+            float fov = CameraMath.VerticalFovDegrees(pointsH);
+            if (MathF.Abs(_camera.Fov - fov) > 0.01f)
+            {
+                _camera.Fov = fov;
+            }
+        }
+    }
+
+    // The orthographic size follows the zoom every frame; the perspective field of view only follows resizes.
+    private void RefreshOrthoSize()
+    {
+        if (_camera is null || Projection != CameraProjection.Orthographic)
+        {
+            return;
+        }
+
+        float size = CameraMath.OrthographicSize(Zoom, CurrentPointsHeight());
+        if (MathF.Abs(_camera.Size - size) > 0.001f)
+        {
+            _camera.Size = size;
+        }
+    }
+
+    // The cached window height in logical points, refreshed by CheckFovScale just before this runs each frame.
+    private float CurrentPointsHeight()
+    {
+        float screen = _lastFovScreen > 0f ? _lastFovScreen : 1f;
+        return UiScale.PointsFromPixels(_lastFovSize.Y, screen);
     }
 
     // The window's screen scale can change without a resize (the window moving to a display with another HiDPI
@@ -603,7 +701,7 @@ public sealed partial class CameraRig : Node3D
         {
             _lastFovSize = size;
             _lastFovScreen = screen;
-            ApplyFov();
+            ApplyProjection();
         }
     }
 

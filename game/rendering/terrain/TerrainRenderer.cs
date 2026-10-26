@@ -1,6 +1,7 @@
 using Evenmere.Game.Controls;
 using Evenmere.Game.Data.Visuals.Terrain;
 using Evenmere.Game.Host;
+using Evenmere.Game.Rendering.Look;
 using Evenmere.Game.Rendering.Camera;
 using Evenmere.Sim.Queries;
 using Evenmere.Sim.Queries.Types;
@@ -248,6 +249,21 @@ public sealed partial class TerrainRenderer : Node3D
 
         _material = new ShaderMaterial { Shader = shader };
         _material.SetShaderParameter("show_grid", _gridVisible);
+        Color sceneAmbient = SceneAmbient();
+        _material.SetShaderParameter("ambient_color", sceneAmbient);
+
+        // Classic restores the M1 materials: smooth shading and the mud riverbed under the M1 strip colours.
+        _material.SetShaderParameter("look_amount", LookSettings.ActiveLook == LookMode.HandDrawn ? 1f : 0f);
+        if (LookSettings.ActiveLook != LookMode.HandDrawn)
+        {
+            for (int i = 0; i < _coloursByTerrain.Length; i++)
+            {
+                if (_host.Content.Terrains.Names[i] == "river")
+                {
+                    _coloursByTerrain[i] = new Color(0.4f, 0.38f, 0.28f).SrgbToLinear();
+                }
+            }
+        }
 
         int chunksX = (map.Width + ChunkCoord.TilesPerSide - 1) / ChunkCoord.TilesPerSide;
         int chunksY = (map.Height + ChunkCoord.TilesPerSide - 1) / ChunkCoord.TilesPerSide;
@@ -291,6 +307,20 @@ public sealed partial class TerrainRenderer : Node3D
         }
 
         GD.Print($"[Evenmere] Terrain: dropped {dropped} dirty mark(s) covered by the initial build");
+    }
+
+    // The scene ambient that lifts every toon band (Main.tscn WorldEnvironment): colour x energy, falling back
+    // to the authored values when the scene has no environment yet.
+    private Color SceneAmbient()
+    {
+        WorldEnvironment? holder = GetTree().CurrentScene?.GetNodeOrNull<WorldEnvironment>("WorldEnvironment");
+        Godot.Environment? environment = holder?.Environment;
+        if (environment is null)
+        {
+            return new Color(0.51f, 0.53f, 0.55f);
+        }
+
+        return environment.AmbientLightColor * environment.AmbientLightEnergy;
     }
 
     private int ChunksX() => _chunks.GetLength(0);

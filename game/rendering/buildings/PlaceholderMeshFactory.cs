@@ -1,5 +1,6 @@
 using Evenmere.Game.Data.Visuals;
 using Evenmere.Game.Rendering.Buildings.Kit;
+using Evenmere.Game.Rendering.Look;
 using Godot;
 
 namespace Evenmere.Game.Rendering.Buildings;
@@ -29,7 +30,9 @@ public sealed class PlaceholderMeshFactory : IDisposable
     private readonly Dictionary<string, KitSpec?> _kits = new(StringComparer.Ordinal);
     private readonly HashSet<string> _warned = new(StringComparer.Ordinal);
     private readonly StandardMaterial3D _buildingMaterial;
+    private readonly StandardMaterial3D _buildingMaterialHand;
     private readonly StandardMaterial3D _scaffoldMaterial;
+    private readonly StandardMaterial3D _scaffoldMaterialHand;
     private ArrayMesh? _plinthUnit;
 
     private BuildingVisualMap _map = new(new Dictionary<string, BuildingVisual>());
@@ -37,19 +40,34 @@ public sealed class PlaceholderMeshFactory : IDisposable
     /// <summary>Initializes a new instance of the <see cref="PlaceholderMeshFactory"/> class.</summary>
     public PlaceholderMeshFactory()
     {
-        // Matte low-poly look in the terrain's style: palette colours as albedo, no metallic shine.
+        // Matte low-poly look in the terrain's style: palette colours as albedo, no metallic shine. The hand-drawn
+        // twins band the key light like the terrain; classic keeps the M1 materials. The mode is fixed at startup.
         _buildingMaterial = new StandardMaterial3D
         {
             VertexColorUseAsAlbedo = true,
             Roughness = 0.95f,
             Metallic = 0f,
         };
+        _buildingMaterialHand = new StandardMaterial3D
+        {
+            VertexColorUseAsAlbedo = true,
+            Roughness = 0.95f,
+            Metallic = 0f,
+        };
+        LookMaterials.ApplyHandDrawn(_buildingMaterialHand);
         _scaffoldMaterial = new StandardMaterial3D
         {
             AlbedoColor = _scaffoldColour.SrgbToLinear(),
             Roughness = 1f,
             Metallic = 0f,
         };
+        _scaffoldMaterialHand = new StandardMaterial3D
+        {
+            AlbedoColor = _scaffoldColour.SrgbToLinear(),
+            Roughness = 1f,
+            Metallic = 0f,
+        };
+        LookMaterials.ApplyHandDrawn(_scaffoldMaterialHand);
     }
 
     /// <summary>
@@ -127,7 +145,7 @@ public sealed class PlaceholderMeshFactory : IDisposable
 
         (BuildingShape shape, Color colour) = VisualFor(typeName);
         _builder.RebuildBody(shape, width, depth);
-        mesh = ToMesh(_builder, _buildingMaterial, slot => SlotColour(shape, colour, slot));
+        mesh = ToMesh(_builder, BuildingMaterial, slot => SlotColour(shape, colour, slot));
         _bodies[key] = mesh;
         return mesh;
     }
@@ -146,7 +164,7 @@ public sealed class PlaceholderMeshFactory : IDisposable
         }
 
         _builder.RebuildRuin(width, depth);
-        mesh = ToMesh(_builder, _buildingMaterial, static slot => Shade(_ruinColour, slot));
+        mesh = ToMesh(_builder, BuildingMaterial, static slot => Shade(_ruinColour, slot));
         _ruins[key] = mesh;
         return mesh;
     }
@@ -175,7 +193,7 @@ public sealed class PlaceholderMeshFactory : IDisposable
         }
 
         _builder.RebuildScaffold(width, depth, height);
-        mesh = ToMesh(_builder, _scaffoldMaterial, static _ => _scaffoldColour.SrgbToLinear());
+        mesh = ToMesh(_builder, ScaffoldMaterial, static _ => _scaffoldColour.SrgbToLinear());
         _scaffolds[key] = mesh;
         return mesh;
     }
@@ -209,7 +227,7 @@ public sealed class PlaceholderMeshFactory : IDisposable
         }
 
         _builder.RebuildPlinthUnit();
-        _plinthUnit = ToMesh(_builder, _buildingMaterial, static _ => new Color(0.3f, 0.26f, 0.2f));
+        _plinthUnit = ToMesh(_builder, BuildingMaterial, static _ => new Color(0.3f, 0.26f, 0.2f));
         return _plinthUnit;
     }
 
@@ -217,8 +235,18 @@ public sealed class PlaceholderMeshFactory : IDisposable
     public void Dispose()
     {
         _buildingMaterial.Dispose();
+        _buildingMaterialHand.Dispose();
         _scaffoldMaterial.Dispose();
+        _scaffoldMaterialHand.Dispose();
     }
+
+    // The active building material for the launch look: the hand-drawn toon, else the M1 smooth material.
+    private StandardMaterial3D BuildingMaterial =>
+        LookSettings.ActiveLook == LookMode.HandDrawn ? _buildingMaterialHand : _buildingMaterial;
+
+    // The active scaffold material, same rule as <see cref="BuildingMaterial"/>.
+    private StandardMaterial3D ScaffoldMaterial =>
+        LookSettings.ActiveLook == LookMode.HandDrawn ? _scaffoldMaterialHand : _scaffoldMaterial;
 
     private static Color SlotColour(BuildingShape shape, Color body, MeshSlot slot) => slot switch
     {
@@ -308,7 +336,7 @@ public sealed class PlaceholderMeshFactory : IDisposable
 
         ArrayMesh mesh = new();
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-        mesh.SurfaceSetMaterial(0, _buildingMaterial);
+        mesh.SurfaceSetMaterial(0, BuildingMaterial);
         return mesh;
     }
 

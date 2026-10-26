@@ -15,6 +15,12 @@ public static class CameraMath
     /// The window height in logical points the reference view is framed for: at this height the vertical field of
     /// view is <see cref="ReferenceVerticalFovDegrees"/> and the view looks exactly as it did before M2-31.
     /// </summary>
+    /// <summary>The yaw offset in degrees at street level: streets run diagonally at the developer's chosen angle.</summary>
+    public const float StreetYawDegrees = 30f;
+
+    /// <summary>The yaw offset in degrees at island view: the reference's angle, blended to with zoom.</summary>
+    public const float IslandYawDegrees = 45f;
+
     public const float ReferenceViewportHeight = 900f;
 
     /// <summary>The vertical field of view in degrees at <see cref="ReferenceViewportHeight"/> points of window height.</summary>
@@ -42,6 +48,26 @@ public static class CameraMath
     }
 
     /// <summary>
+    /// Gets the orthographic size (the vertical span in world units) for a zoom distance and a window height in
+    /// logical points. At a given zoom one tile covers the same number of points at any window size, so a bigger
+    /// window shows more island: the size scales linearly with the height (doubling the height doubles the span).
+    /// Within the perspective clamp range it matches the perspective span at the focus point
+    /// (<c>2 x zoom x tan(fov / 2)</c>), so switching projections at the same zoom keeps the tile size in points.
+    /// Orthographic projection never distorts, so unlike <see cref="VerticalFovDegrees"/> the size is never clamped.
+    /// <param name="zoom">The camera distance from the focus point, in world units; non-positive counts as zero.</param>
+    /// <param name="windowPointsH">The window height in logical points; non-positive counts as zero.</param>
+    /// <returns>The vertical span in world units.</returns>
+    public static float OrthographicSize(float zoom, float windowPointsH)
+    {
+        if (!(zoom > 0f) || !(windowPointsH > 0f))
+        {
+            return 0f;
+        }
+
+        float referenceHalf = (ReferenceVerticalFovDegrees / 2f) * (MathF.PI / 180f);
+        return 2f * zoom * MathF.Tan(referenceHalf) * (windowPointsH / ReferenceViewportHeight);
+    }
+
     /// Decides whether a pointer zoom (the wheel, a trackpad scroll or a pinch) reaches the camera: only when the
     /// pointer is over no blocking control. Scrolling over any panel never zooms, even at the end of a list's range;
     /// gamepad and keyboard zoom are unaffected and handled separately.
@@ -59,6 +85,36 @@ public static class CameraMath
     /// <param name="offsetDegrees">The starting angle in degrees, clockwise about the vertical axis.</param>
     /// <returns>The offset in radians.</returns>
     public static float YawOffsetRadians(float offsetDegrees) => offsetDegrees * (MathF.PI / 180f);
+
+    /// <summary>
+    /// Gets the yaw offset for a zoom distance: it blends from <see cref="StreetYawDegrees"/> at street level to
+    /// <see cref="IslandYawDegrees"/> at island view along the same smooth step of <see cref="ZoomFraction"/> that
+    /// <see cref="PitchRadians"/> uses, so the view turns gradually as it pulls back. Rotation still adds its 90°
+    /// steps on top of the blend.
+    /// </summary>
+    /// <param name="zoom">The camera distance from the focus point, in world units.</param>
+    /// <param name="minZoom">The street-level distance; must be above zero.</param>
+    /// <param name="maxZoom">The island-view distance; must be above <paramref name="minZoom"/>.</param>
+    /// <returns>The yaw offset in degrees, from street to island angles, clamped.</returns>
+    public static float BlendedYawOffsetDegrees(float zoom, float minZoom, float maxZoom) =>
+        BlendedYawOffsetDegrees(zoom, minZoom, maxZoom, StreetYawDegrees, IslandYawDegrees);
+
+    /// <summary>
+    /// Gets the yaw offset for a zoom distance between explicit end angles, along the same smooth step of
+    /// <see cref="ZoomFraction"/> that <see cref="PitchRadians"/> uses. The camera rig passes its exported street
+    /// angle and the matching island angle, so an edited street angle keeps its span.
+    /// </summary>
+    /// <param name="zoom">The camera distance from the focus point, in world units.</param>
+    /// <param name="minZoom">The street-level distance; must be above zero.</param>
+    /// <param name="maxZoom">The island-view distance; must be above <paramref name="minZoom"/>.</param>
+    /// <param name="streetDegrees">The yaw offset at street level, in degrees.</param>
+    /// <param name="islandDegrees">The yaw offset at island view, in degrees.</param>
+    /// <returns>The yaw offset in degrees, from street to island angles, clamped.</returns>
+    public static float BlendedYawOffsetDegrees(float zoom, float minZoom, float maxZoom, float streetDegrees, float islandDegrees)
+    {
+        float t = SmoothStep(ZoomFraction(zoom, minZoom, maxZoom));
+        return streetDegrees + ((islandDegrees - streetDegrees) * t);
+    }
 
     /// <summary>
     /// Gets the yaw the rotation spring aims at: the offset plus 90° per step. Negative steps turn left.
