@@ -19,5 +19,7 @@
   "ui.stats.window": "Window",
   "ui.stats.window.days": "Last 40 days",
   "ui.stats.window.years": "2 years",
-  "ui.stats.long.empty": "The long view needs two full seasons first."
+  "ui.stats.long.empty": "The long view needs two full seasons first.",
+  "ui.stats.day": "Day {day}",
+  "ui.stats.season": "{season} Y{year}"
 }

@@ -67,14 +67,6 @@ public sealed partial class LineChart : Control
 
     /// <summary>Shows a chart.</summary>
     /// <param name="lines">The lines to draw.</param>
-    /// <param name="startDay">The day number of the oldest plotted point, for axis labels.</param>
-    /// <param name="dayStep">How many days one plotted point covers.</param>
-    /// <param name="emptyText">What to draw when every line is empty.</param>
-    public void SetData(IReadOnlyList<ChartLine> lines, int startDay, int dayStep, string emptyText) =>
-        SetData(lines, DayText(startDay), DayText(startDay + ((PointCountOf(lines) - 1) * Math.Max(1, dayStep))), emptyText);
-
-    /// <summary>Shows a chart with explicit axis labels (the long view names seasons, not days).</summary>
-    /// <param name="lines">The lines to draw.</param>
     /// <param name="firstLabel">The axis label of the oldest plotted point.</param>
     /// <param name="lastLabel">The axis label of the newest plotted point.</param>
     /// <param name="emptyText">What to draw when every line is empty.</param>
@@ -377,18 +369,5 @@ public sealed partial class LineChart : Control
         }
 
         return StatsViewModel.FormatValue(raw, _lines[0].IsMilli);
-    }
-
-    private static string DayText(long day) => $"Day {day}";
-
-    private static int PointCountOf(IReadOnlyList<ChartLine> lines)
-    {
-        int n = 0;
-        foreach (ChartLine line in lines)
-        {
-            n = Math.Max(n, line.Values.Length);
-        }
-
-        return n;
     }
 }

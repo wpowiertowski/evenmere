@@ -221,7 +221,7 @@ public sealed class StatsViewModel : ViewModel
 
     /// <summary>Gets the label of one plotted point: a day number in the daily window, a season in the long view.</summary>
     /// <param name="index">The point's index, oldest first.</param>
-    /// <returns>"Day 12" or "Spring Y2".</returns>
+    /// <returns>The locale's day or season label.</returns>
     public string PointLabel(int index)
     {
         if (Window == StatsWindow.TwoYears && index >= 0 && index < SeasonLabels.Length)
@@ -229,7 +229,7 @@ public sealed class StatsViewModel : ViewModel
             return SeasonLabels[index];
         }
 
-        return $"Day {StartDay + ((long)index * DayStep)}";
+        return _strings.Format("ui.stats.day", ("day", (StartDay + ((long)index * DayStep)).ToString()));
     }
 
     private void RefreshDaily()
@@ -330,7 +330,7 @@ public sealed class StatsViewModel : ViewModel
         return max;
     }
 
-    /// <summary>Names one season from the world start: "Spring Y2" for the sixth season.</summary>
+    /// <summary>Names one season from the world start, through the locale's season label.</summary>
     /// <param name="seasonIndex">The zero-based season from the world start; negative means before the start.</param>
     /// <returns>The display label, or an empty string when the index predates the world.</returns>
     public string SeasonLabel(long seasonIndex)
@@ -347,7 +347,10 @@ public sealed class StatsViewModel : ViewModel
             Season.Autumn => _strings.Get("ui.hud.season.autumn"),
             _ => _strings.Get("ui.hud.season.winter"),
         };
-        return $"{season} Y{(seasonIndex / GameTime.SeasonsPerYear) + 1}";
+        return _strings.Format(
+            "ui.stats.season",
+            ("season", season),
+            ("year", ((seasonIndex / GameTime.SeasonsPerYear) + 1).ToString()));
     }
 
     private int PlottedCount()

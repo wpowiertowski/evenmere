@@ -20,11 +20,12 @@ internal static class RunCommand
     /// <param name="seed">The world seed.</param>
     /// <param name="hashEvery">Print an intermediate hash every this many ticks; zero for none.</param>
     /// <param name="mapId">The island to start on (a folder under <c>maps/</c>), or <see langword="null"/> for the empty world.</param>
+    /// <param name="cheats">Whether cheat commands are enabled for the new game, so replays of logs that contain cheat commands match.</param>
     /// <param name="output">Standard output.</param>
     /// <param name="error">Standard error.</param>
     /// <returns><see cref="ExitCodes.Success"/>, or <see cref="ExitCodes.ContentErrors"/> if the content or the map has errors.</returns>
     public static int Execute(
-        IReadOnlyList<string> roots, long ticks, ulong seed, long hashEvery, string? mapId, TextWriter output, TextWriter error)
+        IReadOnlyList<string> roots, long ticks, ulong seed, long hashEvery, string? mapId, bool cheats, TextWriter output, TextWriter error)
     {
         ArgumentNullException.ThrowIfNull(roots);
         ArgumentOutOfRangeException.ThrowIfNegative(ticks);
@@ -55,6 +56,7 @@ internal static class RunCommand
         }
 
         var simulation = Simulation.CreateNew(result.Db, new NewGameOptions { Seed = seed, Map = map });
+        simulation.CheatsUsed = cheats;
         for (long tick = 1; tick <= ticks; tick++)
         {
             simulation.Tick();

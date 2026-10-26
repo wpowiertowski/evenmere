@@ -420,7 +420,7 @@ public sealed partial class StatsPanel : PanelContainer
         bool longView = _model.Window == StatsWindow.TwoYears;
         bool ready = !longView || _model.LongViewReady;
         string emptyText = longView && !ready ? strings.Get("ui.stats.long.empty") : strings.Get("ui.stats.empty");
-        (string first, string last) = AxisEnds(_model, longView && ready);
+        (string first, string last) = AxisEnds(_model, longView && ready, strings);
 
         SetBlock(
             0,
@@ -474,7 +474,7 @@ public sealed partial class StatsPanel : PanelContainer
         }
     }
 
-    private static (string First, string Last) AxisEnds(StatsViewModel model, bool seasons)
+    private static (string First, string Last) AxisEnds(StatsViewModel model, bool seasons, UiStrings strings)
     {
         if (seasons && model.SeasonLabels.Length > 0)
         {
@@ -482,8 +482,11 @@ public sealed partial class StatsPanel : PanelContainer
         }
 
         long lastDay = model.StartDay + ((long)Math.Max(0, PlottedWidth(model) - 1) * model.DayStep);
-        return ($"Day {model.StartDay}", $"Day {lastDay}");
+        return (DayText(strings, model.StartDay), DayText(strings, lastDay));
     }
+
+    private static string DayText(UiStrings strings, long day) =>
+        strings.Format("ui.stats.day", ("day", day.ToString()));
 
     private static int PlottedWidth(StatsViewModel model)
     {

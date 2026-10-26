@@ -44,6 +44,28 @@ public sealed class SaveRemapUnitTests
     }
 
     [Fact]
+    public void Remap_NewGood_FulfilmentDefaultsToFull()
+    {
+        // A good the save never knew gets the documented FairShares default (1000 per-mille:
+        // nobody needs it, so it counts as fully supplied); surviving goods keep their shares.
+        ContentDb content = Content;
+        string[] oldGoods = [.. content.Goods.Names.Take(content.Goods.Count - 1)];
+        SaveTables tables = TablesWith(content, oldGoods, null);
+        var world = WorldState.CreateNew(content, 1);
+        world.Needs.Shares.Demand = new Amount[oldGoods.Length];
+        world.Needs.Shares.Fulfilment = new Ratio[oldGoods.Length];
+        int oldBread = Array.IndexOf(oldGoods, "bread");
+        world.Needs.Shares.Fulfilment[oldBread] = Ratio.FromPerMille(500);
+
+        var report = new SaveReport();
+        RemapPass.Apply(world, tables, report);
+
+        world.Needs.Shares.Fulfilment[content.IdOf<GoodId>("bread").Value].ShouldBe(Ratio.FromPerMille(500));
+        GoodId added = content.IdOf<GoodId>(content.Goods.Names[^1]);
+        world.Needs.Shares.Fulfilment[added.Value].ShouldBe(Ratio.One);
+    }
+
+    [Fact]
     public void Remap_UnknownTech_DropsProgressTargetQueueModifiersAndSources()
     {
         ContentDb content = Content;

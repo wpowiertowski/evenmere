@@ -21,7 +21,12 @@ namespace Evenmere.Game.Rendering.Roads;
 /// </remarks>
 public sealed partial class RoadRenderer : Node3D
 {
-    private static readonly string _mappingPath = "res://data/visuals/era1-slice.json";
+    private static readonly string[] _mappingFiles =
+    [
+        "res://data/visuals/era1-slice.json",
+        "res://data/visuals/era1-production.json",
+        "res://data/visuals/era1-trees.json",
+    ];
     private static readonly Color _fallbackRoad = new(0.5f, 0.5f, 0.5f);
 
     private readonly RoadMeshBuilder _builder = new();
@@ -133,11 +138,31 @@ public sealed partial class RoadRenderer : Node3D
             return;
         }
 
-        var map = new BuildingVisualMap(new Dictionary<string, BuildingVisual>());
-        string json = Godot.FileAccess.GetFileAsString(_mappingPath);
-        if (!string.IsNullOrEmpty(json))
+        // Roads live across the visuals files (dirt in the slice, cobbled and timber in era1-production),
+        // so every mapping is merged the way the research panel merges its glyphs: the first file naming a
+        // road wins, and a road named nowhere falls back to grey with one warning.
+        var merged = new Dictionary<string, Color>(StringComparer.Ordinal);
+        foreach (string file in _mappingFiles)
         {
-            map = BuildingVisualMap.Load(json, static text => GD.PushWarning($"[Evenmere] Roads: {text}"));
+            if (!Godot.FileAccess.FileExists(file))
+            {
+                continue;
+            }
+
+            string json = Godot.FileAccess.GetFileAsString(file);
+            if (string.IsNullOrEmpty(json))
+            {
+                continue;
+            }
+
+            var map = BuildingVisualMap.Load(json, static text => GD.PushWarning($"[Evenmere] Roads: {text}"));
+            foreach (string name in _host.Content.Buildings.Names)
+            {
+                if (!merged.ContainsKey(name) && map.TryGet(name, out BuildingVisual? visual))
+                {
+                    merged[name] = Color.FromHtml(visual.Colour).SrgbToLinear();
+                }
+            }
         }
 
         foreach (string name in _host.Content.Buildings.Names)
@@ -148,9 +173,9 @@ public sealed partial class RoadRenderer : Node3D
                 continue;
             }
 
-            if (map.TryGet(name, out BuildingVisual? visual))
+            if (merged.TryGetValue(name, out Color colour))
             {
-                _roadColours[name] = Color.FromHtml(visual.Colour).SrgbToLinear();
+                _roadColours[name] = colour;
             }
             else
             {

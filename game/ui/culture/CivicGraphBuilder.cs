@@ -121,93 +121,8 @@ public static class CivicGraphBuilder
         ContentDb content,
         UiStrings strings,
         System.Collections.Immutable.ImmutableArray<Effect> effects,
-        Func<string, string?> iconFor)
-    {
-        ArgumentNullException.ThrowIfNull(content);
-        ArgumentNullException.ThrowIfNull(strings);
-        ArgumentNullException.ThrowIfNull(iconFor);
-
-        var unlocks = new List<GraphUnlock>(effects.Length);
-        foreach (Effect effect in effects)
-        {
-            switch (effect)
-            {
-                case UnlockBuildingEffect unlocked:
-                    {
-                        string name = content.Buildings.NameOf(unlocked.Building);
-                        unlocks.Add(new GraphUnlock(iconFor(name) ?? "\u2022", strings.Get($"building.{name}.name")));
-                        break;
-                    }
-
-                case UnlockRecipeEffect unlocked:
-                    {
-                        string name = content.Recipes.NameOf(unlocked.Recipe);
-                        unlocks.Add(new GraphUnlock(string.Empty, strings.Get($"recipe.{name}.name")));
-                        break;
-                    }
-
-                case UnlockTierEffect unlocked:
-                    {
-                        string name = content.Tiers.NameOf(unlocked.Tier);
-                        unlocks.Add(new GraphUnlock("\u25b2", strings.TierName(name)));
-                        break;
-                    }
-
-                case UnlockTraditionEffect unlocked:
-                    {
-                        string name = content.Traditions.NameOf(unlocked.Tradition);
-                        unlocks.Add(new GraphUnlock("\u2726", strings.Get($"tradition.{name}.name")));
-                        break;
-                    }
-
-                case UnlockFestivalEffect unlocked:
-                    {
-                        string name = content.Festivals.NameOf(unlocked.Festival);
-                        unlocks.Add(new GraphUnlock("\u2726", strings.Get($"festival.{name}.name")));
-                        break;
-                    }
-
-                case TraditionSlotEffect slot:
-                    unlocks.Add(new GraphUnlock("+", SlotName(strings, slot.Slot)));
-                    break;
-
-                case ModifierEffect modifier:
-                    unlocks.Add(new GraphUnlock(
-                        string.Empty,
-                        $"+{modifier.Percent}% {StatName(modifier.Stat)}"));
-                    break;
-
-                case GrantGoodsEffect granted:
-                    {
-                        var parts = new List<string>(granted.Goods.Length);
-                        foreach (GoodAmount goods in granted.Goods)
-                        {
-                            parts.Add($"+{NumberFormat.Units(goods.Amount)} {strings.GoodName(content.Goods.NameOf(goods.Good))}");
-                        }
-
-                        unlocks.Add(new GraphUnlock(string.Empty, string.Join(", ", parts)));
-                        break;
-                    }
-
-                case GrantPointsEffect granted:
-                    {
-                        var parts = new List<string>(granted.Points.Length);
-                        foreach (PointAmount points in granted.Points)
-                        {
-                            parts.Add($"+{NumberFormat.Units(points.Amount)} {ContentNames.NameOf(points.Kind)}");
-                        }
-
-                        unlocks.Add(new GraphUnlock(string.Empty, string.Join(", ", parts)));
-                        break;
-                    }
-
-                default:
-                    break;
-            }
-        }
-
-        return unlocks;
-    }
+        Func<string, string?> iconFor) =>
+        EffectText.Describe(content, strings, effects, iconFor, EffectText.StatName);
 
     /// <summary>
     /// Humanizes a modifier stat's JSON name for display: the content spelling (<c>output.culture</c>,
@@ -216,33 +131,7 @@ public static class CivicGraphBuilder
     /// </summary>
     /// <param name="stat">The stat.</param>
     /// <returns>The display name, all lowercase to sit inside effect lines.</returns>
-    public static string StatName(Stat stat)
-    {
-        string raw = ContentNames.NameOf(stat);
-        const string OutputPrefix = "output.";
-        string reordered = raw.StartsWith(OutputPrefix, StringComparison.Ordinal)
-            ? raw[OutputPrefix.Length..] + " output"
-            : raw;
-        var words = new System.Text.StringBuilder(reordered.Length + 4);
-        foreach (char letter in reordered)
-        {
-            if (letter is '_' or '.' or ' ')
-            {
-                words.Append(' ');
-            }
-            else if (char.IsUpper(letter))
-            {
-                words.Append(' ');
-                words.Append(char.ToLowerInvariant(letter));
-            }
-            else
-            {
-                words.Append(letter);
-            }
-        }
-
-        return words.ToString().TrimStart(' ');
-    }
+    public static string StatName(Stat stat) => EffectText.StatName(stat);
 
     /// <summary>
     /// Names a tradition slot type from the locale table (<c>ui.traditions.slot.*</c>).
@@ -250,11 +139,7 @@ public static class CivicGraphBuilder
     /// <param name="strings">The display text.</param>
     /// <param name="slot">The slot type.</param>
     /// <returns>The display name.</returns>
-    public static string SlotName(UiStrings strings, TraditionSlotType slot)
-    {
-        ArgumentNullException.ThrowIfNull(strings);
-        return strings.Get($"ui.traditions.slot.{slot.ToString().ToLowerInvariant()}");
-    }
+    public static string SlotName(UiStrings strings, TraditionSlotType slot) => EffectText.SlotName(strings, slot);
 
     private static string StateText(UiStrings strings, NodeRow<CivicId> row) => row.Group switch
     {

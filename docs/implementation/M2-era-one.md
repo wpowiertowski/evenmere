@@ -101,6 +101,7 @@ file per card as listed; never edit another card's file.
 | M2-32 | Look tuning: water strokes, terrain calibration, coast and map edge | game | M2-29 | done |
 | M2-33 | Long statistics history: a seasonal series | sim + game | M2-22 | done |
 | M2-34 | Advisors at scale | sim | M2-16 | done |
+| M2-35 | Polish pass from review | game + sim + tools | — | done |
 
 ---
 
@@ -1138,6 +1139,30 @@ file per card as listed; never edit another card's file.
 
 ---
 
+### M2-35 · Polish pass from review
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| game + sim + tools | — | listed per item below |
+
+**Goal:** clear the small follow-ups found while reviewing M2 tasks before the M2-28 playtest.
+
+**Items** (each touches only the lines it names):
+
+1. **Road colours.** The cobbled road and timber bridge render grey ("no placeholder mapping"), because `RoadRenderer.LoadRoadColours` reads a single visuals file (`_mappingPath`) while `cobbled_road` lives in `era1-production.json`. Load every `game/data/visuals/*.json` mapping the way the building renderer does, or share its loader. Owns: `game/rendering/roads/RoadRenderer.cs`.
+2. **Toasts over docked panels.** Completion toasts (bottom centre) overlap the right-docked panels: research, civics, statistics, overlays, inspector. Lay out toasts in the space left of whichever docked panel is open, with nothing hidden and nothing overlapping. Owns: `game/ui/notifications/NotificationFeed.cs` (toast layout only).
+3. **One effect formatter.** `CivicGraphBuilder.DescribeEffects` (culture) and `ResearchViewModel`'s unlock formatting duplicate each other. Move the shared formatting into one place (for example `game/ui/progress/EffectText.cs`, new) used by both, with unchanged output. Owns: those three files.
+4. **Statistics labels in locale.** "Day N" axis and hover labels are hardcoded English in `game/ui/stats/{StatsPanel,LineChart,StatsViewModel}.cs`. Move them to `content/locale/en/ui-stats.json`.
+5. **HUD goods chip → chain viewer.** Clicking (or `ui_accept` on) a goods chip opens the chain viewer on that good. Owns: `game/ui/hud/HudRoot.cs` (chip activation lines).
+6. **Fulfilment default on remap.** `RemapPass.RemapNeeds` fills `Fulfilment` with 0 for new goods nobody needs, where `FairShares` documents 1000 (per-mille). Use the documented default. Owns: `src/Evenmere.Sim/Persistence/RemapPass.cs` (that line), plus a test.
+7. **`evenmere run --cheats`.** Replays of logs that contain cheat commands need the flag. Owns: the run command's file and `EvenmereCli.cs` (that option only).
+
+**Acceptance:** each item with evidence (a screenshot for 1, 2 and 5; tests for 3, 4, 6 and 7); `REQUIRE_GODOT=1 scripts/verify.sh` passes; golden hashes unchanged, unless item 6 moves one, in which case state why.
+
+**Out of scope:** moving `AfterLookPriority` into `LookPost` (after M2-23 lands); anything not listed.
+
+---
+
 ## Follow-ups found in review
 
 Small issues found while reviewing M2 tasks, each with the card or lane it belongs to. A card picks its item up when it touches the code anyway. Items with no home card are listed for a polish pass before the M2-28 playtest.
@@ -1147,20 +1172,21 @@ Small issues found while reviewing M2 tasks, each with the card or lane it belon
 | M2-16 | ~~The advisors system spikes to 248 ms on some ticks on `perf-20k`.~~ Fixed by M2-34 (max 7.5 ms, average within budget). | M2-34 (done) |
 | M2-34 | Building the storehouse distance fields after a roads change still costs up to about 50 ms on `perf-20k` (953 storehouses). Logistics now pays it first (its Deck average is 0.42 against a 0.50 budget), and the tick's p99 is still about 7.9 ms Deck. Labelled per-tile costs, or incremental field updates, would remove it. Not gating. | Sim perf task before M3 |
 | M2-19 | The inspector names tradition, festival, happening and monument sources "from 0": `ExplainService.SourceArg` and `ExplainFormat` have no arms for them. | M2-13b (first real traditions) |
-| M2-19 | Completion toasts overlap right-docked panels (research, civics, statistics, overlays, inspector). | Polish pass |
-| M2-19 | `CivicGraphBuilder.DescribeEffects` duplicates the unlock formatting in `ResearchViewModel`; one shared formatter. | Polish pass |
-| M2-22/M2-33 | The statistics panel's "Day N" axis and hover labels are hardcoded English. | Polish pass |
+| M2-19 | ~~Completion toasts overlap right-docked panels.~~ Done in M2-35. | M2-35 (done) |
+| M2-19 | ~~One shared effect formatter.~~ Done in M2-35 (`EffectText`). | M2-35 (done) |
+| M2-22/M2-33 | ~~Statistics "Day N" labels hardcoded.~~ Done in M2-35. | M2-35 (done) |
 | M2-27 | Happening options have no label: the happenings schema allows only `effects` and `durationDays` per option. Adding labels changes a frozen schema (ADR). | M2-13b |
 | M2-02b | Generated region names (`region.generated.N`) and discovery names have no locale text. | M2-13b |
 | M2-02b | `MapState` doesn't keep `SubSeed` or `Discoveries`; exploration needs them. | M2-06 |
 | M2-13a | `bridge_building`'s inspiration (complete 1 expedition) can't fire until the expeditions counter exists. | M2-06 |
-| M2-13a | `RemapNeeds` fills `Fulfilment` with 0 for new goods nobody needs, where `FairShares` documents 1000; it corrects itself at the next day boundary. | Polish pass |
+| M2-13a | ~~`RemapNeeds` fulfilment default.~~ Done in M2-35. | M2-35 (done) |
 | M2-02a | A few generated rivers still read as long, nearly straight lines at overview scale, though each passes the 12-step rule. | M2-03 (seed gallery) |
 | M2-20 | `OverlayRenderer.AfterLookPriority` belongs in `LookPost`, so the camera and tools don't depend on the overlay namespace. | Polish pass |
 | M2-32 | Lit forest's red channel sits 3.8 points outside the ±8% calibration band; no single light fits every biome. | Look track |
+| M2-35 | At the default zoom the beach blend can still read as a bright yellow glow along the coast; judge it in the M2-28 playtest. | Look track |
 | M2-24 | Blossom pink is hardcoded; a `flower.blossom` palette token. Snow on roofs needs building visuals. | ART track |
-| M2-26 | `evenmere run` could take `--cheats` to replay logs that contain cheat commands. | Polish pass |
-| ART-02 | Clicking a HUD goods chip could open the chain viewer for that good. | Polish pass |
+| M2-26 | ~~`evenmere run --cheats`.~~ Done in M2-35. | M2-35 (done) |
+| ART-02 | ~~HUD goods chip opens the chain viewer.~~ Done in M2-35. | M2-35 (done) |
 
 ## Gate record
 

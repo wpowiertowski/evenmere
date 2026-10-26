@@ -1,6 +1,7 @@
 using Evenmere.Content;
 using Evenmere.Core.Ids;
 using Evenmere.Game.Host;
+using Evenmere.Game.Ui.Chains;
 using Evenmere.Game.Ui.Common;
 using Evenmere.Game.Ui.Explain;
 using Evenmere.Sim;
@@ -44,6 +45,7 @@ public sealed partial class HudRoot : Control
     private Label? _festivalBadge;
     private UiStrings? _strings;
     private string _debugWorkforceTier = string.Empty;
+    private string _debugChipClick = string.Empty;
     private Button[] _speedButtons = [];
     private SimHost? _host;
     private ContentDb? _builtFor;
@@ -73,6 +75,10 @@ public sealed partial class HudRoot : Control
     /// <summary>Gets or sets the path to the <see cref="SimHost"/> node, relative to this node.</summary>
     [Export]
     public NodePath HostPath { get; set; } = new("../../SimHost");
+
+    /// <summary>Gets or sets the path to the chain viewer opened when a goods chip is activated, relative to this node.</summary>
+    [Export]
+    public NodePath ChainViewerPath { get; set; } = new("../../ChainViewer");
 
     /// <summary>
     /// Gets or sets the UI scale, from <see cref="UiScale.Minimum"/> to <see cref="UiScale.Maximum"/>. It feeds the
@@ -129,6 +135,13 @@ public sealed partial class HudRoot : Control
                 {
                     _debugAllGoods = true;
                 }
+                else if (arg.StartsWith("--hud-chip-click=", StringComparison.Ordinal))
+                {
+                    // Debug screenshots only: --hud-chip-click=<good> drives the real chip activation
+                    // path once the HUD is built (M2-35 evidence), so the shot proves the click opens the
+                    // chain viewer instead of staging it through the viewer's own flag.
+                    _debugChipClick = arg["--hud-chip-click=".Length..];
+                }
             }
         }
 
@@ -166,6 +179,7 @@ public sealed partial class HudRoot : Control
         }
 
         _viewModel?.Advance(delta);
+        RunDebugChipClick();
 
         // Debug measurement for the two-row proof: with --hud-all-goods, log the settled goods-row
         // widths once, so the report can show 15 chips fitting the bar's width arithmetically.
@@ -660,11 +674,53 @@ public sealed partial class HudRoot : Control
             chip.MouseExited += () => CallDeferred(nameof(HideGoodTipUnlessHovered));
             chip.FocusEntered += () => ShowGoodTip(index);
             chip.FocusExited += () => CallDeferred(nameof(HideGoodTipUnlessFocused));
+            chip.GuiInput += @event => OnGoodChipInput(@event, index, fromDebug: false);
         }
 
         if (_explainPopup is not null)
         {
             _explainPopup.MouseExited += HideGoodTip;
+        }
+    }
+
+    // Clicking (or ui_accept on) a goods chip opens the chain viewer on that good (M2-35): the chip keeps
+    // its hover tooltip, and activation reuses the same strip index the tooltip reads.
+    private void OnGoodChipInput(InputEvent @event, int index, bool fromDebug)
+    {
+        if (@event.IsEcho())
+        {
+            return;
+        }
+
+        bool click = @event is InputEventMouseButton button
+            && button.Pressed
+            && button.ButtonIndex == MouseButton.Left;
+        if (!click && !@event.IsActionPressed("ui_accept"))
+        {
+            return;
+        }
+
+        if ((uint)index >= (uint)_stripGoods.Length)
+        {
+            return;
+        }
+
+        if (_host is not { IsRunning: true } host)
+        {
+            return;
+        }
+
+        GoodId good = _stripGoods[index];
+        if (GetNodeOrNull<ChainViewer>(ChainViewerPath) is { } viewer)
+        {
+            viewer.Show(good);
+            if (!fromDebug)
+            {
+                // Outside input dispatch (the debug driver) there is no event to mark handled.
+                GetViewport().SetInputAsHandled();
+            }
+
+            GD.Print($"[Evenmere] HUD: goods chip for {host.Content.NameOf(good)} opened the chain viewer.");
         }
     }
 
@@ -784,6 +840,30 @@ public sealed partial class HudRoot : Control
                 return;
             }
         }
+    }
+
+    // Drives the real chip activation path for a named good (debug screenshots only): the same synthetic
+    // click the mouse sends, so the evidence shot proves clicking the chip opens the chain viewer. Runs
+    // once the chips exist; an unknown name clears the request quietly.
+    private void RunDebugChipClick()
+    {
+        if (_debugChipClick.Length == 0 || _goodChips.Count == 0 || _host is not { IsRunning: true } host)
+        {
+            return;
+        }
+
+        string wanted = _debugChipClick;
+        _debugChipClick = string.Empty;
+        for (int i = 0; i < _stripGoods.Length && i < _goodChips.Count; i++)
+        {
+            if (string.Equals(host.Content.NameOf(_stripGoods[i]), wanted, StringComparison.Ordinal))
+            {
+                OnGoodChipInput(new InputEventMouseButton { Pressed = true, ButtonIndex = MouseButton.Left }, i, fromDebug: true);
+                return;
+            }
+        }
+
+        GD.PushWarning($"[Evenmere] HUD: --hud-chip-click names an unknown good '{wanted}'; ignoring.");
     }
 
     private readonly record struct SpeedOption(SimSpeed Speed, string Action);
