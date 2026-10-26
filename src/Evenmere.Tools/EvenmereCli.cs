@@ -69,8 +69,107 @@ internal static class EvenmereCli
             BuildHash(environment),
             BuildReplay(content, environment),
             BuildBalance(content, environment),
+            BuildPerf(content, environment),
         };
         return root;
+    }
+
+    private static Command BuildPerf(Option<string[]> content, ToolEnvironment environment)
+    {
+        var save = new Option<string?>("--save")
+        {
+            Description = "The save file to measure.",
+            HelpName = "file",
+        };
+
+        var buildSave = new Option<string?>("--build-save")
+        {
+            Description = "Build a provisional perf reference save instead of measuring one: 2k (about 2,000 residents) or 20k (synthetic stress, as many as the island holds).",
+            HelpName = "2k|20k",
+        };
+        buildSave.AcceptOnlyFromAmong("2k", "20k");
+
+        var output = new Option<string?>("--out")
+        {
+            Description = "Where to write the built save (with --build-save).",
+            HelpName = "file",
+        };
+
+        var ticks = new Option<long>("--ticks")
+        {
+            Description = "How many ticks to measure.",
+            HelpName = "n",
+            DefaultValueFactory = _ => 2000,
+            CustomParser = NonNegativeWholeNumber("--ticks"),
+        };
+
+        var enforce = new Option<bool>("--enforce")
+        {
+            Description = "Exit non-zero when a Deck-equivalent average exceeds its budget x 1.25.",
+            DefaultValueFactory = _ => false,
+        };
+
+        var perf = new Command(
+            "perf",
+            "Measure a save's tick cost, or build a provisional perf reference save. stdout: the JSON report; stderr: the text report with raw and Deck-equivalent numbers.")
+        {
+            save,
+            buildSave,
+            output,
+            ticks,
+            enforce,
+        };
+        perf.SetAction(parsed =>
+        {
+            long measured = parsed.GetValue(ticks);
+            if (measured < 1)
+            {
+                environment.Error.WriteLine("evenmere: --ticks must be 1 or more.");
+                return ExitCodes.Usage;
+            }
+
+            string? build = parsed.GetValue(buildSave);
+            string? savePath = parsed.GetValue(save);
+            string? outPath = parsed.GetValue(output);
+            if (build is not null)
+            {
+                if (savePath is not null)
+                {
+                    environment.Error.WriteLine("evenmere: --save and --build-save cannot be combined.");
+                    return ExitCodes.Usage;
+                }
+
+                if (string.IsNullOrEmpty(outPath))
+                {
+                    environment.Error.WriteLine("evenmere: --build-save needs --out <file>.");
+                    return ExitCodes.Usage;
+                }
+
+                return WithContentRoots(parsed, content, environment, roots =>
+                    PerfCommand.Build(
+                        roots,
+                        build,
+                        outPath,
+                        environment.Output,
+                        environment.Error));
+            }
+
+            if (string.IsNullOrEmpty(savePath))
+            {
+                environment.Error.WriteLine("evenmere: --save <file> or --build-save 2k|20k is required.");
+                return ExitCodes.Usage;
+            }
+
+            return WithContentRoots(parsed, content, environment, roots =>
+                PerfCommand.Execute(
+                    roots,
+                    savePath,
+                    measured,
+                    parsed.GetValue(enforce),
+                    environment.Output,
+                    environment.Error));
+        });
+        return perf;
     }
 
     private static Command BuildLint(Option<string[]> content, ToolEnvironment environment)
