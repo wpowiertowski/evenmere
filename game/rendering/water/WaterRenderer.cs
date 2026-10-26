@@ -1,5 +1,6 @@
 using Evenmere.Content;
 using Evenmere.Game.Host;
+using Evenmere.Game.Rendering.Look;
 using Evenmere.Game.Rendering.Terrain;
 using Evenmere.Sim.Queries;
 using Evenmere.Sim.Queries.Types;
@@ -17,6 +18,8 @@ public sealed partial class WaterRenderer : Node3D
 {
     private static readonly string _seaShaderPath = "res://rendering/water/sea.gdshader";
     private static readonly string _riverShaderPath = "res://rendering/water/river.gdshader";
+    private static readonly string _palettePath = "res://data/visuals/palette.tres";
+    private static readonly string _ripplePath = "res://assets/textures/water/ripples.png";
 
     private SimHost? _host;
     private bool _initialised;
@@ -99,6 +102,28 @@ public sealed partial class WaterRenderer : Node3D
         var seaMaterial = new ShaderMaterial { Shader = seaShader };
         seaMaterial.SetShaderParameter("shore_tex", ImageTexture.CreateFromImage(image));
         seaMaterial.SetShaderParameter("map_size", new Vector2(map.Width, map.Height));
+        seaMaterial.SetShaderParameter("ambient_color", SceneAmbient());
+        seaMaterial.SetShaderParameter("look_amount", LookSettings.ActiveLook == LookMode.HandDrawn ? 1f : 0f);
+        if (LookSettings.ActiveLook == LookMode.HandDrawn)
+        {
+            // The hand-drawn sea is palette-calibrated; classic keeps the M1 colours from the shader defaults.
+            // Uniforms take linear colours, so every token goes through the shared palette's lineariser.
+            if (GD.Load<Resource>(_palettePath) is LookPalette palette)
+            {
+                seaMaterial.SetShaderParameter("shallow_color", palette.ColourOf("water.shallow"));
+                seaMaterial.SetShaderParameter("reef_color", palette.ColourOf("terrain.reef"));
+                seaMaterial.SetShaderParameter("deep_color", palette.ColourOf("water.deep"));
+                seaMaterial.SetShaderParameter("foam_color", palette.ColourOf("water.foam"));
+                seaMaterial.SetShaderParameter("ripple_color", palette.ColourOf("ink.water"));
+            }
+            else
+            {
+                GD.PushWarning("[Evenmere] Water: missing palette; the sea keeps its M1 colours.");
+            }
+        }
+
+        // ART-04 painted ripples over the procedural strokes; missing files warn once and keep the fallback.
+        seaMaterial.SetShaderParameter("has_ripple_tex", BindRipple(seaMaterial));
 
         var seaMesh = new PlaneMesh
         {
@@ -117,6 +142,34 @@ public sealed partial class WaterRenderer : Node3D
         GD.Print($"[Evenmere] Water: sea plane and river strips built ({map.Width}x{map.Height} tiles)");
     }
 
+    // Loads the painted ripple mask for a water material, reporting whether it bound. A missing file warns once
+    // and leaves the slot on its procedural fallback.
+    private static float BindRipple(ShaderMaterial material)
+    {
+        if (GD.Load<Texture2D>(_ripplePath) is not { } texture)
+        {
+            GD.PushWarning($"[Evenmere] Water: missing texture '{_ripplePath}'; using procedural strokes.");
+            return 0f;
+        }
+
+        material.SetShaderParameter("ripple_tex", texture);
+        return 1f;
+    }
+
+    // The scene ambient that lifts every toon band (Main.tscn WorldEnvironment): colour x energy, falling back
+    // to the authored values when the scene has no environment yet.
+    private Color SceneAmbient()
+    {
+        WorldEnvironment? holder = GetTree().CurrentScene?.GetNodeOrNull<WorldEnvironment>("WorldEnvironment");
+        Godot.Environment? environment = holder?.Environment;
+        if (environment is null)
+        {
+            return new Color(0.51f, 0.53f, 0.55f);
+        }
+
+        return environment.AmbientLightColor * environment.AmbientLightEnergy;
+    }
+
     // One flat-ish quad per river tile, its vertices riding the carved corners plus the lift: above the flat bed by
     // construction, below the banks, and continuous tile to tile (the shared corners agree, so the water runs
     // unbroken from source to mouth). Rivers never change in M1, so this runs once.
@@ -131,6 +184,7 @@ public sealed partial class WaterRenderer : Node3D
         List<Vector3> vertexList = new();
         List<Vector3> normalList = new();
         List<Vector2> uvList = new();
+        List<Color> bankList = new();
         List<int> indexList = new();
 
         for (int y = 0; y < stripMap.Height; y++)
@@ -149,16 +203,21 @@ public sealed partial class WaterRenderer : Node3D
                 float h01 = StripCornerHeight(stripMap, x, y + 1) + TerrainSurface.RiverStripLift;
                 float h11 = StripCornerHeight(stripMap, x + 1, y + 1) + TerrainSurface.RiverStripLift;
 
+                // The bank mask per tile edge follows the land around it: bit 0 north, 1 east, 2 south, 3 west.
+                // The shader inks exactly the edges that border land, so the line runs continuously along both
+                // banks and never covers the middle, however narrow the river.
+                float bankMask = TileBankMask(stripMap, x, y);
+
                 // The same diagonal rule as the terrain tile, so strip and bed never cross.
                 if (Math.Abs(h00 - h11) <= Math.Abs(h10 - h01))
                 {
-                    EmitStripTriangle(vertexList, normalList, uvList, indexList, x, h00, y, x + 1, h10, y, x + 1, h11, y + 1);
-                    EmitStripTriangle(vertexList, normalList, uvList, indexList, x, h00, y, x + 1, h11, y + 1, x, h01, y + 1);
+                    EmitStripTriangle(vertexList, normalList, uvList, bankList, indexList, x, h00, y, x + 1, h10, y, x + 1, h11, y + 1, bankMask);
+                    EmitStripTriangle(vertexList, normalList, uvList, bankList, indexList, x, h00, y, x + 1, h11, y + 1, x, h01, y + 1, bankMask);
                 }
                 else
                 {
-                    EmitStripTriangle(vertexList, normalList, uvList, indexList, x, h00, y, x + 1, h10, y, x, h01, y + 1);
-                    EmitStripTriangle(vertexList, normalList, uvList, indexList, x + 1, h10, y, x + 1, h11, y + 1, x, h01, y + 1);
+                    EmitStripTriangle(vertexList, normalList, uvList, bankList, indexList, x, h00, y, x + 1, h10, y, x, h01, y + 1, bankMask);
+                    EmitStripTriangle(vertexList, normalList, uvList, bankList, indexList, x + 1, h10, y, x + 1, h11, y + 1, x, h01, y + 1, bankMask);
                 }
             }
         }
@@ -172,6 +231,7 @@ public sealed partial class WaterRenderer : Node3D
         Vector3[] stripNormals = normalList.ToArray();
 
         Vector2[] uvs = uvList.ToArray();
+        Color[] banks = bankList.ToArray();
         int[] indices = indexList.ToArray();
 
         Godot.Collections.Array arrays = new();
@@ -179,16 +239,34 @@ public sealed partial class WaterRenderer : Node3D
         arrays[(int)Mesh.ArrayType.Vertex] = vertices;
         arrays[(int)Mesh.ArrayType.Normal] = stripNormals;
         arrays[(int)Mesh.ArrayType.TexUV] = uvs;
+        arrays[(int)Mesh.ArrayType.Color] = banks;
         arrays[(int)Mesh.ArrayType.Index] = indices;
 
         ArrayMesh mesh = new();
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
 
+        var stripMaterial = new ShaderMaterial { Shader = riverShader };
+        stripMaterial.SetShaderParameter("ambient_color", SceneAmbient());
+        stripMaterial.SetShaderParameter("has_ripple_tex", BindRipple(stripMaterial));
+        stripMaterial.SetShaderParameter("look_amount", LookSettings.ActiveLook == LookMode.HandDrawn ? 1f : 0f);
+        if (LookSettings.ActiveLook == LookMode.HandDrawn)
+        {
+            // The hand-drawn river is water-blue; classic keeps the M1 strip colours from the shader defaults.
+            if (GD.Load<Resource>(_palettePath) is LookPalette stripPalette)
+            {
+                stripMaterial.SetShaderParameter("river_color", stripPalette.ColourOf("water.river"));
+                stripMaterial.SetShaderParameter("streak_color", stripPalette.ColourOf("water.foam"));
+            }
+            else
+            {
+                GD.PushWarning("[Evenmere] Water: missing palette; the river keeps its M1 colours.");
+            }
+        }
         MeshInstance3D strips = new()
         {
             Name = "RiverStrips",
             Mesh = mesh,
-            MaterialOverride = new ShaderMaterial { Shader = riverShader },
+            MaterialOverride = stripMaterial,
         };
         strips.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
         AddChild(strips);
@@ -200,10 +278,12 @@ public sealed partial class WaterRenderer : Node3D
         List<Vector3> vertexList,
         List<Vector3> normalList,
         List<Vector2> uvList,
+        List<Color> bankList,
         List<int> indexList,
         float ax, float ay, float az,
         float bx, float by, float bz,
-        float cx, float cy, float cz)
+        float cx, float cy, float cz,
+        float bankMask)
     {
         TerrainSurface.FaceNormal(ax, ay, az, bx, by, bz, cx, cy, cz, out float nx, out float ny, out float nz);
         int stripBase = vertexList.Count;
@@ -213,12 +293,56 @@ public sealed partial class WaterRenderer : Node3D
         normalList.Add(new Vector3(nx, ny, nz));
         normalList.Add(new Vector3(nx, ny, nz));
         normalList.Add(new Vector3(nx, ny, nz));
+        var mask = new Color(bankMask / 15f, bankMask / 15f, bankMask / 15f, 1f);
+        bankList.Add(mask);
+        bankList.Add(mask);
+        bankList.Add(mask);
         for (int k = 0; k < 3; k++)
         {
             Vector3 v = vertexList[stripBase + k];
             uvList.Add(new Vector2(v.X, v.Z));
             indexList.Add(stripBase + k);
         }
+    }
+
+    // The bank mask of a river tile: bit 0 north, 1 east, 2 south, 3 west, set when the neighbour across that
+    // edge is not a river tile. Off-map counts as bank, so a river meets the map edge (and the sea) with a line.
+    private float TileBankMask(IMapQueries map, int x, int y)
+    {
+        int mask = 0;
+        if (!IsRiverTile(map, x, y - 1))
+        {
+            mask |= 1;
+        }
+
+        if (!IsRiverTile(map, x + 1, y))
+        {
+            mask |= 2;
+        }
+
+        if (!IsRiverTile(map, x, y + 1))
+        {
+            mask |= 4;
+        }
+
+        if (!IsRiverTile(map, x - 1, y))
+        {
+            mask |= 8;
+        }
+
+        return mask;
+    }
+
+    private bool IsRiverTile(IMapQueries map, int x, int y)
+    {
+        if (_host is null || x < 0 || y < 0 || x >= map.Width || y >= map.Height)
+        {
+            return false;
+        }
+
+        TileInfo tile = map.GetTile(x, y);
+        string name = _host.Content.Terrains.Names[tile.Terrain.Value];
+        return TerrainSurface.Classify(name, (tile.Features & TileFeatures.River) != 0) == WaterKind.River;
     }
 
     // The height of the tile corner shared by the tiles around vertex (vx, vy), through the shared corner rule
