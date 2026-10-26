@@ -1,8 +1,10 @@
+using System.Collections.Immutable;
 using Evenmere.Content;
 using Evenmere.Content.Definitions;
 using Evenmere.Core.Ids;
 using Evenmere.Game.Controls;
 using Evenmere.Game.Host;
+using Evenmere.Game.Ui.Chains;
 using Evenmere.Game.Rendering.Camera;
 using Evenmere.Game.Ui.Common;
 using Evenmere.Game.Ui.Explain;
@@ -41,6 +43,7 @@ public sealed partial class InspectorPanel : PanelContainer
     // Debug screenshots only: --inspector-open=<entity id> opens the inspector on that building once the world is
     // running (M1-37 evidence), so a workplace or house can be captured without clicking it.
     private int _debugOpenEntity;
+    private bool _debugOpenChain;
     private SimHost? _host;
     private CameraRig? _rig;
     private ContentDb? _builtFor;
@@ -61,6 +64,7 @@ public sealed partial class InspectorPanel : PanelContainer
     private Button? _demolishButton;
     private Button? _upgradeButton;
     private Button? _lockButton;
+    private Button? _chainButton;
     private ConfirmationDialog? _demolishConfirm;
 
     /// <summary>Gets or sets the path to the <see cref="SimHost"/> node, relative to this node.</summary>
@@ -74,6 +78,10 @@ public sealed partial class InspectorPanel : PanelContainer
     /// <summary>Gets or sets the path to the tools node that raises <c>BuildingClicked</c>, relative to this node.</summary>
     [Export]
     public NodePath ToolsPath { get; set; } = new("../Tools");
+
+    /// <summary>Gets or sets the path to the chain viewer, opened for a producer's output good.</summary>
+    [Export]
+    public NodePath ChainPath { get; set; } = new("../ChainViewer");
 
     /// <summary>Gets or sets the path to the research panel, hidden while the inspector is open.</summary>
     [Export]
@@ -107,6 +115,13 @@ public sealed partial class InspectorPanel : PanelContainer
                     && int.TryParse(arg["--inspector-open=".Length..], out int id))
                 {
                     _debugOpenEntity = id;
+                }
+
+                // Debug screenshots only: --chain-open presses the Production chain button once the
+                // inspector has a target, so the M2-21 shots open the viewer through the button itself.
+                if (arg == "--chain-open")
+                {
+                    _debugOpenChain = true;
                 }
             }
         }
@@ -156,6 +171,12 @@ public sealed partial class InspectorPanel : PanelContainer
                 Open(target);
                 _debugOpenEntity = 0;
             }
+        }
+
+        if (_debugOpenChain && _hasTarget)
+        {
+            _debugOpenChain = false;
+            OpenChain();
         }
 
         // A research or civics panel opened elsewhere hides this one, so at most one
@@ -310,6 +331,10 @@ public sealed partial class InspectorPanel : PanelContainer
         _lockButton.Pressed += ToggleLock;
         second.AddChild(_lockButton);
 
+        _chainButton = new Button { FocusMode = Control.FocusModeEnum.All };
+        _chainButton.Pressed += OpenChain;
+        second.AddChild(_chainButton);
+
         _demolishConfirm = new ConfirmationDialog();
         AddChild(_demolishConfirm);
         _demolishConfirm.Confirmed += DoDemolish;
@@ -373,7 +398,7 @@ public sealed partial class InspectorPanel : PanelContainer
             }
 
             _explain.Clear();
-            SetButtonsVisible(pause: false, priority: false, demolish: false, upgrade: false, lockToggle: false);
+            SetButtonsVisible(pause: false, priority: false, demolish: false, upgrade: false, lockToggle: false, chain: false);
             return;
         }
 
@@ -559,9 +584,16 @@ public sealed partial class InspectorPanel : PanelContainer
                     : strings.Get("ui.inspector.house.lock.tip");
             }
         }
+
+        if (_chainButton is not null)
+        {
+            _chainButton.Visible = isProducer && !isSite;
+            _chainButton.Text = strings.Get("ui.chains.open");
+            _chainButton.TooltipText = strings.Get("ui.chains.open.tip");
+        }
     }
 
-    private void SetButtonsVisible(bool pause, bool priority, bool demolish, bool upgrade, bool lockToggle)
+    private void SetButtonsVisible(bool pause, bool priority, bool demolish, bool upgrade, bool lockToggle, bool chain)
     {
         if (_pauseButton is not null)
         {
@@ -586,6 +618,11 @@ public sealed partial class InspectorPanel : PanelContainer
         if (_lockButton is not null)
         {
             _lockButton.Visible = lockToggle;
+        }
+
+        if (_chainButton is not null)
+        {
+            _chainButton.Visible = chain;
         }
     }
 
@@ -682,6 +719,37 @@ public sealed partial class InspectorPanel : PanelContainer
 
         host.Enqueue(new SetHouseUpgradeLock(_target, !house.UpgradeLocked));
         _secondsSinceRefresh = double.MaxValue;
+    }
+
+    /// <summary>Opens the chain viewer on this building's first output good (the handler behind the Production chain button).</summary>
+    private void OpenChain()
+    {
+        if (_host is not { IsRunning: true } host || !_hasTarget)
+        {
+            return;
+        }
+
+        if (!host.Query.Production.TryGet(_target, out ProductionInfo production))
+        {
+            return;
+        }
+
+        if (production.Recipe.Value >= host.Content.Recipes.Count)
+        {
+            return;
+        }
+
+        ImmutableArray<GoodAmount> outputs = host.Content.Get(production.Recipe).Outputs;
+        if (outputs.IsEmpty)
+        {
+            return;
+        }
+
+        if (GetNodeOrNull<ChainViewer>(ChainPath) is { } chains)
+        {
+            chains.Show(outputs[0].Good);
+            GD.Print($"[Evenmere] Inspector: opened chain of {host.Content.NameOf(outputs[0].Good)} from building {_target.Value}.");
+        }
     }
 
     /// <summary>Names a building for its subject-link button, falling back to the raw ID when it is gone.</summary>

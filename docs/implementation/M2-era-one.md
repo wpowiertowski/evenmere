@@ -87,7 +87,7 @@ file per card as listed; never edit another card's file.
 | M2-18 | Tech tree graph view | game | M2-09 | done |
 | M2-19 | Civics tree and traditions board | game | M2-07 | todo |
 | M2-20 | Overlays: coverage, reach, fertility and deposits | game | M2-00 | todo |
-| M2-21 | Production chain viewer | game | M2-00 | todo |
+| M2-21 | Production chain viewer | game | M2-00 | done |
 | M2-22 | Statistics graphs | game | M2-00 | todo |
 | M2-23 | Fog, regions and expedition UI | game | M2-06 | todo |
 | M2-24 | Seasons, weather and smoke visuals | game | M2-05 | todo |
@@ -787,6 +787,8 @@ file per card as listed; never edit another card's file.
 1. **Graph:** pick a good, and the chain graph is built from `ContentDb` recipes (no new sim surface).
 2. **Live data:** annotate each node with the building count, average productivity and produced/consumed per day from `IStatisticsQueries` and `IProductionQueries`.
 3. **Bottlenecks:** highlight the bottleneck from `ExplainGood`. Clicking a node lists its buildings and focuses the worst one.
+
+**Opening (M2-21 review):** the building inspector's "Production chain" button opens the viewer for the building's output good. Opening it from a HUD goods chip waits until ART-02 (which reworks the chips) lands.
 
 **Acceptance:**
 

@@ -1,0 +1,10 @@
+{
+  "ui.chains.title": "{name} chain",
+  "ui.chains.title.empty": "Chain",
+  "ui.chains.bottleneck": "Shortage: {name}",
+  "ui.chains.raw": "From the land",
+  "ui.chains.noproducers": "No producers",
+  "ui.chains.perday": "per day",
+  "ui.chains.open": "Production chain",
+  "ui.chains.open.tip": "Show this building's production chain"
+}
