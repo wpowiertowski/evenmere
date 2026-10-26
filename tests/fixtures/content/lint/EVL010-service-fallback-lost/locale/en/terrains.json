@@ -1,0 +1,10 @@
+{
+  "terrain.forest.name": "Forest",
+  "terrain.forest.desc": "Woodland that renews itself.",
+  "terrain.plains.name": "Plains",
+  "terrain.plains.desc": "Open, level ground.",
+  "terrain.river.name": "River",
+  "terrain.river.desc": "Running water that roads cannot cross without a bridge.",
+  "terrain.sea.name": "Sea",
+  "terrain.sea.desc": "Open water along the coast."
+}

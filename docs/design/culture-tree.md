@@ -42,11 +42,11 @@ flowchart LR
 
 | Civic | id | Cost | Requires | Unlocks | Inspiration (−40%) |
 | --- | --- | --- | --- | --- | --- |
-| Hearth & Shrine | `hearth_and_shrine` | 20 | — | Shrine; **Hearth slot**; *Common Hearth* | Build 5 houses |
+| Hearth & Shrine | `hearth_and_shrine` | 20 | — | Shrine; Communal Oven (upgrade); **Hearth slot**; *Common Hearth* | Build 5 houses |
 | Oral Tradition | `oral_tradition` | 40 | Hearth & Shrine | Storyteller's Circle; Folk Epics (great works); *Fireside Tales* | Have 3 Shrines |
 | Kinship | `kinship` | 40 | Hearth & Shrine | **Craft slot**; *Many Hands* | Have 60 Settlers |
 | Harvest Rites | `harvest_rites` | 60 | Hearth & Shrine | Festival Ground; Harvest Fair; *Harvest Festival* | Harvest 50 grain |
-| Sea Lore | `sea_lore` | 50 | Oral Tradition | *Tide Blessing* | Have 4 Fishing Huts |
+| Sea Lore | `sea_lore` | 50 | Oral Tradition | Fish Weir (upgrade); *Tide Blessing* | Have 4 Fishing Huts |
 | Craft Lore | `craft_lore` | 70 | Kinship, Oral Tradition | *Village Crafts* | Produce 40 homespun |
 | Remembrance | `remembrance` | 80 | Oral Tradition | **Heritage slot**; Standing Stones (monument); *Old Ways* | Create a Folk Epic |
 | **Village Moot ★** | `village_moot` | 140 | Craft Lore, Harvest Rites, Remembrance | *Common Voice*; civic gateway to Era II | Hold 2 festivals |

@@ -43,6 +43,19 @@ internal sealed class ConstructionQueries(ConstructionState state, ContentDb con
         return true;
     }
 
+    /// <inheritdoc />
+    public bool TryGetUpgradeTarget(EntityId building, out BuildingTypeId target)
+    {
+        if (state.Sites.TryGet(building, out SiteRecord record) && record.Kind == SiteKind.Upgrade)
+        {
+            target = record.Target;
+            return true;
+        }
+
+        target = default;
+        return false;
+    }
+
     // A monument's progress spans its stages: the work of the finished stages plus the work done in this one.
     private static int ProgressOf(long total, int stageCount, SiteRecord record)
     {

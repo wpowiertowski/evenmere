@@ -21,6 +21,8 @@ internal static class AdvicePriority
         AdviceKind.HouseCannotAdvance => 4,
         AdviceKind.ResearchIdle => 5,
         AdviceKind.CivicIdle => 6,
+        // A lost fallback is a risk, not a breakage: it waits behind every active problem (M2-30).
+        AdviceKind.NoLowerTierFallback => 7,
         _ => 7,
     };
 }

@@ -21,4 +21,11 @@ public sealed class SaveReport
 
     /// <summary>Gets a value indicating whether loading changed nothing: no remap, no ruin and no drop.</summary>
     public bool IsClean => Remapped.Count == 0 && Ruins.Count == 0 && Dropped.Count == 0;
+
+    /// <summary>
+    /// Gets a value indicating whether loading lost nothing: no ruin and no drop. Remaps are allowed: adding content
+    /// shifts IDs, which the remap follows by name without losing state, so an old save loading under grown content is
+    /// lossless without being clean (M2-30).
+    /// </summary>
+    public bool IsLossless => Ruins.Count == 0 && Dropped.Count == 0;
 }

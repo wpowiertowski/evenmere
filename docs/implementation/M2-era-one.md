@@ -3,7 +3,7 @@
 **Goal:** the whole Founding era on generated islands:
 
 - Rivers and bridges, fog and expeditions, seasons.
-- All Era I content: 13 techs, 8 civics, 8 traditions, festivals, the Standing Stones and happenings.
+- All Era I content: 14 techs, 8 civics, 8 traditions, festivals, the Standing Stones and happenings.
 - Era advancement through both gateways.
 - Graph views of both trees, overlays, the production-chain viewer and statistics.
 - Save migrations, replay, the performance harness and a multi-seed balance bot.
@@ -96,7 +96,7 @@ file per card as listed; never edit another card's file.
 | M2-27 | Festivals, monuments and happenings UI | game | M2-08, M2-10, M2-12 | todo |
 | M2-28 | Era I playtest and gate review | human | all M2 tasks | todo |
 | M2-29 | Look development: hand-drawn rendering prototype | game | M1 gate | done |
-| M2-30 | Upgrade lines: design pass, crew stat and Era I upgrades | human + content | M2-00 | todo |
+| M2-30 | Upgrade lines: design pass, crew stat and Era I upgrades | human + content | M2-00 | done |
 | M2-31 | Window and input polish from the M1 playtest | game | M1 gate | done |
 | M2-32 | Look tuning: water strokes, terrain calibration, coast and map edge | game | M2-29 | todo |
 
@@ -511,6 +511,8 @@ file per card as listed; never edit another card's file.
 4. **Visuals:** a mapping for every new building in `game/data/visuals/era1-production.json`.
 5. **Locale:** `content/locale/en/era1-production.json` with `<type>.<id>.name` and `.desc` for every item.
 
+**Added by M2-30 (developer-approved upgrade table, 2026-10-25):** implement the Era I ★ upgrade rows from progression.md §Upgrade lines that this card's goods and buildings enable: `stone_storehouse` and `stone_shrine` (4 stone each), `rotation_farm`, `fish_weir` and `communal_oven`. Each is a building with `upgradeOf`, its staffing, cost and locale, plus its kit spec from ART-03's pattern. The unlock effects land with M2-13b's tree files. Old saves must load losslessly (`SaveReport.IsLossless`) when building IDs shift.
+
 **Acceptance:**
 
 - `evenmere lint` is clean, including EVL010 (M2-14) and EVL011.
@@ -541,6 +543,11 @@ file per card as listed; never edit another card's file.
 5. **Era II definition:** `content/eras/township.json` with the gateway requirements.
 6. **Happenings:** 8–10 Era I happenings (travelling scholar, bountiful catch, Harvest Fair request, shipwreck salvage, lost lamb, storyteller's visit, fair-weather season, stone find), each with at least one option and a default, all passing EVL012.
 7. **Visuals + names:** mappings for every new building; `names.json` with deterministic discovery-name tables.
+
+**Added by M2-30 (developer-approved upgrade table, 2026-10-25):**
+- Add a ninth tech file, `techs/crop_rotation.json` (Era I, cost 55, requires Cultivation, `unlockBuilding: rotation_farm`).
+- Add the `unlockBuilding` effects for the other ★ upgrades: Masonry for `stone_storehouse` and `stone_shrine`, Sea Lore for `fish_weir`, and Hearth & Shrine for `communal_oven`. This touches the slice civic file, for that effect only.
+- Add the Era I `crew` modifiers from the table, on their traditions and techs.
 
 **Acceptance:**
 

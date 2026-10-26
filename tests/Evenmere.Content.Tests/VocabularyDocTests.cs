@@ -85,7 +85,7 @@ public sealed class VocabularyDocTests
         [
             "productivity", "consumption", "constructionSpeed", "capacity", "workforce", "output.knowledge",
             "output.culture", "output.coin", "attractiveness", "visitors", "cartSpeed", "materialCost", "declineGrace",
-            "expeditionSpeed", "comfortBonus", "festivalCost", "festivalDuration", "settlerArrival",
+            "expeditionSpeed", "comfortBonus", "festivalCost", "festivalDuration", "settlerArrival", "crew",
         ]);
 
     [Fact]

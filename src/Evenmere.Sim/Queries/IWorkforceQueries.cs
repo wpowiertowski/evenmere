@@ -25,7 +25,7 @@ public interface IWorkforceQueries
     Ratio FillOf(EntityId building);
 
     /// <summary>Gets how many workers the construction sites of a tier will ask for once they are finished (ADR-0016).</summary>
-    /// <remarks>Only new buildings in the <see cref="Evenmere.Sim.Queries.Types.BuildingState.Site"/> state count, by the tier their type names. An in-place upgrade keeps working as its old type until it completes, so its old tier's <see cref="Demand"/> still covers it.</remarks>
+    /// <remarks>Only new buildings in the <see cref="Evenmere.Sim.Queries.Types.BuildingState.Site"/> state count, by the tier their type names. An in-place upgrade keeps working as its old type until it completes, so its old tier's <see cref="Demand"/> still covers it, and its site counts the new staffing for the new tier here while it builds (M2-30).</remarks>
     /// <param name="tier">The tier.</param>
     /// <returns>The planned workers wanted.</returns>
     int PlannedDemand(TierId tier);

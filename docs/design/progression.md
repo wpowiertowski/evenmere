@@ -70,7 +70,7 @@ Goods are in **units per 1,000 residents per day**. Services are buildings withi
   - A need never yet met at this tier only holds occupancy down, so newly advanced houses never bounce straight back.
   - Decline is one step at a time, never below Settlers, and never to an empty house.
   - Festivals pause every timer while they run.
-- **Design rule.** The goods and services a tier needs are produced and staffed by **lower** tiers. A tier's workers are never required to make its own basic needs, which avoids deadlocks when a tier first appears.
+- **Design rule (EVL010).** For every tier's basic goods and services, at least one production chain or provider staffed entirely by **lower** tiers stays available (buildable once unlocked, never removed by an upgrade), so a struggling town can always fall back on it. Upgrades may be staffed by any tier, but a tier's workers are never left as the only makers of its own basic needs, which avoids deadlocks when a tier first appears.
 - **Higher tiers need more.** A tier's basic goods per resident total more than the tier it advances from (lint EVL011), and its houses fill past the lower tier's capacity only with every basic need met.
 
 ## Goods catalogue
@@ -236,8 +236,11 @@ flowchart LR
 | Sheep Farm | `sheep_farm` | 4×4 | plains | 3 Settlers | → Wool | 30 s | 4 timber | Animal Husbandry |
 | Weaver's Cottage | `weavers_cottage` | 2×2 | land | 4 Settlers | Wool → Homespun | 30 s | 4 timber | Weaving |
 | Grain Farm | `grain_farm` | 5×5 | plains; grain fertility | 4 Settlers | → Grain | 40 s, seasonal | 4 timber | Cultivation |
+| Rotation Farm | `rotation_farm` | 5×5 | plains; grain fertility | 3 Villagers | Grain; upgrade of Grain Farm | 40 s, seasonal | 4 timber | Crop Rotation |
 | Windmill | `windmill` | 2×2 | land; +15% on hills | 3 Settlers | Grain → Flour | 30 s | 6 timber | Milling |
 | Bakery | `bakery` | 2×2 | land | 4 Settlers | Flour → Bread | 30 s | 6 timber | Milling |
+| Communal Oven | `communal_oven` | 2×2 | land | 3 Villagers | Flour → Bread; upgrade of Bakery | 30 s | 6 timber | Hearth & Shrine |
+| Fish Weir | `fish_weir` | 2×2 | coastline | 2 Villagers | Fish; upgrade of Fishing Hut | 20 s | 4 timber | Sea Lore |
 | Quarry | `quarry` | 3×3 | hills over a stone outcrop | 5 Settlers | → Stone | 40 s | 6 timber | Stonecutting |
 | Clay Pit | `clay_pit` | 3×3 | clay deposit (riverbanks) | 4 Settlers | → Clay | 30 s | 4 timber | Pottery |
 | Potter's Kiln | `potters_kiln` | 2×2 | land | 4 Settlers | Clay + Wood → Pottery | 40 s | 4 timber, 4 stone | Pottery |
@@ -256,6 +259,7 @@ flowchart LR
 | Stone Storehouse | `stone_storehouse` | 2×2 | 2 Settlers | Upgrade of Storehouse: reach 26, 3 carts | 4 stone | Masonry |
 | Market | `market` | 3×3 | 2 Settlers | Coverage 16 | 6 timber | start |
 | Shrine | `shrine` | 2×2 | 1 Settler | Service coverage 14 · +1 culture | 6 timber | Hearth & Shrine |
+| Stone Shrine | `stone_shrine` | 2×2 | 1 Villager | Service coverage 18 · +2 culture; upgrade of Shrine | 4 stone | Masonry |
 | Scout's Lodge | `scouts_lodge` | 2×2 | 2 Settlers | One expedition at a time | 6 timber | Pathfinding |
 | Timber Bridge | `timber_bridge` | 1×(2–5) | — | Road across a river up to 3 tiles wide | 2 timber per tile | Bridge-building |
 | Scribe's Hall | `scribes_hall` | 3×3 | 4 Villagers | +4 knowledge · 1 Writing slot | 8 timber, 6 stone | Letters |
@@ -371,30 +375,123 @@ The Great Library's books stage needs the Printing Press, and the Star Tower's s
 
 ## Upgrade lines
 
-Production and service buildings modernise as the trees advance. A tech or civic unlocks an **upgraded version** of a building. The player upgrades each building in place, when they choose, by paying its upgrade cost. The upgraded version has **its own staffing**: usually fewer workers, often of a higher tier, and sometimes better output. Upgrades move jobs up the tiers over time, so lower tiers aren't needed forever, which is the long-term counterpart of the workforce hold.
+> **Approved by the developer (2026-10-25), with the rotation-farm tech and the chained bakery line.** M2-30 maps
+> every production and service building below. Era I rows are content in M2-13a/M2-13b (★); Era II rows belong to
+> M3-05/M3-06, Era III rows to M5-03, Era IV rows to M5-08.
+> Effect names for the crew-modifier rows are proposals; the content tasks name them.
+
+Production and service buildings modernise as the trees advance. A tech or civic unlocks an **upgraded version** of a
+building. The player upgrades each building in place, when they choose, by paying its upgrade cost. The upgraded
+version has **its own staffing**: usually fewer workers, often of a higher tier, and sometimes better output.
+Upgrades move jobs up the tiers over time, so lower tiers aren't needed forever, which is the long-term counterpart
+of the workforce hold.
 
 **Rules:**
 
 - **Unlocks:**
   - An upgrade is a building whose content declares `upgradeOf` the building it replaces.
-  - It is unlocked by one tech or civic (`unlockBuilding`), placed so the change feels historically grounded (water power, guild organisation, crop rotation, steam).
+  - It is unlocked by one tech or civic (`unlockBuilding`), placed so the change feels historically grounded (crop
+    rotation, guild organisation, dressed stone, tidal weirs, communal ovens, steam).
+  - A `steam_*` variant's `upgradeOf` is the latest pre-steam variant in its line (the tower mill for windmills,
+    the base building everywhere else).
 - **The upgrade itself:**
-  - Upgrading happens in place: the footprint, roads and position are kept, and the building turns into a construction site for its upgrade cost.
-  - The inspector and the build menu show the change plainly, for example "Upgrade to Water Sawmill: 2 Townsfolk instead of 3 Settlers".
-- **Staffing:**
-  - An upgrade may change the staffing tier and the crew size, but it must still satisfy EVL010: a tier's basic goods and services are made and staffed only by lower tiers. That rule prevents self-staffing deadlocks.
-  - Small, same-tier crew reductions can also come from tech and civic modifiers on the `crew` stat, for example "Saw Frames: sawpits need one worker fewer", without any rebuilding.
-- **The steam variants** in Era IV (`steam_*`) are the last step of these lines.
+  - Upgrading happens in place: the footprint, roads and position are kept, and the building turns into a
+    construction site for its upgrade cost.
+  - The inspector and the build menu show the change plainly, for example "Upgrade to Rotation Farm: 3 Villagers
+    instead of 4 Settlers".
+  - An in-place upgrade site counts its new staffing in `PlannedDemand` for the new tier while it builds; the old
+    staffing keeps working until it completes (M2-30, recording the ADR-0016 decision).
+- **Staffing and the fallback (EVL010):**
+  - An upgrade may change the staffing tier and the crew size, but for every tier's basic good and service at least
+    one chain or provider staffed entirely by lower tiers stays available: still buildable once unlocked, and never
+    removed by an upgrade. Upgrades never delete their base, so the check passes as long as the base stays.
+  - Small, same-tier crew reductions can also come from tech and civic modifiers on the `crew` stat, for example
+    "Saw Frames: sawpits need one worker fewer", without any rebuilding.
+  - If a town upgrades away its last fallback for a need, the advisors warn (`NoLowerTierFallback`) while every
+    active maker is staffed by the tier itself.
+- **The steam variants** in Era IV (`steam_*`) are the last step of seven of these lines.
+- **Out of scope for this table:** residences (Population advances them), roads (separate types, no in-place
+  chain), knowledge, culture and decoration buildings (they grow through slots and styles instead), and monuments
+  and wonders (they build in stages instead).
 
-**Illustrative lines.** These aren't final; M2-30's design pass maps every production and service building:
+### Upgrades unlocked in Era I
 
-| Base building (era, staffing) | Unlocked by | Upgrade | Staffing |
-| --- | --- | --- | --- |
-| Sawpit (I, 3 Settlers) | Water Mills (II) | Water-powered sawmill | 2 Townsfolk |
-| Grain farm (I, 4 Settlers) | Crop Rotation | Rotation farm | 3 Villagers, more grain |
-| Weaver's cottage (I, Settlers) | Guilds (civic, II) | Guild weaving shop | fewer Artisans |
-| Windmill (I) | Engineering | Tower mill | fewer workers, higher throughput |
-| Sawmill, mills and looms (II–III) | Steam Mills (IV) | Steam variants | fewer workers, coal fuel |
+The ★ rows are the Era I upgrades; their content lands in M2-13a/M2-13b once this table is approved. Every one keeps its base buildable, so the lower-tier fallback stays.
+
+| Base (era, staffing) | Unlocked by | Upgrade | Staffing | Output change | Cost |
+| --- | --- | --- | --- | --- | --- |
+| Storehouse (I, 2 Settlers) | Masonry (tech) | stone_storehouse ★ | 2 Settlers | Reach 20 → 26, carts 2 → 3 | 4 stone |
+| Grain farm (I, 4 Settlers) | Crop Rotation (tech) | rotation_farm ★ | 3 Villagers | Same output; jobs move 4 Settlers → 3 Villagers | 4 timber |
+| Shrine (I, 1 Settler) | Masonry (tech) | stone_shrine ★ | 1 Villager | Coverage 14 → 18, culture 1 → 2 | 4 stone |
+| Fishing hut (I, 3 Settlers) | Sea Lore (civic) | fish_weir ★ | 2 Villagers | Same output; jobs move 3 Settlers → 2 Villagers | 4 timber |
+| Bakery (I, 4 Settlers) | Hearth & Shrine (civic) | communal_oven ★ | 3 Villagers | Same output; jobs move 4 Settlers → 3 Villagers | 4 timber |
+| Weaver's cottage (I, 4 Settlers) | Craft Lore → *Village Crafts* (tradition) | `crew` −1, no rebuild | 3 Settlers | Same output | — |
+| Sheep farm (I, 3 Settlers) | Kinship → *Many Hands* (tradition) | `crew` −1, no rebuild | 2 Settlers | Same output | — |
+| Orchard (I, 3 Settlers) | Orcharding (tech) | `crew` −1, no rebuild | 2 Settlers | Same output | — |
+| Potter's kiln (I, 4 Settlers) | Pottery (tech) | `crew` −1, no rebuild | 3 Settlers | Same output | — |
+
+No Era I step: the woodcutter's hut, sawpit, quarry and clay pit (their lines start in Era II and IV), the cider
+press (the comfort line ends here), the market and the Scout's Lodge (upgraded in Era II), and the Founders' Hall
+(upgraded by the Era I gateway, built in Era II).
+
+### Upgrades unlocked in Era II
+
+Built by M3-05/M3-06 from this table.
+
+| Base (era, staffing) | Unlocked by | Upgrade | Staffing | Output change | Cost |
+| --- | --- | --- | --- | --- | --- |
+| Weaver's cottage (I, 4 Settlers) | Guilds (civic) | guild_weaving_shop | 3 Artisans | Same output | 4 timber, 4 bricks |
+| Communal oven (I, 3 Villagers) | Brickmaking (tech) | brick_oven_bakery | 2 Villagers | Same output; upgrades the communal oven, not the base bakery | 4 timber, 4 bricks |
+| Clay pit (I, 4 Settlers) | Brickmaking (tech) | clay_works | 4 Villagers | More clay (new recipe) | 4 timber, 4 bricks |
+| Quarry (I, 5 Settlers) | Mining (tech) | deep_quarry | 4 Villagers | More stone (new recipe) | 6 timber, 4 stone |
+| Potter's kiln (I, 4 Settlers) | Brickmaking (tech) | firing_kiln | 3 Villagers | Same output | 4 timber, 4 bricks |
+| Woodcutter's hut (I, 3 Settlers) | Ironworking (tech) | `crew` −1 (iron axes), no rebuild | 2 Settlers | Same output | — |
+| Sawpit (I, 3 Settlers) | Ironworking (tech) | `crew` −1 (iron teeth), no rebuild | 2 Settlers | Same output | — |
+| Scout's Lodge (I, 2 Settlers) | Cartography (tech) | surveyors_lodge | 2 Villagers | Same function, Villager crew | 6 timber, 4 bricks |
+| Market (I, 2 Settlers) | Market Days (civic) | market_square | 2 Settlers | Coverage 16 → 22, +2 attractiveness | 6 bricks, 4 stone |
+| Founders' Hall | Town Charter (gateway tech) | town_hall | — | Reach 24 → 28, carts 3 → 4, coverage 16 → 20, knowledge 2 → 6, culture 1 → 2 | 10 timber, 10 bricks |
+| Timber Bridge | Stone Bridges (tech) | stone_bridge | — | Span 3 → 8 tiles | 4 stone + 1 brick per tile |
+
+No Era II step: the fishing hut (Net-weaving's +25% is its step; the Deep-water Fishery is a separate building),
+the sheep farm and orchard (their lines end at the Era I modifiers), the grain farm and shrine (upgraded in Era I),
+and every Era II production building except the kiln line (brickworks, linen weaver and brewery wait for steam; the
+rest end here), the tavern, school, counting house and inn (the Inn is the tavern's larger cousin, not its upgrade),
+and the library and guildhall (knowledge and culture buildings, out of scope above).
+
+**Chained upgrades.** Brick oven bakery is `upgradeOf` the communal oven, not the base bakery: `upgradeOf` names one
+building, so a player who never built a communal oven upgrades twice (Bakery → Communal oven → Brick oven bakery).
+All three stay buildable, so the Settler-staffed base bakery keeps EVL010's fallback.
+
+### Upgrades unlocked in Era III
+
+Built by M5-03 from this table.
+
+| Base (era, staffing) | Unlocked by | Upgrade | Staffing | Output change | Cost |
+| --- | --- | --- | --- | --- | --- |
+| Windmill (I, 3 Settlers) | Mechanics (tech) | tower_mill | 2 Settlers | Higher throughput (new recipe) | 6 timber, 4 bricks, 2 tools |
+
+Everything else standing in Era III ends here or waits for steam: the water mill and glassworks (steam in Era IV),
+the paper mill, printing house, sand pit, lens grinder, tea garden, madder field, tailor's shop and deep-water
+fishery (no upgrade), and the bathhouse, harbour and theatre (no upgrade; the Academy, Observatory and Museum are
+knowledge and culture buildings, out of scope above).
+
+### Upgrades unlocked in Era IV
+
+Built by M5-08 from this table. Each steam variant burns 0.5 coal per day, carries −2 attractiveness, and raises
+productivity 50% for the same crew.
+
+| Base (era, staffing) | Unlocked by | Upgrade | Staffing | Output change | Cost |
+| --- | --- | --- | --- | --- | --- |
+| Sawpit (I, 3 Settlers) | Steam Mills (tech) | steam_sawmill | 2 Settlers | +50% productivity, coal fuel | 4 steel, 4 bricks |
+| Windmill → Tower mill (III, 2 Settlers) | Steam Mills (tech) | steam_windmill | 2 Settlers | +50% productivity, coal fuel | 4 steel, 4 bricks |
+| Water mill (III, 3 Settlers) | Steam Mills (tech) | steam_water_mill | 2 Settlers | +50% productivity, coal fuel | 4 steel, 4 bricks |
+| Brickworks (II, 6 Villagers) | Steam Mills (tech) | steam_brickworks | 4 Villagers | +50% productivity, coal fuel | 4 steel, 4 bricks |
+| Linen weaver (II, 4 Villagers) | Steam Mills (tech) | steam_linen_weaver | 3 Villagers | +50% productivity, coal fuel | 4 steel, 4 bricks |
+| Glassworks (III, 6 Townsfolk) | Steam Mills (tech) | steam_glassworks | 4 Townsfolk | +50% productivity, coal fuel | 4 steel, 4 bricks |
+| Brewery (II, 5 Townsfolk) | Steam Mills (tech) | steam_brewery | 4 Townsfolk | +50% productivity, coal fuel | 4 steel, 4 bricks |
+
+Every other Era IV building ends here: the mines, steelworks, foundry, clockmaker, divers' hut, jeweller, beet farm,
+refinery and confectioner (no upgrades beyond), and the railway station, gasworks and concert hall (no upgrades).
 
 ## Knowledge and culture sources
 

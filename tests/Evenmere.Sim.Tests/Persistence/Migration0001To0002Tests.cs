@@ -80,8 +80,9 @@ public sealed class Migration0001To0002Tests
 
             if (version < SaveFormat.CurrentVersion)
             {
-                // An older save cannot pin the migrated bytes, so it pins the migration instead: it must load cleanly.
-                report.IsClean.ShouldBeTrue();
+                // An older save cannot pin the migrated bytes, so it pins the migration instead: loading must lose
+                // nothing. Remaps from content growth are fine; ruins and drops are not.
+                report.IsLossless.ShouldBeTrue();
             }
             else
             {
@@ -89,12 +90,13 @@ public sealed class Migration0001To0002Tests
                 SaveGame.ReadStateHash(stream).ShouldBe(simulation.ComputeStateHash());
             }
 
-            // The v1 slice fixture migrates silently: its tables match the content, so nothing is remapped or dropped.
+            // The v1 slice fixture migrates losslessly: grown content remaps its tables by name, and nothing is
+            // ruined or dropped.
             if (Path.GetFileName(fixture) == "v1-slice.evsave")
             {
                 version.ShouldBe((ushort)1);
                 simulation.CurrentTick.ShouldBe(20_000);
-                report.IsClean.ShouldBeTrue();
+                report.IsLossless.ShouldBeTrue();
             }
 
             if (Path.GetFileName(fixture) == "slice-20000.evsave")

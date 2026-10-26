@@ -122,7 +122,9 @@ internal sealed class WorkforceSystem : ISimSystem, IBuildingLifecycleListener
         _state.EnsureTierSlots(tierCount);
 
         // The demanders in ascending ID order: ActiveBuildings already walks that way, and every later pass keeps it, so
-        // leftover workers always land on the lowest IDs.
+        // leftover workers always land on the lowest IDs. Each workplace asks for its effective crew (ADR-0015): the
+        // content count reduced by the building's <c>crew</c> modifiers, so techs and civics that trim crews flow into
+        // the allocation, the stepping down and the hold exactly as the queries report them.
         var demand = new List<WorkplaceDemand>();
         foreach (BuildingInfo building in ctx.Queries.Map.ActiveBuildings)
         {
@@ -137,7 +139,7 @@ internal sealed class WorkforceSystem : ISimSystem, IBuildingLifecycleListener
                 continue;
             }
 
-            demand.Add(new WorkplaceDemand(building.Id, spec.Tier.Value, spec.Count));
+            demand.Add(new WorkplaceDemand(building.Id, spec.Tier.Value, EffectiveCrewOf(ctx, building, spec.Count)));
         }
 
         // Stale allocations (a workplace paused, turned into a site, or changed to a type that needs no workers) read as
@@ -170,6 +172,15 @@ internal sealed class WorkforceSystem : ISimSystem, IBuildingLifecycleListener
             FillFromAbove(ctx, order, rank, demand, used);
         }
     }
+
+    /// <summary>Computes a workplace's effective crew: its content count reduced by its <c>crew</c> modifiers.</summary>
+    /// <param name="ctx">The simulation context, for the modifier queries.</param>
+    /// <param name="building">The workplace.</param>
+    /// <param name="count">The content workforce count.</param>
+    /// <returns>The workers the workplace asks for, at least 1.</returns>
+    private static int EffectiveCrewOf(SimContext ctx, BuildingInfo building, int count) => WorkforceMath.EffectiveCrew(
+        count,
+        ctx.Queries.Progression.BonusPercent(Stat.Crew, ModifierContext.ForBuilding(building.Id, building.Type)));
 
     /// <summary>Computes a tier's effective supply: the published raw supply scaled by the workforce modifiers.</summary>
     /// <param name="ctx">The simulation context, for the modifier queries.</param>

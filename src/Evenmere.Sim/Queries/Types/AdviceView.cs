@@ -23,6 +23,12 @@ public enum AdviceKind : byte
 
     /// <summary>Culture is accruing with no civic target. There is no subject.</summary>
     CivicIdle = 6,
+
+    /// <summary>
+    /// Every active producer or provider of a tier's basic need is staffed by the tier itself: the town has upgraded
+    /// away its lower-tier fallback (M2-30). The subject is the tier. Appended at the end, so existing values keep.
+    /// </summary>
+    NoLowerTierFallback = 7,
 }
 
 /// <summary>
