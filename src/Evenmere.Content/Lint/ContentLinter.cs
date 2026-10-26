@@ -20,8 +20,9 @@ namespace Evenmere.Content.Lint;
 /// <item><term>EVL008</term><description>Era gateways exist, and no node requires a node of a later era.</description></item>
 /// <item><term>EVL010</term><description>Every tier's basic good and service keeps a lower-tier-staffed, available fallback chain or provider; upgrades may be staffed by any tier.</description></item>
 /// <item><term>EVL011</term><description>A tier with an advanceFrom tier needs strictly more basic goods per resident than that tier.</description></item>
+/// <item><term>EVL012</term><description>No happening option is net-negative: a penalty comes with a grant, a bonus modifier or a festival discount.</description></item>
 /// </list>
-/// The rules EVL003 to EVL008, EVL010 and EVL011 read the typed <see cref="ContentDb"/>, so they run only when loading produced one. Shape
+/// The rules EVL003 to EVL008 and EVL010 to EVL012 read the typed <see cref="ContentDb"/>, so they run only when loading produced one. Shape
 /// errors, unresolved references and locale file problems are reported either way.
 /// </summary>
 public static class ContentLinter
@@ -105,6 +106,7 @@ public static class ContentLinter
             EraRule.Run(context);
             TierStaffingRule.Run(context);
             TierConsumptionRule.Run(context);
+            HappeningGentlenessRule.Run(context);
             all.AddRange(context.Diagnostics);
         }
 

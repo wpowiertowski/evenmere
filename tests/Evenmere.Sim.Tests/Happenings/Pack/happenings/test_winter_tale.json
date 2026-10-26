@@ -1,0 +1,10 @@
+{
+  "id": "test_winter_tale",
+  "trigger": { "season": "winter" },
+  "chancePerMille": 1000,
+  "cooldownDays": 30,
+  "options": [
+    { "effects": [ { "grantGoods": { "fish": 1 } } ] }
+  ],
+  "defaultOption": 0
+}

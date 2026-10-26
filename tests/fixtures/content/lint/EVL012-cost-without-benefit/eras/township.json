@@ -1,0 +1,5 @@
+{
+  "id": "township",
+  "order": 2,
+  "requires": { "tech": "town_charter", "civic": "village_moot" }
+}

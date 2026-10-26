@@ -75,6 +75,8 @@ public sealed class FixtureCaseTests
             [E.Error(LintCodes.Evl010, Villagers, "/basicNeeds/services/0", "'founders_hall' providing it is staffed by 'villagers'")],
         ["EVL011-less-or-equal"] = [E.Error(LintCodes.Evl011, Villagers, "/basicNeeds/goods", "tier 'villagers' needs 3")],
         ["EVL011-ok"] = [],
+        ["EVL012-cost-without-benefit"] = [E.Error(LintCodes.Evl012, "happenings/rough_winter.json", "/options/0/effects", "a penalty must come with")],
+        ["EVL012-exchange-ok"] = [],
     };
 
     public static TheoryData<string> Cases => [.. _expected.Keys];

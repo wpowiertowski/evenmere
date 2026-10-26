@@ -4,6 +4,7 @@ using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Sim.Queries;
 using Evenmere.Sim.Queries.Types;
+using Evenmere.Sim.Systems.Happenings;
 
 namespace Evenmere.Sim.Tests.Fakes;
 
@@ -310,5 +311,35 @@ internal sealed class FakeExplorationQueries : IExplorationQueries;
 /// <summary>A stand-in for <see cref="IEconomyQueries"/>, which has no members in M1.</summary>
 internal sealed class FakeEconomyQueries : IEconomyQueries;
 
-/// <summary>A stand-in for <see cref="IHappeningsQueries"/>, which has no members in M1.</summary>
-internal sealed class FakeHappeningsQueries : IHappeningsQueries;
+/// <summary>A settable stand-in for <see cref="IHappeningsQueries"/>. Nothing is pending or cooling down until a test says so. (M2-12.)</summary>
+internal sealed class FakeHappeningsQueries : IHappeningsQueries
+{
+    private readonly HashSet<HappeningId> _coolingDown = [];
+
+    /// <summary>Gets or sets the pending happening, as <see cref="IHappeningsQueries.PendingHappening"/> reports it.</summary>
+    public PendingHappening? Pending { get; set; }
+
+    /// <summary>Sets whether a happening is cooling down.</summary>
+    /// <param name="happening">The happening.</param>
+    /// <param name="coolingDown">Whether it is on cooldown.</param>
+    /// <returns>This fake.</returns>
+    public FakeHappeningsQueries SetCooldown(HappeningId happening, bool coolingDown = true)
+    {
+        if (coolingDown)
+        {
+            _coolingDown.Add(happening);
+        }
+        else
+        {
+            _coolingDown.Remove(happening);
+        }
+
+        return this;
+    }
+
+    /// <inheritdoc />
+    PendingHappening? IHappeningsQueries.PendingHappening() => Pending;
+
+    /// <inheritdoc />
+    bool IHappeningsQueries.IsOnCooldown(HappeningId happening) => _coolingDown.Contains(happening);
+}

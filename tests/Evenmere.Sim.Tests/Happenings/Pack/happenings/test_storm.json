@@ -1,0 +1,17 @@
+{
+  "id": "test_storm",
+  "trigger": { "season": "spring" },
+  "chancePerMille": 1000,
+  "cooldownDays": 30,
+  "options": [
+    {
+      "effects": [
+        { "modifier": { "stat": "productivity", "percent": -10 } },
+        { "grantGoods": { "wood": 5 } }
+      ],
+      "durationDays": 5
+    },
+    { "effects": [] }
+  ],
+  "defaultOption": 1
+}

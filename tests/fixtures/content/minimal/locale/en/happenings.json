@@ -1,0 +1,4 @@
+{
+  "happening.test_happening.name": "Test happening",
+  "happening.test_happening.desc": "A quiet event the tests load so the happening tables are never empty; its trigger can never hold."
+}

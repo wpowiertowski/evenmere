@@ -1,0 +1,11 @@
+{
+  "id": "test_feast",
+  "trigger": { "season": "spring" },
+  "chancePerMille": 1000,
+  "cooldownDays": 30,
+  "options": [
+    { "effects": [ { "grantGoods": { "fish": 10 } } ] },
+    { "effects": [ { "modifier": { "stat": "productivity", "percent": 10 } } ], "durationDays": 10 }
+  ],
+  "defaultOption": 0
+}

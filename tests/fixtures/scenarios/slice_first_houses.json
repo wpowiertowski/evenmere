@@ -29,7 +29,7 @@
     { "tick": 300, "type": "SetHouseUpgradeLock", "args": { "house": 9, "locked": true } }
   ],
   "expect": {
-    "hash": "0e9ce134c8d4415b",
+    "hash": "c620ee0556064b1c",
     "residents": { "settlers": "== 48" },
     "events": [ { "type": "ConstructionCompleted", "exactly": 10 } ]
   }

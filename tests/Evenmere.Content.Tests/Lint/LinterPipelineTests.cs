@@ -197,8 +197,8 @@ public sealed class LinterPipelineTests
     {
         ContentLoadResult result = ContentLoader.Load(TestPaths.MinimalPack);
 
-        // 10 item types plus the rules file; great works, monuments and happenings are covered by the kitchen sink.
-        result.Raw.Items.Select(static i => i.Type).Distinct().Count().ShouldBe(11);
+        // 11 item types plus the rules file; great works and monuments are covered by the kitchen sink.
+        result.Raw.Items.Select(static i => i.Type).Distinct().Count().ShouldBe(12);
         ContentLinter.ValidateSchemas(result.Raw).ShouldBeEmpty();
     }
 }

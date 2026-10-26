@@ -10,6 +10,7 @@ using Evenmere.Sim.Systems.Construction;
 using Evenmere.Sim.Systems.Culture;
 using Evenmere.Sim.Systems.Culture.Festivals;
 using Evenmere.Sim.Systems.Culture.Traditions;
+using Evenmere.Sim.Systems.Happenings;
 using Evenmere.Sim.Systems.Logistics;
 using Evenmere.Sim.Systems.Map;
 using Evenmere.Sim.Systems.Modifiers;
@@ -49,6 +50,7 @@ internal static class RemapPass
         run.RemapStorage();
         run.RemapResearch();
         run.RemapCulture();
+        run.RemapHappenings();
         run.RemapProgression();
         run.RemapModifiers();
         run.RemapBuildings();
@@ -240,6 +242,46 @@ internal static class RemapPass
             }
 
             state.FestivalLastHeldYear = Permute(state.FestivalLastHeldYear, tables.FestivalMap, tables.Content.Festivals.Count, static () => 0);
+        }
+
+        public void RemapHappenings()
+        {
+            HappeningsState state = world.Happenings;
+
+            if (state.Pending is { } pending)
+            {
+                int mapped = tables.MapHappening(pending.Happening.Value);
+                if (mapped < 0)
+                {
+                    Ledger.Add("happening", tables.OldHappeningName(pending.Happening.Value), "pending happening removed by the remap");
+                    state.Pending = null;
+                }
+                else
+                {
+                    state.Pending = new PendingHappening(HappeningId.From(checked((ushort)mapped)), pending.RaisedTick);
+                }
+            }
+
+            state.CooldownUntil = Permute(state.CooldownUntil, tables.HappeningMap, tables.Content.Happenings.Count, static () => 0L);
+
+            if (state.TempModifiers.Length > 0)
+            {
+                var kept = new List<TempModifierRecord>(state.TempModifiers.Length);
+                foreach (TempModifierRecord record in state.TempModifiers)
+                {
+                    int mapped = tables.MapHappening(record.Happening.Value);
+                    if (mapped < 0)
+                    {
+                        Ledger.Add("happening", tables.OldHappeningName(record.Happening.Value), "duration-bound modifiers dropped by the remap");
+                    }
+                    else
+                    {
+                        kept.Add(new TempModifierRecord(HappeningId.From(checked((ushort)mapped)), record.ExpiresTick));
+                    }
+                }
+
+                state.TempModifiers = [.. kept];
+            }
         }
 
         public void RemapProgression()

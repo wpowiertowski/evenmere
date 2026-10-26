@@ -29,4 +29,7 @@ public static class LintCodes
 
     /// <summary>EVL011: a tier with an advanceFrom tier must need strictly more basic goods per resident than that tier.</summary>
     public const string Evl011 = "EVL011";
+
+    /// <summary>EVL012: no happening option may be net-negative; a penalty must come with a grant, a bonus modifier or a festival discount.</summary>
+    public const string Evl012 = "EVL012";
 }

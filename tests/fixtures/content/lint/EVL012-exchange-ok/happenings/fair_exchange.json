@@ -1,0 +1,17 @@
+{
+  "id": "fair_exchange",
+  "trigger": { "season": "spring" },
+  "chancePerMille": 10,
+  "cooldownDays": 30,
+  "options": [
+    {
+      "effects": [
+        { "modifier": { "stat": "productivity", "percent": -10 } },
+        { "grantGoods": { "fish": 5 } }
+      ],
+      "durationDays": 5
+    },
+    { "effects": [] }
+  ],
+  "defaultOption": 1
+}

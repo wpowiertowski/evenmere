@@ -8,6 +8,7 @@ using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
 using Evenmere.Sim.Systems.Culture.Festivals.Commands;
 using Evenmere.Sim.Systems.Culture.Traditions.Commands;
+using Evenmere.Sim.Systems.Happenings.Commands;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
 using Evenmere.Sim.Systems.Research.Commands;
@@ -117,6 +118,9 @@ public sealed class CommandLogCoverageTests
                 // Slice content defines no festivals yet, so the sample names ID 0 and rides the default
                 // passthrough. M2-13b (festival content) adds the RemapCommand case and names a real festival.
                 _ when type == typeof(HoldFestival) => new HoldFestival(new EntityId(7), FestivalId.From(0)),
+                // Slice content defines no happenings yet, so the sample names ID 0 and rides the default
+                // passthrough. M2-13b (happening content) adds the RemapCommand case and names a real happening.
+                _ when type == typeof(ChooseHappeningOption) => new ChooseHappeningOption(HappeningId.From(0), 0),
                 _ when type == typeof(DismissAdvice) => new DismissAdvice(3),
                 _ => null,
             };
