@@ -185,16 +185,31 @@ internal sealed class AdvisorsSystem : ISimSystem
     // each tier the note stays with its subject house while that house is still blocked in the same tier, so the
     // note is stable when more houses join; otherwise it names the lowest-ID blocked house of the tier. A
     // demolished subject fails the lookups below, so its note lapses and the next lowest house takes over.
+    // The lowest blocked house of every tier comes from a single pass over the buildings (the map walks in
+    // ascending ID order, so the first blocked house seen for a tier is its lowest); the per-tier work after that
+    // is just the stable-subject check and the confirm, in tier order, exactly as before.
     private void EvaluateHouses(SimContext ctx)
     {
         int tiers = _content.Tiers.Count;
+        var lowest = new EntityId[tiers];
+        foreach (BuildingInfo building in ctx.Queries.Map.Buildings)
+        {
+            if (ctx.Queries.Population.TryGetHouse(building.Id, out HouseInfo info)
+                && info.AdvanceBlocker is AdvanceBlocker.MissingMaterials or AdvanceBlocker.NextTierLocked
+                && (uint)info.Tier.Value < (uint)tiers
+                && lowest[info.Tier.Value].IsNone)
+            {
+                lowest[info.Tier.Value] = building.Id;
+            }
+        }
+
         for (int t = 0; t < tiers; t++)
         {
             var tier = TierId.From(checked((ushort)t));
             EntityId subject = StableBlockedSubject(ctx, tier);
             if (subject.IsNone)
             {
-                subject = LowestBlockedHouse(ctx, tier);
+                subject = lowest[t];
             }
 
             if (!subject.IsNone)
@@ -236,22 +251,6 @@ internal sealed class AdvisorsSystem : ISimSystem
             && info.AdvanceBlocker is AdvanceBlocker.MissingMaterials or AdvanceBlocker.NextTierLocked;
     }
 
-    // The lowest-ID blocked house of the tier, or none. The map sequence walks in ascending ID order.
-    private static EntityId LowestBlockedHouse(SimContext ctx, TierId tier)
-    {
-        foreach (BuildingInfo building in ctx.Queries.Map.Buildings)
-        {
-            if (ctx.Queries.Population.TryGetHouse(building.Id, out HouseInfo info)
-                && info.Tier == tier
-                && info.AdvanceBlocker is AdvanceBlocker.MissingMaterials or AdvanceBlocker.NextTierLocked)
-            {
-                return building.Id;
-            }
-        }
-
-        return EntityId.None;
-    }
-
     // A tier is short of workers for the day when its jobs stay unfilled after stepping down: demand past supply that
     // even the substitutes from higher tiers do not cover, two days in a row (ADR-0016). Workers placed from above
     // fill the gap between supply and demand, so only the remainder counts.
@@ -275,88 +274,136 @@ internal sealed class AdvisorsSystem : ISimSystem
     // (M2-30): one note per tier, so the player keeps a lower-tier fallback standing. Needs with no active maker at
     // all are not warnings: nothing was upgraded away, and the shortage rules cover missing production. Structural like
     // the road rules, so it shows on the first day without a streak.
+    // One pass over the active buildings feeds every tier's flags: for each maker the pass marks the basic needs it
+    // covers and whether a lower tier (or nobody) staffs it, then each tier confirms at most once, in tier order.
+    // The confirms match the old per-need rescans exactly: a tier confirms if and only if some basic need has an
+    // active maker but no lower-tier one.
     private void EvaluateFallbacks(SimContext ctx)
     {
         int tiers = _content.Tiers.Count;
+        int goods = _content.Goods.Count;
+        var tierDefs = new TierDef[tiers];
+        bool[] eligible = new bool[tiers];
+        int[][] goodNeed = new int[tiers][];
+        bool[][] goodsAny = new bool[tiers][];
+        bool[][] goodsLower = new bool[tiers][];
+        bool[][] servicesAny = new bool[tiers][];
+        bool[][] servicesLower = new bool[tiers][];
         for (int t = 0; t < tiers; t++)
         {
             TierDef def = _content.Tiers.Items[t];
-            if (def.AdvanceFrom is null)
+            tierDefs[t] = def;
+            int needGoods = def.BasicGoods.Length;
+            int needServices = def.BasicServices.Length;
+            int[] map = new int[goods];
+            Array.Fill(map, -1);
+            if (def.AdvanceFrom is not null)
             {
                 // The first tier has nothing lower than it, so it can lose no fallback.
+                eligible[t] = true;
+                for (int i = 0; i < needGoods; i++)
+                {
+                    if ((uint)def.BasicGoods[i].Good.Value < (uint)goods)
+                    {
+                        map[def.BasicGoods[i].Good.Value] = i;
+                    }
+                }
+            }
+
+            goodNeed[t] = map;
+            goodsAny[t] = new bool[needGoods];
+            goodsLower[t] = new bool[needGoods];
+            servicesAny[t] = new bool[needServices];
+            servicesLower[t] = new bool[needServices];
+        }
+
+        foreach (BuildingInfo building in ctx.Queries.Map.ActiveBuildings)
+        {
+            if (building.State != BuildingState.Active)
+            {
+                continue;
+            }
+
+            BuildingDef bdef = _content.Get(building.Type);
+            if (bdef.Recipe is { } recipe)
+            {
+                foreach (GoodAmount output in _content.Get(recipe).Outputs)
+                {
+                    if ((uint)output.Good.Value >= (uint)goods)
+                    {
+                        continue;
+                    }
+
+                    for (int t = 0; t < tiers; t++)
+                    {
+                        int need = goodNeed[t][output.Good.Value];
+                        if (need < 0)
+                        {
+                            continue;
+                        }
+
+                        goodsAny[t][need] = true;
+                        if (IsLowerOrNone(tierDefs[t], bdef))
+                        {
+                            goodsLower[t][need] = true;
+                        }
+                    }
+                }
+            }
+
+            if (bdef.Service is { } provided)
+            {
+                for (int t = 0; t < tiers; t++)
+                {
+                    if (!eligible[t])
+                    {
+                        continue;
+                    }
+
+                    int need = tierDefs[t].BasicServices.IndexOf(provided.Kind);
+                    if (need < 0)
+                    {
+                        continue;
+                    }
+
+                    servicesAny[t][need] = true;
+                    if (IsLowerOrNone(tierDefs[t], bdef))
+                    {
+                        servicesLower[t][need] = true;
+                    }
+                }
+            }
+        }
+
+        for (int t = 0; t < tiers; t++)
+        {
+            if (!eligible[t])
+            {
                 continue;
             }
 
             var tier = TierId.From(checked((ushort)t));
-            if (FallbackLost(ctx, tier, def))
+            if (FallbackLost(goodsAny[t], goodsLower[t], servicesAny[t], servicesLower[t]))
             {
                 Confirm(ctx, AdviceKind.NoLowerTierFallback, SubjectLink.ForTier(tier));
             }
         }
     }
 
-    // Whether some basic need of the tier has an active maker but no lower-tier one: a good whose active producers are
-    // all staffed by the tier itself, or a service whose active providers are. Workerless makers need nobody, so they
-    // always count as a fallback.
-    private bool FallbackLost(SimContext ctx, TierId tier, TierDef def)
+    // Whether some basic need has an active maker but no lower-tier one, from one tier's accumulated flags.
+    private static bool FallbackLost(bool[] goodsAny, bool[] goodsLower, bool[] servicesAny, bool[] servicesLower)
     {
-        foreach (GoodAmount need in def.BasicGoods)
+        for (int i = 0; i < goodsAny.Length; i++)
         {
-            bool any = false;
-            bool lower = false;
-            foreach (BuildingInfo building in ctx.Queries.Map.ActiveBuildings)
-            {
-                if (building.State != BuildingState.Active)
-                {
-                    continue;
-                }
-
-                BuildingDef bdef = _content.Get(building.Type);
-                if (bdef.Recipe is not { } recipe || !Produces(recipe, need.Good))
-                {
-                    continue;
-                }
-
-                any = true;
-                if (IsLowerOrNone(def, bdef))
-                {
-                    lower = true;
-                    break;
-                }
-            }
-
-            if (any && !lower)
+            if (goodsAny[i] && !goodsLower[i])
             {
                 return true;
             }
         }
 
-        foreach (ServiceKind service in def.BasicServices)
+        for (int i = 0; i < servicesAny.Length; i++)
         {
-            bool any = false;
-            bool lower = false;
-            foreach (BuildingInfo building in ctx.Queries.Map.ActiveBuildings)
-            {
-                if (building.State != BuildingState.Active)
-                {
-                    continue;
-                }
-
-                BuildingDef bdef = _content.Get(building.Type);
-                if (bdef.Service is not { } provided || provided.Kind != service)
-                {
-                    continue;
-                }
-
-                any = true;
-                if (IsLowerOrNone(def, bdef))
-                {
-                    lower = true;
-                    break;
-                }
-            }
-
-            if (any && !lower)
+            if (servicesAny[i] && !servicesLower[i])
             {
                 return true;
             }
@@ -379,19 +426,6 @@ internal sealed class AdvisorsSystem : ISimSystem
         }
 
         return _content.Get(spec.Tier).Order < tier.Order;
-    }
-
-    private bool Produces(RecipeId recipe, GoodId good)
-    {
-        foreach (GoodAmount output in _content.Get(recipe).Outputs)
-        {
-            if (output.Good == good)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     // Knowledge or culture is accruing with nothing left to choose. No streak: idleness shows on the first day.

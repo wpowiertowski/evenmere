@@ -8,7 +8,7 @@ namespace Evenmere.Sim.Systems.Roads;
 
 /// <summary>
 /// The road layer and everything derived from it: access tiles, the distance field of each storehouse and service building,
-/// the per-building lookups built on those fields, and view paths. <see cref="RoadsSystem"/> owns one and its command
+/// the tile-level storehouse-reach labels, the per-building lookups built on those fields, and view paths. <see cref="RoadsSystem"/> owns one and its command
 /// handlers, lifecycle callbacks and queries all go through it.
 /// </summary>
 /// <remarks>
@@ -38,6 +38,7 @@ internal sealed partial class RoadNetwork
     private readonly Func<ISimQueries> _queries;
     private readonly int[] _roadCost;
     private readonly int _minRoadCost;
+    private readonly int _maxRoadCost;
     private readonly List<int> _changed = [];
 
     /// <summary>Initializes a new instance of the <see cref="RoadNetwork"/> class.</summary>
@@ -62,6 +63,7 @@ internal sealed partial class RoadNetwork
 
         _roadCost = new int[content.Buildings.Count];
         _minRoadCost = int.MaxValue;
+        _maxRoadCost = 0;
         for (int i = 0; i < _roadCost.Length; i++)
         {
             int cost = content.Buildings.Items[i].RoadCost ?? 0;
@@ -69,6 +71,7 @@ internal sealed partial class RoadNetwork
             if (cost > 0)
             {
                 _minRoadCost = Math.Min(_minRoadCost, cost);
+                _maxRoadCost = Math.Max(_maxRoadCost, _roadCost[i]);
             }
         }
 
@@ -122,8 +125,57 @@ internal sealed partial class RoadNetwork
             return false;
         }
 
-        Span<int> ring = RingBuffer(info, stackalloc int[StackRing]);
-        return CollectAccess(info, ring) > 0;
+        return HasAnyAccess(info);
+    }
+
+    // Whether any road tile touches the footprint along an edge, stopping at the first one. This mirrors
+    // CollectAccess's walk (same tiles, same order) but skips the buffer and the full scan: most buildings sit
+    // beside a road, so the answer is usually found within a few tiles.
+    private bool HasAnyAccess(in BuildingInfo building)
+    {
+        int width = _state.Width;
+        int height = _state.Height;
+        int left = building.Origin.X;
+        int top = building.Origin.Y;
+        int right = left + building.Width;
+        int bottom = top + building.Height;
+
+        if (top - 1 >= 0 && top - 1 < height)
+        {
+            for (int x = Math.Max(left, 0); x < Math.Min(right, width); x++)
+            {
+                if (CostAt(((top - 1) * width) + x) > 0)
+                {
+                    return true;
+                }
+            }
+        }
+
+        for (int y = Math.Max(top, 0); y < Math.Min(bottom, height); y++)
+        {
+            if (left - 1 >= 0 && left - 1 < width && CostAt((y * width) + left - 1) > 0)
+            {
+                return true;
+            }
+
+            if (right >= 0 && right < width && CostAt((y * width) + right) > 0)
+            {
+                return true;
+            }
+        }
+
+        if (bottom >= 0 && bottom < height)
+        {
+            for (int x = Math.Max(left, 0); x < Math.Min(right, width); x++)
+            {
+                if (CostAt((bottom * width) + x) > 0)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Lists a building's access tiles: the road tiles orthogonally adjacent to its footprint, in row-major order.</summary>

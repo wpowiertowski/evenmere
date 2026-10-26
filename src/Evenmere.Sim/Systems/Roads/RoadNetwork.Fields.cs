@@ -118,6 +118,7 @@ internal sealed partial class RoadNetwork
         if (changed)
         {
             _epoch++;
+            _reachStale = true;
         }
     }
 
@@ -129,6 +130,7 @@ internal sealed partial class RoadNetwork
         if (RemoveField(building.Id))
         {
             _epoch++;
+            _reachStale = true;
         }
 
         ForgetDerived(building.Id);
@@ -222,6 +224,7 @@ internal sealed partial class RoadNetwork
         if (rebuilt)
         {
             _epoch++;
+            _reachStale = true;
         }
     }
 
