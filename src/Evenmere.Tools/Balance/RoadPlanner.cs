@@ -118,6 +118,8 @@ public static class RoadPlanner
     /// <param name="anchorY">The row of the anchor rectangle's top-left tile.</param>
     /// <param name="anchorWidth">The anchor width.</param>
     /// <param name="anchorHeight">The anchor height.</param>
+    /// <param name="avoid">Tiles the path must not use (for example same-tick building footprints that are not
+    /// buildings yet, so validation would still call them free but apply would refuse the road); may be <see langword="null"/>.</param>
     /// <returns>The path from beside the footprint to the network (the final tile is already a road and is left out), or <see langword="null"/> when no valid path exists.</returns>
     /// <exception cref="ArgumentNullException">An argument is <see langword="null"/>.</exception>
     public static TileCoord[]? FindConnector(
@@ -131,7 +133,8 @@ public static class RoadPlanner
         int anchorX,
         int anchorY,
         int anchorWidth,
-        int anchorHeight)
+        int anchorHeight,
+        IReadOnlyCollection<TileCoord>? avoid = null)
     {
         ArgumentNullException.ThrowIfNull(simulation);
         ArgumentNullException.ThrowIfNull(content);
@@ -139,9 +142,50 @@ public static class RoadPlanner
         int mapWidth = simulation.Query.Map.Width;
         int mapHeight = simulation.Query.Map.Height;
         var blocked = new HashSet<int>();
+        if (avoid is not null)
+        {
+            foreach (TileCoord tile in avoid)
+            {
+                if (tile.IsInside(mapWidth, mapHeight))
+                {
+                    blocked.Add(tile.ToIndex(mapWidth));
+                }
+            }
+        }
+        TileCoord[]? found = SearchValidated(simulation, content, roadType, x, y, width, height, anchorX, anchorY, anchorWidth, anchorHeight, mapWidth, mapHeight, blocked, targetAnchor: false);
+        if (found is not null)
+        {
+            return found;
+        }
+
+        // Fallback: the anchor's doorstep. Once any road exists the search above targets only roads, so a
+        // footprint the young network cannot reach (its one road sits across water) would never connect even
+        // though the hall is next door. The fallback only runs when the network search found nothing, so every
+        // previously successful search returns exactly what it did before.
+        var fallbackBlocked = new HashSet<int>(blocked);
+        return SearchValidated(simulation, content, roadType, x, y, width, height, anchorX, anchorY, anchorWidth, anchorHeight, mapWidth, mapHeight, fallbackBlocked, targetAnchor: true);
+    }
+
+    private static TileCoord[]? SearchValidated(
+        ISimulation simulation,
+        ContentDb content,
+        BuildingTypeId roadType,
+        int x,
+        int y,
+        int width,
+        int height,
+        int anchorX,
+        int anchorY,
+        int anchorWidth,
+        int anchorHeight,
+        int mapWidth,
+        int mapHeight,
+        HashSet<int> blocked,
+        bool targetAnchor)
+    {
         for (int attempt = 0; attempt < MaxAttempts; attempt++)
         {
-            TileCoord[]? path = Search(simulation, content, x, y, width, height, anchorX, anchorY, anchorWidth, anchorHeight, mapWidth, mapHeight, blocked);
+            TileCoord[]? path = Search(simulation, content, x, y, width, height, anchorX, anchorY, anchorWidth, anchorHeight, mapWidth, mapHeight, blocked, targetAnchor);
             if (path is null)
             {
                 return null;
@@ -187,7 +231,8 @@ public static class RoadPlanner
         int anchorHeight,
         int mapWidth,
         int mapHeight,
-        HashSet<int> blocked)
+        HashSet<int> blocked,
+        bool targetAnchor)
     {
         bool hasRoads = HasAnyRoad(simulation, mapWidth, mapHeight);
         var starts = new List<int>();
@@ -248,7 +293,7 @@ public static class RoadPlanner
             int cx = current % mapWidth;
             int cy = current / mapWidth;
             var tile = new TileCoord(cx, cy);
-            if (IsTarget(simulation, tile, hasRoads, anchorX, anchorY, anchorWidth, anchorHeight))
+            if (IsTarget(simulation, tile, hasRoads, anchorX, anchorY, anchorWidth, anchorHeight, targetAnchor))
             {
                 return BuildPath(previous, current, starts, mapWidth);
             }
@@ -268,7 +313,7 @@ public static class RoadPlanner
                 }
 
                 // Walking through existing roads is free; only new tiles must be walkable.
-                if (!IsTarget(simulation, next, hasRoads, anchorX, anchorY, anchorWidth, anchorHeight)
+                if (!IsTarget(simulation, next, hasRoads, anchorX, anchorY, anchorWidth, anchorHeight, targetAnchor)
                     && !IsWalkable(simulation, content, next, x, y, width, height, blocked, mapWidth))
                 {
                     continue;
@@ -282,9 +327,9 @@ public static class RoadPlanner
         return null;
     }
 
-    private static bool IsTarget(ISimulation simulation, TileCoord tile, bool hasRoads, int anchorX, int anchorY, int anchorWidth, int anchorHeight)
+    private static bool IsTarget(ISimulation simulation, TileCoord tile, bool hasRoads, int anchorX, int anchorY, int anchorWidth, int anchorHeight, bool targetAnchor)
     {
-        if (hasRoads)
+        if (!targetAnchor && hasRoads)
         {
             return simulation.Query.Roads.RoadAt(tile.X, tile.Y) is not null;
         }

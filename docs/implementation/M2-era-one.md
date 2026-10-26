@@ -67,6 +67,7 @@ file per card as listed; never edit another card's file.
 | M2-01 | Island generator: heightmap, coast and biomes | sim | M2-00 | done |
 | M2-02a | Rivers, fertility and deposits | sim | M2-01 | done |
 | M2-02b | Regions, discoveries, start guarantee and generated new games | sim | M2-02a | done |
+| M2-02c | Start guarantee by road reach | sim | M2-02b, M2-17a | todo |
 | M2-03 | Map generation preview CLI and seed gallery | tools | M2-02b | done |
 | M2-04 | Bridges and river crossing | sim | M2-00 | done |
 | M2-05 | Seasons | sim | M2-00 | done |
@@ -82,7 +83,7 @@ file per card as listed; never edit another card's file.
 | M2-14 | Lint rule EVL010: lower-tier staffing | content-infra | M2-00 | done |
 | M2-15 | Save versioning, migrations and autosave rotation | sim | M2-00 | done |
 | M2-16 | Replay and performance harness, reference saves | tools | M2-15 | done |
-| M2-17a | Balance bot v2: the Era I island bot | tools | M2-04, M2-13b, M2-16 | todo |
+| M2-17a | Balance bot v2: the Era I island bot | tools | M2-04, M2-13b, M2-16 | done |
 | M2-17b | Multi-seed balance runs and pacing sign-off | tools | M2-17a + pacing-window confirmation (human) | todo |
 | M2-18 | Tech tree graph view | game | M2-09 | done |
 | M2-19 | Civics tree and traditions board | game | M2-07 | done |
@@ -1187,6 +1188,37 @@ file per card as listed; never edit another card's file.
 
 ---
 
+### M2-02c · Start guarantee by road reach
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| sim | M2-02b, M2-17a | `src/Evenmere.Sim/Systems/Map/Generation/StartGuarantee.cs` (and the generator's re-seed loop if needed), `tests/Evenmere.Sim.Tests/MapGeneration/Guarantee/**`, `tests/fixtures/maps/generated-mapdef.md`, `tests/fixtures/scenarios/generated_seed7.json` (hash line) |
+
+**Found by M2-17a:** on seeds 2, 3 and 4 at 320, the Era I bot starves before Era II. The hall's start bank has no reachable wood or fish without a bridge:
+- seed 2: 771 forest tiles west of the hall across a river, but 5 within reach on its own bank;
+- seed 3: the fishing coast is unreachable;
+- seed 4: a diagonal lace of rivers leaves roads failing from tick 0.
+
+Meanwhile `StartGuarantee` counts resources over a flood that leaks diagonally across thin rivers (8-connected). Roads can't cross there (4-connected, no river tiles).
+
+**Goal:** a generated start is playable without bridges, as the M1-03 guarantees intend.
+
+**Steps:**
+
+1. Measure every guarantee count (forest belt, grain and sheep sites, coast, stone, clay) over the tiles a dirt road can actually reach from the hall: 4-connected, no river or water tiles, and within the hall's storehouse reach. Use the same connectivity the road placement rules use.
+2. Require a fishing-hut site on reachable coast.
+3. Keep the deterministic re-seed (at most 16 attempts). If any of seeds 1–100 needs more than 16, report it rather than raise the cap.
+
+**Acceptance:**
+
+- Seeds 1–100 at 320 satisfy the stricter guarantee (test).
+- The `MapDef` golden hashes are re-baselined, with the reason.
+- `generated_seed7.json` still reaches Villagers.
+- The Era I bot (`tools/bots/era1.json`) reaches Era II on seeds 1–5 at 320, with the pacing table in the PR. This moves M2-17a's acceptance for the generated seeds here.
+- `scripts/verify.sh` passes.
+
+---
+
 ## Follow-ups found in review
 
 Small issues found while reviewing M2 tasks, each with the card or lane it belongs to. A card picks its item up when it touches the code anyway. Items with no home card are listed for a polish pass before the M2-28 playtest.
@@ -1195,6 +1227,8 @@ Small issues found while reviewing M2 tasks, each with the card or lane it belon
 | --- | --- | --- |
 | M2-16 | ~~The advisors system spikes to 248 ms on some ticks on `perf-20k`.~~ Fixed by M2-34 (max 7.5 ms, average within budget). | M2-34 (done) |
 | M2-34 | Building the storehouse distance fields after a roads change still costs up to about 50 ms on `perf-20k` (953 storehouses). Logistics now pays it first (its Deck average is 0.42 against a 0.50 budget), and the tick's p99 is still about 7.9 ms Deck. Labelled per-tile costs, or incremental field updates, would remove it. Not gating. | Sim perf task before M3 |
+| M2-17a | `EraOneBot.cs` is 3,184 lines and copies v1's goal mechanics verbatim. Split it into components and share the mechanics with `BalanceBot`. Also review `SeversNetwork` for false positives on river-laced ground. | M2-17b |
+| M2-17a | Generated-island pacing on the two green seeds: 100 Villagers missed by Era II (seed 1 had 80 Villagers at 112 min, seed 5 had 50 at 112.5). Era II landed at 112 min. | M2-17b (pacing) |
 | M2-19 | ~~The inspector names tradition, festival, happening and monument sources "from 0".~~ Done in M2-13b. | M2-13b (done) |
 | M2-19 | ~~Completion toasts overlap right-docked panels.~~ Done in M2-35. | M2-35 (done) |
 | M2-19 | ~~One shared effect formatter.~~ Done in M2-35 (`EffectText`). | M2-35 (done) |

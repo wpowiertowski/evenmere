@@ -424,6 +424,13 @@ internal static class EvenmereCli
             CustomParser = PositiveWholeNumber("--max-minutes"),
         };
 
+        var size = new Option<int>("--size")
+        {
+            Description = "Generate an island this many tiles across (256, 320 or 384) from the seed instead of loading --map. 0 loads --map.",
+            HelpName = "n",
+            DefaultValueFactory = _ => 0,
+        };
+
         var balance = new Command(
             "balance",
             "Play the island with a scripted auto-player and report pacing. stdout: the JSON report; stderr: the text report.")
@@ -432,6 +439,7 @@ internal static class EvenmereCli
             bot,
             seed,
             maxMinutes,
+            size,
         };
         balance.SetAction(parsed =>
         {
@@ -450,7 +458,8 @@ internal static class EvenmereCli
                     parsed.GetValue(seed),
                     parsed.GetValue(maxMinutes),
                     environment.Output,
-                    environment.Error));
+                    environment.Error,
+                    parsed.GetValue(size)));
         });
         return balance;
     }
