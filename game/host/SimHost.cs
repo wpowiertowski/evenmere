@@ -142,6 +142,19 @@ public sealed partial class SimHost : Node
     }
 
     /// <summary>
+    /// Loads the content and its display text when nothing runs yet and returns the content, so the new-game screen
+    /// can generate a preview island before any simulation starts (when <see cref="Content"/> would still throw).
+    /// The content loads once and is reused by <see cref="StartNewGame"/> and loaded saves.
+    /// </summary>
+    /// <returns>The loaded content.</returns>
+    /// <exception cref="ContentLoadException">The content has errors.</exception>
+    public ContentDb LoadContent()
+    {
+        EnsureContent();
+        return Content;
+    }
+
+    /// <summary>
     /// Loads the content and its display text, loads the island and starts a new world on it, replacing any simulation
     /// already running. Problems in the locale files are logged as warnings and never stop the game.
     /// </summary>
@@ -154,7 +167,28 @@ public sealed partial class SimHost : Node
     {
         EnsureContent();
         MapDef map = MapLoader.Load([ContentPaths.Resolve()], mapId, Content!).GetMapOrThrow();
+        StartNewGameCore(seed, map, mapId, cheatsUsed);
+    }
 
+    /// <summary>
+    /// Starts a new world on a ready-made island (M2-25), replacing any simulation already running. A generated
+    /// island needs no map folder: the new-game screen draws the <see cref="MapDef"/> off-thread and hands it
+    /// over finished. The content still loads first, so the island always matches the running content.
+    /// </summary>
+    /// <param name="seed">The world seed.</param>
+    /// <param name="map">The finished island, generated or loaded.</param>
+    /// <param name="cheatsUsed">Whether cheat commands are processed for the new game (ADR-0012).</param>
+    /// <exception cref="ArgumentNullException"><paramref name="map"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ContentLoadException">The content has errors.</exception>
+    public void StartNewGame(ulong seed, MapDef map, bool cheatsUsed = false)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+        EnsureContent();
+        StartNewGameCore(seed, map, map.Id, cheatsUsed);
+    }
+
+    private void StartNewGameCore(ulong seed, MapDef map, string mapId, bool cheatsUsed)
+    {
         // Held as the interface on purpose: the host exposes queries, never the concrete simulation or its state.
         _sim = Evenmere.Sim.Simulation.CreateNew(Content!, new NewGameOptions { Seed = seed, Map = map });
 

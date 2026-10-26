@@ -5,6 +5,7 @@ using Evenmere.Content.Maps;
 using Evenmere.Game.Host;
 using Evenmere.Game.Host.Persistence;
 using Evenmere.Game.Ui.Common;
+using Evenmere.Game.Ui.Menus.NewGame;
 using Evenmere.Game.Ui.Progress;
 using Evenmere.Sim.Persistence;
 using Godot;
@@ -41,6 +42,7 @@ public sealed partial class MainMenu : Control
     private SlotListDialog? _dialog;
     private SettingsStub? _settings;
     private LoadReportNote? _report;
+    private NewGameScreen? _newGame;
 
     /// <summary>Gets or sets the simulation host. It is set by the scene root before the menu is shown.</summary>
     public SimHost? Host { get; set; }
@@ -60,6 +62,7 @@ public sealed partial class MainMenu : Control
         LoadStrings();
         Build();
         Refresh();
+        MaybeAutoOpenNewGame();
     }
 
     /// <summary>Refreshes the Continue button and focuses New Game, for showing the menu again after quitting.</summary>
@@ -169,7 +172,8 @@ public sealed partial class MainMenu : Control
             MaxLength = 20,
             Text = LaunchOptions.DefaultSeed.ToString(CultureInfo.InvariantCulture),
         };
-        seedEdit.TextSubmitted += _ => StartGame();
+        seedEdit.TextSubmitted += _ => ShowNewGame();
+        NewGameScreen.StyleInput(seedEdit);
         seedRow.AddChild(seedEdit);
         _seedEdit = seedEdit;
 
@@ -179,7 +183,7 @@ public sealed partial class MainMenu : Control
         _seedButton = seedButton;
 
         Button newGame = MakeButton(column);
-        newGame.Pressed += StartGame;
+        newGame.Pressed += ShowNewGame;
         _newGameButton = newGame;
 
         Button cont = MakeButton(column);
@@ -307,31 +311,88 @@ public sealed partial class MainMenu : Control
         _seedEdit.SelectAll();
     }
 
-    private void StartGame()
+    private ulong InitialSeedOrRandom()
     {
-        if (_host is null || _seedEdit is null)
+        if (_seedEdit is not null
+            && ulong.TryParse(_seedEdit.Text.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out ulong seed))
+        {
+            return seed;
+        }
+
+        // Random by default (the game layer may use the system RNG; the sim may not): every new island differs.
+        return (ulong)Random.Shared.NextInt64(0, long.MaxValue);
+    }
+
+    private void ShowNewGame() => ShowNewGame(string.Empty, walk: false);
+
+    private void ShowNewGame(string shotMode, bool walk)
+    {
+        if (_host is null || _strings is null || _newGame is not null)
         {
             return;
         }
 
-        if (!ulong.TryParse(_seedEdit.Text.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out ulong seed))
+        ShowError(null);
+        var screen = new NewGameScreen
         {
-            ShowError(Strings().Get("ui.menu.seed.invalid"));
-            _seedEdit.GrabFocus();
-            _seedEdit.SelectAll();
+            Host = _host,
+            Strings = _strings,
+            InitialSeed = InitialSeedOrRandom(),
+            ShotMode = shotMode,
+            WalkRequested = walk,
+        };
+        AddChild(screen);
+        screen.Started += OnNewGameStarted;
+        screen.Closed += OnNewGameClosed;
+        _newGame = screen;
+    }
+
+    private void OnNewGameStarted()
+    {
+        if (_newGame is not null)
+        {
+            _newGame.QueueFree();
+            _newGame = null;
+        }
+
+        Recorder?.EndSlot();
+        PlayStarted?.Invoke();
+    }
+
+    private void OnNewGameClosed()
+    {
+        _newGame = null;
+        Refresh();
+    }
+
+    private void MaybeAutoOpenNewGame()
+    {
+        // Debug only (M2-25): `--newgame-shot=&lt;mode&gt;` opens the new-game screen at startup for screenshots,
+        // and `--newgame-walk` opens it with the scripted ui_* reachability probe, because --focus-walk starts a
+        // game directly and never shows the menu. Release builds ignore both flags.
+        if (!OS.IsDebugBuild())
+        {
             return;
         }
 
-        try
+        string[] args = OS.GetCmdlineUserArgs();
+        string shotMode = string.Empty;
+        foreach (string arg in args)
         {
-            ShowError(null);
-            _host.StartNewGame(seed, LaunchOptions.DefaultMap);
-            Recorder?.EndSlot();
-            PlayStarted?.Invoke();
+            if (arg.StartsWith("--newgame-shot=", StringComparison.Ordinal))
+            {
+                string tail = arg["--newgame-shot=".Length..];
+                if (tail is "starter" or "generated" or "generating")
+                {
+                    shotMode = tail;
+                }
+            }
         }
-        catch (Exception ex) when (ex is ContentLoadException or MapLoadException or IOException)
+
+        bool walk = args.Contains("--newgame-walk", StringComparer.Ordinal);
+        if (shotMode.Length > 0 || walk)
         {
-            ShowError(ex.Message.ReplaceLineEndings(" "));
+            ShowNewGame(shotMode, walk);
         }
     }
 
