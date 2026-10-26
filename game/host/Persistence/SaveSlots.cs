@@ -140,13 +140,69 @@ public static class SaveSlots
 
     private const int MaxSlotIdLength = 48;
 
+    /// <summary>The saves folder of a debug or tooling run, so screenshots, smoke runs, walks and benches never touch the player's saves (M2-26).</summary>
+    public const string DebugRoot = "user://saves-debug";
+
+    private const string DefaultRoot = "user://saves";
+    private const string FocusWalkFlag = "--focus-walk";
+    private const string DemoPrefix = "--demo-";
+    private const string ToolPrefix = "--tool-";
+    private const string ShowPrefix = "--show-";
+    private const string LoadSavePrefix = "--load-save=";
+    private const string DebugSaveQuitPrefix = "--debug-save-and-quit=";
+
+    private static string? _rootOverride;
+
+    /// <summary>
+    /// Chooses the saves root for this launch, without touching the disk (M2-26). A normal launch keeps the
+    /// player's <c>user://saves/</c>; any non-normal launch (everything <see cref="WindowSetup"/> already
+    /// classifies as fixed-size — smoke, screenshot, bench, window-size — plus <c>--focus-walk</c>, any
+    /// <c>--demo-*</c>, <c>--tool-*</c> or <c>--show-*</c> flag, <c>--load-save=</c> and
+    /// <c>--debug-save-and-quit=</c>) uses <c>user://saves-debug/</c> instead, so debug runs can never rotate
+    /// real autosaves out.
+    /// </summary>
+    /// <param name="userArgs">The user arguments, as <c>Godot.OS.GetCmdlineUserArgs()</c> returns them.</param>
+    /// <returns>The saves root for this launch.</returns>
+    public static string RootFor(IReadOnlyList<string> userArgs)
+    {
+        ArgumentNullException.ThrowIfNull(userArgs);
+
+        if (!WindowSetup.ShouldMaximize(userArgs))
+        {
+            return DebugRoot;
+        }
+
+        foreach (string arg in userArgs)
+        {
+            if (arg == FocusWalkFlag
+                || arg.StartsWith(DemoPrefix, StringComparison.Ordinal)
+                || arg.StartsWith(ToolPrefix, StringComparison.Ordinal)
+                || arg.StartsWith(ShowPrefix, StringComparison.Ordinal)
+                || arg.StartsWith(LoadSavePrefix, StringComparison.Ordinal)
+                || arg.StartsWith(DebugSaveQuitPrefix, StringComparison.Ordinal))
+            {
+                return DebugRoot;
+            }
+        }
+
+        return DefaultRoot;
+    }
+
+    /// <summary>Overrides the saves root chosen by <see cref="RootFor"/>, for the rest of the run. Call once at startup.</summary>
+    /// <param name="root">The saves root, such as <see cref="DebugRoot"/>.</param>
+    public static void SetRootOverride(string root)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(root);
+        _rootOverride = root;
+    }
+
     /// <summary>Gets the absolute saves folder, creating it on first use.</summary>
     /// <returns>The folder path.</returns>
     public static string SavesDirectory
     {
         get
         {
-            string directory = ProjectSettings.GlobalizePath("user://saves");
+            string directory = ProjectSettings.GlobalizePath(_rootOverride ?? DefaultRoot);
             Directory.CreateDirectory(directory);
             return directory;
         }

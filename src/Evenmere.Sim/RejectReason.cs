@@ -57,4 +57,7 @@ public enum RejectReason
 
     /// <summary>The pool cannot pay a festival's discounted cost. (M2-08.)</summary>
     FestivalGoodsShort = 16,
+
+    /// <summary>A cheat command was sent to a save whose cheats flag is off. (M2-26, ADR-0012.)</summary>
+    CheatsDisabled = 17,
 }

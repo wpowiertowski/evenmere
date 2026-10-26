@@ -4,6 +4,7 @@ using Evenmere.Sim.Systems.Advisors.Commands;
 using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
 using Evenmere.Sim.Systems.Culture.Traditions.Commands;
+using Evenmere.Sim.Systems.Debug.Commands;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
 using Evenmere.Sim.Systems.Research.Commands;
@@ -266,6 +267,54 @@ public sealed class CommandLogReader
                     int mapped = _tables.MapTradition(card.Value);
                     return mapped < 0 ? null : tradition with { Tradition = TraditionId.From(checked((ushort)mapped)) };
                 }
+
+            case CheatGrantGoods grant:
+                {
+                    int good = _tables.MapGood(grant.Good.Value);
+                    return good < 0 ? null : grant with { Good = GoodId.From(checked((ushort)good)) };
+                }
+
+            case CheatCompleteNode complete:
+                {
+                    // A completion names exactly one node (the handler enforces it); an empty command passes
+                    // through and is rejected at apply time instead of silently dropped here.
+                    TechId? tech = complete.Tech;
+                    if (tech is not null)
+                    {
+                        int mapped = _tables.MapTech(tech.Value.Value);
+                        if (mapped < 0)
+                        {
+                            return null;
+                        }
+
+                        tech = TechId.From(checked((ushort)mapped));
+                    }
+
+                    CivicId? civic = complete.Civic;
+                    if (civic is not null)
+                    {
+                        int mapped = _tables.MapCivic(civic.Value.Value);
+                        if (mapped < 0)
+                        {
+                            return null;
+                        }
+
+                        civic = CivicId.From(checked((ushort)mapped));
+                    }
+
+                    return complete with { Tech = tech, Civic = civic };
+                }
+
+            case CheatSetEra era:
+                {
+                    int mapped = _tables.MapEra(era.Era.Value);
+                    return mapped < 0 ? null : era with { Era = EraId.From(checked((ushort)mapped)) };
+                }
+
+            case CheatRevealAll:
+            case CheatAddResidents:
+                // Region numbers are map data, not content IDs, and a headcount names nothing at all.
+                return command;
 
             default:
                 // TODO(M2-13b): add the HoldFestival remap case (map the festival, drop the command when it is

@@ -57,6 +57,9 @@ public static class InputActions
     /// <summary>Open or close the civics panel (C, right stick press).</summary>
     public static readonly StringName UiCivics = "ui_civics";
 
+    /// <summary>Open the cheat console (backtick; M2-26). Debug builds only, keyboard only: no gamepad button may open it.</summary>
+    public static readonly StringName DebugConsole = "debug_console";
+
     /// <summary>Rotate the building or tool being placed (R, X).</summary>
     public static readonly StringName ToolRotate = "tool_rotate";
 

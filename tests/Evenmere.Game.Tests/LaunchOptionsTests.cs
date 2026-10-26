@@ -75,4 +75,25 @@ public sealed class LaunchOptionsTests
     {
         Should.Throw<FormatException>(() => DebugLaunchOptions.Parse(["--bench-frames=many"]));
     }
+
+    [Fact]
+    public void Parse_CheatsFlag()
+    {
+        LaunchOptions.Parse([]).Cheats.ShouldBeFalse();
+        LaunchOptions.Parse(["--cheats"]).Cheats.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void DebugLaunchOptions_FocusWalkDefaultsOff()
+    {
+        DebugLaunchOptions.Parse([]).FocusWalk.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void DebugLaunchOptions_FocusWalkFlag()
+    {
+        var options = DebugLaunchOptions.Parse(["--static-camera", "--focus-walk"]);
+        options.FocusWalk.ShouldBeTrue();
+        options.StaticCamera.ShouldBeTrue();
+    }
 }

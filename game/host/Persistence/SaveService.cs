@@ -119,6 +119,19 @@ public static class SaveService
     }
 
     /// <summary>
+    /// Reads a save's cheats flag straight from the file, for the load list: only the header is parsed, never the body.
+    /// Saves written before the flag existed read as disabled.
+    /// </summary>
+    /// <param name="slotId">The file-safe slot ID.</param>
+    /// <returns><see langword="true"/> when the save was written with cheats enabled.</returns>
+    public static bool ReadCheatsUsed(string slotId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(slotId);
+        using FileStream stream = File.OpenRead(SaveSlots.SavePath(slotId));
+        return SaveGame.ReadCheatsUsed(stream);
+    }
+
+    /// <summary>
     /// Reads a save's state hash straight from the file, with no content needed, for the debug label's identity check.
     /// </summary>
     /// <param name="slotId">The file-safe slot ID.</param>

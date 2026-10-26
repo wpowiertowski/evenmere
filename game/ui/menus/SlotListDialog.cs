@@ -271,9 +271,15 @@ public sealed partial class SlotListDialog : PanelContainer
 
         foreach (SaveSlotInfo slot in slots)
         {
+            string text = MenuText.SlotDetail(strings, slot);
+            if (HasCheatsUsed(slot.SlotId))
+            {
+                text += "\n" + strings.Get("ui.load.cheats");
+            }
+
             var row = new Button
             {
-                Text = MenuText.SlotDetail(strings, slot),
+                Text = text,
                 FocusMode = FocusModeEnum.All,
                 Alignment = HorizontalAlignment.Left,
                 SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
@@ -283,6 +289,24 @@ public sealed partial class SlotListDialog : PanelContainer
             row.Pressed += () => OnSlotPressed(captured, name);
             _slotsBox.AddChild(row);
             _slotsBox.MoveChild(row, _slotsBox.GetChildCount() - 2);
+        }
+    }
+
+    /// <summary>
+    /// Reads a slot's cheats flag for the load list badge. A save that cannot be read shows no badge and never
+    /// breaks the list (M2-26).
+    /// </summary>
+    /// <param name="slotId">The file-safe slot ID.</param>
+    /// <returns><see langword="true"/> when the save was written with cheats enabled.</returns>
+    private static bool HasCheatsUsed(string slotId)
+    {
+        try
+        {
+            return SaveService.ReadCheatsUsed(slotId);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return false;
         }
     }
 

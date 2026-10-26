@@ -26,6 +26,13 @@ public interface ISimulation
     /// <summary>Gets the read-only queries. They are valid only between ticks (ADR-0006).</summary>
     ISimQueries Query { get; }
 
+    /// <summary>
+    /// Gets or sets whether cheat commands are enabled for this save. It is not simulation state and never reaches
+    /// the state hash: the host sets it at new-game time (debug builds, or with the <c>--cheats</c> launch flag)
+    /// and save/load carries it in the save header, so replays of cheat-using sessions enable it the same way (ADR-0012).
+    /// </summary>
+    bool CheatsUsed { get; set; }
+
     /// <summary>Computes the XxHash64 of the canonical serialisation of the world state (ADR-0003).</summary>
     /// <returns>The state hash.</returns>
     ulong ComputeStateHash();

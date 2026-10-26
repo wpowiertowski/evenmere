@@ -22,6 +22,9 @@ public sealed partial class TreeNodeView : PanelContainer
     /// <summary>Gets the name button, whose focus neighbours the graph wires to the tree's edges.</summary>
     public Button MainButton => _main ?? throw new InvalidOperationException("SetNode has not run yet.");
 
+    /// <summary>Gets the queue button, wired below <see cref="MainButton"/> in the vertical chain (M2-26 focus walk).</summary>
+    public Button QueueButton => _queue ?? throw new InvalidOperationException("SetNode has not run yet.");
+
     private static readonly Color _ink = new(0.15f, 0.17f, 0.20f);
     private static readonly Color _muted = new(0.37f, 0.42f, 0.46f);
     private static readonly Color _sea = new(0.12f, 0.35f, 0.47f);
