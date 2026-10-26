@@ -1,0 +1,18 @@
+{
+  "id": "storytellers_visit",
+  "trigger": { "count": { "building": "shrine", "atLeast": 2 } },
+  "chancePerMille": 30,
+  "cooldownDays": 60,
+  "options": [
+    {
+      "label": "happening.storytellers_visit.option.0.label",
+      "effects": [{ "modifier": { "stat": "output.culture", "percent": 10 } }],
+      "durationDays": 10
+    },
+    {
+      "label": "happening.storytellers_visit.option.1.label",
+      "effects": []
+    }
+  ],
+  "defaultOption": 1
+}

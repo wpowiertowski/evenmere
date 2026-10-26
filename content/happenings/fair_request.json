@@ -1,0 +1,17 @@
+{
+  "id": "fair_request",
+  "trigger": { "adopted": "harvest_rites" },
+  "chancePerMille": 30,
+  "cooldownDays": 90,
+  "options": [
+    {
+      "label": "happening.fair_request.option.0.label",
+      "effects": [{ "requestFestival": { "festival": "harvest_fair", "discountPercent": 25 } }]
+    },
+    {
+      "label": "happening.fair_request.option.1.label",
+      "effects": []
+    }
+  ],
+  "defaultOption": 1
+}

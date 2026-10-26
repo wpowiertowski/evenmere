@@ -4,7 +4,8 @@
   "cost": 50,
   "requires": ["oral_tradition"],
   "effects": [
-    { "unlockBuilding": "fish_weir" }
+    { "unlockBuilding": "fish_weir" },
+    { "unlockTradition": "tide_blessing" }
   ],
   "inspiration": {
     "when": {

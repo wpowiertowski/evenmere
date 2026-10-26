@@ -1,0 +1,17 @@
+{
+  "id": "lost_lamb",
+  "trigger": { "count": { "building": "sheep_farm", "atLeast": 1 } },
+  "chancePerMille": 40,
+  "cooldownDays": 60,
+  "options": [
+    {
+      "label": "happening.lost_lamb.option.0.label",
+      "effects": [{ "grantGoods": { "wool": 4 } }]
+    },
+    {
+      "label": "happening.lost_lamb.option.1.label",
+      "effects": []
+    }
+  ],
+  "defaultOption": 0
+}

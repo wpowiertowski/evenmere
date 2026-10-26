@@ -1,0 +1,18 @@
+{
+  "id": "mended_nets",
+  "trigger": { "count": { "building": "fishing_hut", "atLeast": 2 } },
+  "chancePerMille": 40,
+  "cooldownDays": 60,
+  "options": [
+    {
+      "label": "happening.mended_nets.option.0.label",
+      "effects": [{ "modifier": { "stat": "productivity", "target": { "tag": "fishing" }, "percent": 15 } }],
+      "durationDays": 7
+    },
+    {
+      "label": "happening.mended_nets.option.1.label",
+      "effects": []
+    }
+  ],
+  "defaultOption": 1
+}

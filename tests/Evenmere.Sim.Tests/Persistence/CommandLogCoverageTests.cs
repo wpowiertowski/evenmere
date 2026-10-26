@@ -118,12 +118,9 @@ public sealed class CommandLogCoverageTests
                 _ when type == typeof(SetCivicTarget) => new SetCivicTarget(content.IdOf<CivicId>("hearth_and_shrine")),
                 _ when type == typeof(SetCivicQueue) => new SetCivicQueue([content.IdOf<CivicId>("hearth_and_shrine")]),
                 _ when type == typeof(SetTradition) => new SetTradition(TraditionSlotType.Hearth, 0, null),
-                // Slice content defines no festivals yet, so the sample names ID 0 and rides the default
-                // passthrough. M2-13b (festival content) adds the RemapCommand case and names a real festival.
-                _ when type == typeof(HoldFestival) => new HoldFestival(new EntityId(7), FestivalId.From(0)),
-                // Slice content defines no happenings yet, so the sample names ID 0 and rides the default
-                // passthrough. M2-13b (happening content) adds the RemapCommand case and names a real happening.
-                _ when type == typeof(ChooseHappeningOption) => new ChooseHappeningOption(HappeningId.From(0), 0),
+                // M2-13b added the RemapCommand cases, so the samples name real content and round-trip through them.
+                _ when type == typeof(HoldFestival) => new HoldFestival(new EntityId(7), content.IdOf<FestivalId>("harvest_fair")),
+                _ when type == typeof(ChooseHappeningOption) => new ChooseHappeningOption(content.IdOf<HappeningId>("bountiful_catch"), 0),
                 _ when type == typeof(StartExpedition) => new StartExpedition(new EntityId(7), 3),
                 _ when type == typeof(DismissAdvice) => new DismissAdvice(3),
                 _ when type == typeof(CheatGrantGoods) => new CheatGrantGoods(content.IdOf<GoodId>("timber"), Amount.FromUnits(2)),

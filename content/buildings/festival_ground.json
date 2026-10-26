@@ -1,0 +1,9 @@
+{
+  "id": "festival_ground",
+  "category": "culture",
+  "era": 1,
+  "footprint": [4, 4],
+  "cost": { "timber": 8 },
+  "buildDays": 2,
+  "tags": ["festival_ground"]
+}

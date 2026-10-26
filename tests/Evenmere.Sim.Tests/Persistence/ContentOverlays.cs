@@ -142,11 +142,11 @@ internal static class ContentOverlays
         Write(overlay, "techs/aaa_alchemy.json",
             """{ "id": "aaa_alchemy", "era": 1, "cost": 10, "requires": ["cultivation"] }""");
         Write(overlay, "techs/zzz_gateway_tech.json",
-            """{ "id": "zzz_gateway_tech", "era": 1, "cost": 10, "requires": ["cultivation"], "gateway": true }""");
+            """{ "id": "zzz_gateway_tech", "era": 2, "cost": 10, "requires": ["cultivation"], "gateway": true }""");
         Write(overlay, "civics/aaa_customs.json",
             """{ "id": "aaa_customs", "era": 1, "cost": 10, "requires": ["hearth_and_shrine"] }""");
         Write(overlay, "civics/zzz_gateway_civic.json",
-            """{ "id": "zzz_gateway_civic", "era": 1, "cost": 10, "requires": ["hearth_and_shrine"], "gateway": true }""");
+            """{ "id": "zzz_gateway_civic", "era": 2, "cost": 10, "requires": ["hearth_and_shrine"], "gateway": true }""");
         Write(overlay, "traditions/aaa_tales.json",
             """{ "id": "aaa_tales", "slot": "hearth", "start": true }""");
         Write(overlay, "festivals/aaa_lanterns.json",
@@ -158,7 +158,7 @@ internal static class ContentOverlays
         Write(overlay, "happenings/aaa_omen.json",
             """{ "id": "aaa_omen", "trigger": { "produced": { "good": "wood", "atLeast": 1 } }, "chancePerMille": 10, "cooldownDays": 30, "options": [{ "effects": [] }] }""");
         Write(overlay, "eras/aaa_dawn.json",
-            """{ "id": "aaa_dawn", "order": 2, "requires": { "tech": "zzz_gateway_tech", "civic": "zzz_gateway_civic" } }""");
+            """{ "id": "aaa_dawn", "order": 3, "requires": { "tech": "zzz_gateway_tech", "civic": "zzz_gateway_civic" } }""");
         Write(overlay, "terrains/aaa_mud.json",
             """{ "id": "aaa_mud", "buildable": true }""");
         Write(overlay, "locale/en/aaa.json",

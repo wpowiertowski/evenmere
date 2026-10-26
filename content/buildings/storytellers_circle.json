@@ -1,0 +1,10 @@
+{
+  "id": "storytellers_circle",
+  "category": "culture",
+  "era": 1,
+  "footprint": [3, 3],
+  "cost": { "timber": 6, "stone": 4 },
+  "buildDays": 2,
+  "workforce": { "tier": "villagers", "count": 2 },
+  "outputs": { "culture": 3 }
+}

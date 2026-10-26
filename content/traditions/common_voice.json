@@ -1,0 +1,7 @@
+{
+  "id": "common_voice",
+  "slot": "hearth",
+  "effects": [
+    { "modifier": { "stat": "declineGrace", "percent": 50 } }
+  ]
+}

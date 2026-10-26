@@ -3,8 +3,10 @@ using Evenmere.Core.Ids;
 using Evenmere.Sim.Systems.Advisors.Commands;
 using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
+using Evenmere.Sim.Systems.Culture.Festivals.Commands;
 using Evenmere.Sim.Systems.Culture.Traditions.Commands;
 using Evenmere.Sim.Systems.Debug.Commands;
+using Evenmere.Sim.Systems.Happenings.Commands;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
 using Evenmere.Sim.Systems.Research.Commands;
@@ -268,6 +270,18 @@ public sealed class CommandLogReader
                     return mapped < 0 ? null : tradition with { Tradition = TraditionId.From(checked((ushort)mapped)) };
                 }
 
+            case HoldFestival hold:
+                {
+                    int festival = _tables.MapFestival(hold.Festival.Value);
+                    return festival < 0 ? null : hold with { Festival = FestivalId.From(checked((ushort)festival)) };
+                }
+
+            case ChooseHappeningOption choose:
+                {
+                    int happening = _tables.MapHappening(choose.Happening.Value);
+                    return happening < 0 ? null : choose with { Happening = HappeningId.From(checked((ushort)happening)) };
+                }
+
             case CheatGrantGoods grant:
                 {
                     int good = _tables.MapGood(grant.Good.Value);
@@ -317,13 +331,9 @@ public sealed class CommandLogReader
                 return command;
 
             default:
-                // TODO(M2-13b): add the HoldFestival remap case (map the festival, drop the command when it is
-                // gone) and the ChooseHappeningOption remap case (map the happening, drop the command when it is
-                // gone) once festival and happening content exist, and name real items in the coverage samples.
-                // Until then the samples ride this passthrough, because a mapping case would drop them under
-                // festival- and happening-free content.
-                // A command from another assembly (a test harness command, for example) carries no known content
-                // IDs; it passes through unchanged.
+                // A command that names no content IDs (placement by tile, regions, headcounts) or a command from
+                // another assembly (a test harness command, for example) carries nothing to remap; it passes
+                // through unchanged.
                 return command;
         }
     }

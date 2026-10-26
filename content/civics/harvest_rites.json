@@ -1,0 +1,16 @@
+{
+  "id": "harvest_rites",
+  "era": 1,
+  "cost": 60,
+  "requires": ["hearth_and_shrine"],
+  "effects": [
+    { "unlockBuilding": "festival_ground" },
+    { "unlockFestival": "harvest_fair" },
+    { "unlockTradition": "harvest_festival" }
+  ],
+  "inspiration": {
+    "when": {
+      "produced": { "good": "grain", "atLeast": 50 }
+    }
+  }
+}

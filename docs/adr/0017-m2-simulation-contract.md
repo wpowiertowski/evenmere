@@ -77,6 +77,12 @@ M2-12 queries return:
 Both view records live in `Evenmere.Sim.Queries.Types`, which the boundary check allows;
 both members are plain additive members with explicit implementations and fake coverage.
 
+## Addendum (2026-10-26, M2-13b)
+
+- `content/happenings/<id>.json` options gain an optional `label` locale key, shown by
+  `game/ui/events/HappeningDialog.cs` beside the effect preview and linted by EVL007. It is
+  display text only: the sim never reads it, so old saves and logs are unaffected.
+
 ## Alternatives
 
 One ADR per system (seven small ADRs): rejected as noise, because every change is

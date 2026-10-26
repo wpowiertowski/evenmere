@@ -78,7 +78,7 @@ file per card as listed; never edit another card's file.
 | M2-11 | Era advancement and gateways | sim | M2-09 | done |
 | M2-12 | Happenings | sim | M2-09 | done |
 | M2-13a | Era I production content | content | M2-04, M2-05, M2-14, M2-30 | done |
-| M2-13b | Era I trees, monuments, happenings and era content | content | M2-06, M2-07, M2-08, M2-10, M2-11, M2-12, M2-13a, M2-14 | todo |
+| M2-13b | Era I trees, monuments, happenings and era content | content | M2-06, M2-07, M2-08, M2-10, M2-11, M2-12, M2-13a, M2-14 | done |
 | M2-14 | Lint rule EVL010: lower-tier staffing | content-infra | M2-00 | done |
 | M2-15 | Save versioning, migrations and autosave rotation | sim | M2-00 | done |
 | M2-16 | Replay and performance harness, reference saves | tools | M2-15 | done |
@@ -1171,12 +1171,12 @@ Small issues found while reviewing M2 tasks, each with the card or lane it belon
 | --- | --- | --- |
 | M2-16 | ~~The advisors system spikes to 248 ms on some ticks on `perf-20k`.~~ Fixed by M2-34 (max 7.5 ms, average within budget). | M2-34 (done) |
 | M2-34 | Building the storehouse distance fields after a roads change still costs up to about 50 ms on `perf-20k` (953 storehouses). Logistics now pays it first (its Deck average is 0.42 against a 0.50 budget), and the tick's p99 is still about 7.9 ms Deck. Labelled per-tile costs, or incremental field updates, would remove it. Not gating. | Sim perf task before M3 |
-| M2-19 | The inspector names tradition, festival, happening and monument sources "from 0": `ExplainService.SourceArg` and `ExplainFormat` have no arms for them. | M2-13b (first real traditions) |
+| M2-19 | ~~The inspector names tradition, festival, happening and monument sources "from 0".~~ Done in M2-13b. | M2-13b (done) |
 | M2-19 | ~~Completion toasts overlap right-docked panels.~~ Done in M2-35. | M2-35 (done) |
 | M2-19 | ~~One shared effect formatter.~~ Done in M2-35 (`EffectText`). | M2-35 (done) |
 | M2-22/M2-33 | ~~Statistics "Day N" labels hardcoded.~~ Done in M2-35. | M2-35 (done) |
-| M2-27 | Happening options have no label: the happenings schema allows only `effects` and `durationDays` per option. Adding labels changes a frozen schema (ADR). | M2-13b |
-| M2-02b | Generated region names (`region.generated.N`) and discovery names have no locale text. | M2-13b |
+| M2-27 | ~~Happening options have no label.~~ Done in M2-13b (`label` keys, ADR-0017 addendum). | M2-13b (done) |
+| M2-02b | ~~Generated region and discovery names need locale text.~~ Done in M2-13b (`names.json`). | M2-13b (done) |
 | M2-02b | `MapState` doesn't keep `SubSeed` or `Discoveries`; exploration needs them. | M2-06 |
 | M2-13a | `bridge_building`'s inspiration (complete 1 expedition) can't fire until the expeditions counter exists. | M2-06 |
 | M2-13a | ~~`RemapNeeds` fulfilment default.~~ Done in M2-35. | M2-35 (done) |

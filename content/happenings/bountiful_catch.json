@@ -1,0 +1,17 @@
+{
+  "id": "bountiful_catch",
+  "trigger": { "produced": { "good": "fish", "atLeast": 30 } },
+  "chancePerMille": 50,
+  "cooldownDays": 45,
+  "options": [
+    {
+      "label": "happening.bountiful_catch.option.0.label",
+      "effects": [{ "grantGoods": { "fish": 8 } }]
+    },
+    {
+      "label": "happening.bountiful_catch.option.1.label",
+      "effects": [{ "grantGoods": { "bread": 6 } }]
+    }
+  ],
+  "defaultOption": 0
+}

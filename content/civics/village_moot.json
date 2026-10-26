@@ -1,0 +1,15 @@
+{
+  "id": "village_moot",
+  "era": 1,
+  "cost": 140,
+  "requires": ["craft_lore", "harvest_rites", "remembrance"],
+  "effects": [
+    { "unlockTradition": "common_voice" }
+  ],
+  "gateway": true,
+  "inspiration": {
+    "when": {
+      "festivalsHeld": { "atLeast": 2 }
+    }
+  }
+}

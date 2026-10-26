@@ -239,7 +239,7 @@ flowchart LR
 | Rotation Farm | `rotation_farm` | 5×5 | plains; grain fertility | 3 Villagers | Grain; upgrade of Grain Farm | 40 s, seasonal | 4 timber | Crop Rotation |
 | Windmill | `windmill` | 2×2 | land; +15% on hills | 3 Settlers | Grain → Flour | 30 s | 6 timber | Milling |
 | Bakery | `bakery` | 2×2 | land | 4 Settlers | Flour → Bread | 30 s | 6 timber | Milling |
-| Communal Oven | `communal_oven` | 2×2 | land | 3 Villagers | Flour → Bread; upgrade of Bakery | 30 s | 6 timber | Hearth & Shrine |
+| Communal Oven | `communal_oven` | 2×2 | land | 3 Villagers | Flour → Bread; upgrade of Bakery | 30 s | 4 timber | Hearth & Shrine |
 | Fish Weir | `fish_weir` | 2×2 | coastline | 2 Villagers | Fish; upgrade of Fishing Hut | 20 s | 4 timber | Sea Lore |
 | Quarry | `quarry` | 3×3 | hills over a stone outcrop | 5 Settlers | → Stone | 40 s | 6 timber | Stonecutting |
 | Clay Pit | `clay_pit` | 3×3 | clay deposit (riverbanks) | 4 Settlers | → Clay | 30 s | 4 timber | Pottery |

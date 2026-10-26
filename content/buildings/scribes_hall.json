@@ -1,0 +1,10 @@
+{
+  "id": "scribes_hall",
+  "category": "knowledge",
+  "era": 1,
+  "footprint": [3, 3],
+  "cost": { "timber": 8, "stone": 6 },
+  "buildDays": 2,
+  "workforce": { "tier": "villagers", "count": 4 },
+  "outputs": { "knowledge": 4 }
+}

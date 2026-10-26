@@ -160,8 +160,10 @@ public sealed partial class HappeningDialog : PanelContainer
         AnchorBottom = 0.5f;
         OffsetLeft = -280f;
         OffsetRight = 280f;
-        OffsetTop = -260f;
-        OffsetBottom = 260f;
+        // Labels add a preview line under every option, so the card is taller than the pre-label 520 px:
+        // two options with marks need the extra room, and longer lists scroll inside as before.
+        OffsetTop = -300f;
+        OffsetBottom = 300f;
         MouseFilter = MouseFilterEnum.Stop;
     }
 
@@ -267,9 +269,26 @@ public sealed partial class HappeningDialog : PanelContainer
                 _optionControls[row.Index] = controls;
             }
 
-            controls.Choose.Text = row.PreviewText;
-            controls.Mark.Visible = row.DefaultMark is not null;
-            controls.Mark.Text = row.DefaultMark ?? string.Empty;
+            // A labelled option shows its label on the button and keeps the effect preview underneath,
+            // so the choice reads as a named decision with its consequences attached.
+            string? label = OptionLabel(pending, row.Index);
+            controls.Choose.Text = label ?? row.PreviewText;
+            controls.Choose.TooltipText = label is null ? string.Empty : row.PreviewText;
+            if (label is null)
+            {
+                controls.Mark.Visible = row.DefaultMark is not null;
+                controls.Mark.Text = row.DefaultMark ?? string.Empty;
+            }
+            else if (row.DefaultMark is null)
+            {
+                controls.Mark.Visible = true;
+                controls.Mark.Text = row.PreviewText;
+            }
+            else
+            {
+                controls.Mark.Visible = true;
+                controls.Mark.Text = row.PreviewText + "\n" + row.DefaultMark;
+            }
         }
 
         var stale = new List<int>();
@@ -286,6 +305,36 @@ public sealed partial class HappeningDialog : PanelContainer
             _optionControls[index].Root.QueueFree();
             _optionControls.Remove(index);
         }
+    }
+
+    private string? OptionLabel(HappeningId? happening, int index)
+    {
+        if (_host is not { IsRunning: true } host || happening is not { } id)
+        {
+            return null;
+        }
+
+        ContentDb content = host.Content;
+        if ((uint)id.Value >= (uint)content.Happenings.Count)
+        {
+            return null;
+        }
+
+        HappeningDef def = content.Get(id);
+        if ((uint)index >= (uint)def.Options.Length)
+        {
+            return null;
+        }
+
+        // The loader leaves Label null when the option has none, and the linter (EVL007) guarantees a named
+        // key exists; a key that still misses its text falls back to the preview, never to a raw key.
+        if (def.Options[index].Label is not { } key)
+        {
+            return null;
+        }
+
+        string text = host.Locale.Get(key);
+        return string.Equals(text, key, StringComparison.Ordinal) ? null : text;
     }
 
     private OptionControls AddOption(int index)
