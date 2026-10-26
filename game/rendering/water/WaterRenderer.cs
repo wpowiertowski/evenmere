@@ -17,7 +17,9 @@ namespace Evenmere.Game.Rendering.Water;
 public sealed partial class WaterRenderer : Node3D
 {
     private static readonly string _seaShaderPath = "res://rendering/water/sea.gdshader";
+    private static readonly string _seaHandDrawnShaderPath = "res://rendering/water/sea_hd.gdshader";
     private static readonly string _riverShaderPath = "res://rendering/water/river.gdshader";
+    private static readonly string _riverHandDrawnShaderPath = "res://rendering/water/river_hd.gdshader";
     private static readonly string _palettePath = "res://data/visuals/palette.tres";
     private static readonly string _ripplePath = "res://assets/textures/water/ripples.png";
 
@@ -91,8 +93,11 @@ public sealed partial class WaterRenderer : Node3D
 
         image.GenerateMipmaps();
 
-        Shader? seaShader = GD.Load<Shader>(_seaShaderPath);
-        Shader? riverShader = GD.Load<Shader>(_riverShaderPath);
+        // The hand-drawn look renders water opaque (the look post pass would erase transparent water);
+        // classic keeps the M1 translucent shaders. The two variants share the same distance-field maths.
+        bool handDrawn = LookSettings.ActiveLook == LookMode.HandDrawn;
+        Shader? seaShader = GD.Load<Shader>(handDrawn ? _seaHandDrawnShaderPath : _seaShaderPath);
+        Shader? riverShader = GD.Load<Shader>(handDrawn ? _riverHandDrawnShaderPath : _riverShaderPath);
         if (seaShader is null || riverShader is null)
         {
             GD.PushError("[Evenmere] Water: missing sea or river shader.");
@@ -107,14 +112,15 @@ public sealed partial class WaterRenderer : Node3D
         if (LookSettings.ActiveLook == LookMode.HandDrawn)
         {
             // The hand-drawn sea is palette-calibrated; classic keeps the M1 colours from the shader defaults.
-            // Uniforms take linear colours, so every token goes through the shared palette's lineariser.
+            // Uniforms take sRGB colours (the engine linearises source_color slots on upload); only vertex
+            // buffers take pre-linearised values.
             if (GD.Load<Resource>(_palettePath) is LookPalette palette)
             {
-                seaMaterial.SetShaderParameter("shallow_color", palette.ColourOf("water.shallow"));
-                seaMaterial.SetShaderParameter("reef_color", palette.ColourOf("terrain.reef"));
-                seaMaterial.SetShaderParameter("deep_color", palette.ColourOf("water.deep"));
-                seaMaterial.SetShaderParameter("foam_color", palette.ColourOf("water.foam"));
-                seaMaterial.SetShaderParameter("ripple_color", palette.ColourOf("ink.water"));
+                seaMaterial.SetShaderParameter("shallow_color", palette.SrgbOf("water.shallow"));
+                seaMaterial.SetShaderParameter("reef_color", palette.SrgbOf("terrain.reef"));
+                seaMaterial.SetShaderParameter("deep_color", palette.SrgbOf("water.deep"));
+                seaMaterial.SetShaderParameter("foam_color", palette.SrgbOf("water.foam"));
+                seaMaterial.SetShaderParameter("ripple_color", palette.SrgbOf("ink.water"));
             }
             else
             {
@@ -125,15 +131,23 @@ public sealed partial class WaterRenderer : Node3D
         // ART-04 painted ripples over the procedural strokes; missing files warn once and keep the fallback.
         seaMaterial.SetShaderParameter("has_ripple_tex", BindRipple(seaMaterial));
 
+        // The hand-drawn sea plane runs well past the island (four and a half map sizes across, centred the
+        // same way), so the island sits in open sea at overview zoom with the plane edge off-screen. Past the
+        // baked distance field the hand-drawn shader holds the deep-water tone, and the background clear colour
+        // matches it, so there is no seam. Classic keeps the M1 map-sized plane. Vertex waves stay gentle
+        // over the larger quads.
+        float seaSpan = handDrawn ? 4.5f : 1.0f;
         var seaMesh = new PlaneMesh
         {
-            Size = new Vector2(map.Width, map.Height),
+            Size = new Vector2(map.Width * seaSpan, map.Height * seaSpan),
             SubdivideWidth = Math.Min(127, map.Width),
             SubdivideDepth = Math.Min(127, map.Height),
         };
         MeshInstance3D sea = new() { Name = "Sea", Mesh = seaMesh, MaterialOverride = seaMaterial };
+
         sea.Position = new Vector3(map.Width * 0.5f, TerrainSurface.WaterSurfaceY, map.Height * 0.5f);
         sea.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+
         AddChild(sea);
 
         BuildRiverStrips(riverShader);
@@ -252,10 +266,11 @@ public sealed partial class WaterRenderer : Node3D
         if (LookSettings.ActiveLook == LookMode.HandDrawn)
         {
             // The hand-drawn river is water-blue; classic keeps the M1 strip colours from the shader defaults.
+            // Uniforms take sRGB colours (see the sea material above).
             if (GD.Load<Resource>(_palettePath) is LookPalette stripPalette)
             {
-                stripMaterial.SetShaderParameter("river_color", stripPalette.ColourOf("water.river"));
-                stripMaterial.SetShaderParameter("streak_color", stripPalette.ColourOf("water.foam"));
+                stripMaterial.SetShaderParameter("river_color", stripPalette.SrgbOf("water.river"));
+                stripMaterial.SetShaderParameter("streak_color", stripPalette.SrgbOf("water.foam"));
             }
             else
             {

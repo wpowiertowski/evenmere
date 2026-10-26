@@ -11,7 +11,13 @@ uniform vec4 grid_color : source_color = vec4(0.08, 0.1, 0.08, 1.0);
 
 // The late-afternoon warmth on the neutral key, linear space (the light.key family); the post pass
 // grades the frame warmer still. The scene sun stays neutral white in every mode.
-uniform vec3 warm_key = vec3(1.0, 1.0, 1.0); // Neutral: the warmth lives on the scene sun (LookScene).
+uniform vec3 warm_key = vec3(1.3, 1.0, 1.0); // M2-32 calibration lift (hand-drawn only, gated below).
+
+// Beach-blend mask (M2-32): baked coast distance, 1.0 on shoreline land fading inland, for smooth beach
+// transitions. Blended only when the look is on; classic keeps its hard tile edges pixel-exact.
+uniform sampler2D coast_tex : filter_linear, repeat_disable;
+uniform vec2 coast_map_size = vec2(128.0, 128.0);
+uniform vec3 beach_color : source_color = vec3(0.85, 0.78, 0.58);
 
 // The scene ambient (Main.tscn WorldEnvironment colour x energy) lifts every band; the material setup reads
 // the live environment so the single source stays in the scene.
@@ -41,7 +47,8 @@ float grid_line(vec2 p, float width_px) {
 }
 
 void fragment() {
-	ALBEDO = COLOR.rgb;
+	float beachBlend = texture(coast_tex, world_pos.xz / coast_map_size).r;
+	ALBEDO = mix(COLOR.rgb, beach_color, beachBlend * look_amount);
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.0;
 
@@ -60,6 +67,7 @@ void light() {
 	float band = mix(band_shade, band_mid, smoothstep(band_low - band_softness, band_low + band_softness, ndl));
 	band = mix(band, 1.0, smoothstep(band_high - band_softness, band_high + band_softness, ndl));
 	float key = mix(clamp(ndl, 0.0, 1.0), band, look_amount);
-	DIFFUSE_LIGHT += ALBEDO * (LIGHT_COLOR * warm_key * key * ATTENUATION + ambient_color);
+	vec3 key_tint = mix(vec3(1.0), warm_key, look_amount);
+	DIFFUSE_LIGHT += ALBEDO * (LIGHT_COLOR * key_tint * key * ATTENUATION + ambient_color);
 }
 

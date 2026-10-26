@@ -38,4 +38,26 @@ public sealed partial class TerrainPalette : Resource
 
         return Fallback.SrgbToLinear();
     }
+
+    /// <summary>
+    /// Looks up the raw sRGB colour for a content terrain name, for shader <c>uniform</c> slots. The engine
+    /// linearises <c>source_color</c> uniform colours on upload (M2-32), so uniform-bound colours must stay
+    /// sRGB; only the vertex-colour path (<see cref="ColourOf"/>) pre-linearises.
+    /// </summary>
+    /// <param name="terrainName">The content terrain name.</param>
+    /// <returns>The authored sRGB colour, or the raw <see cref="Fallback"/> when it has no entry.</returns>
+    public Color SrgbOf(string terrainName)
+    {
+        if (Colors.TryGetValue(terrainName, out Color colour))
+        {
+            return colour;
+        }
+
+        if (_warned.Add(terrainName))
+        {
+            GD.PushWarning($"[Evenmere] TerrainPalette: no colour for terrain '{terrainName}'; using fallback.");
+        }
+
+        return Fallback;
+    }
 }

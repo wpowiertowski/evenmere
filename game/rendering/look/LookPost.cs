@@ -64,7 +64,8 @@ public sealed partial class LookPost : MeshInstance3D
         var material = new ShaderMaterial { Shader = shader, RenderPriority = 10 };
         if (GD.Load<Resource>(_palettePath) is LookPalette palette)
         {
-            material.SetShaderParameter("ink_color", palette.ColourOf("ink.strong"));
+            // Uniforms take sRGB colours (the engine linearises source_color slots on upload).
+            material.SetShaderParameter("ink_color", palette.SrgbOf("ink.strong"));
         }
         else
         {
