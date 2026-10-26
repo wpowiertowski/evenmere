@@ -1,0 +1,16 @@
+{
+  "id": "orchard",
+  "category": "production",
+  "era": 1,
+  "footprint": [4, 4],
+  "placement": {
+    "terrain": ["plains"],
+    "fertility": { "crop": "apples", "minPercent": 25 },
+    "areaYield": { "kind": "footprint_fertility" }
+  },
+  "cost": { "timber": 4 },
+  "buildDays": 2,
+  "workforce": { "tier": "settlers", "count": 3 },
+  "recipe": "grow_apples",
+  "tags": ["farm", "gatherer", "seasonal"]
+}

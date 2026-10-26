@@ -1,0 +1,9 @@
+{
+  "id": "plaza",
+  "category": "decoration",
+  "era": 1,
+  "footprint": [2, 2],
+  "cost": { "stone": 4 },
+  "buildDays": 1,
+  "attractiveness": 2
+}

@@ -1,0 +1,14 @@
+{
+  "id": "crop_rotation",
+  "era": 1,
+  "cost": 55,
+  "requires": ["cultivation"],
+  "effects": [
+    { "unlockBuilding": "rotation_farm" }
+  ],
+  "inspiration": {
+    "when": {
+      "count": { "building": "grain_farm", "atLeast": 6 }
+    }
+  }
+}

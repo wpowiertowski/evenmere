@@ -1,0 +1,5 @@
+{
+  "id": "dig_clay",
+  "outputs": { "clay": 1 },
+  "cycleSeconds": 30
+}

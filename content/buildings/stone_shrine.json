@@ -1,0 +1,12 @@
+{
+  "id": "stone_shrine",
+  "category": "culture",
+  "era": 1,
+  "footprint": [2, 2],
+  "cost": { "stone": 4 },
+  "buildDays": 2,
+  "workforce": { "tier": "villagers", "count": 1 },
+  "service": { "kind": "shrine", "coverage": 18 },
+  "outputs": { "culture": 2 },
+  "upgradeOf": "shrine"
+}

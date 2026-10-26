@@ -1,0 +1,13 @@
+{
+  "id": "pathfinding",
+  "era": 1,
+  "cost": 30,
+  "effects": [
+    { "unlockBuilding": "scouts_lodge" }
+  ],
+  "inspiration": {
+    "when": {
+      "roadTiles": { "atLeast": 40 }
+    }
+  }
+}

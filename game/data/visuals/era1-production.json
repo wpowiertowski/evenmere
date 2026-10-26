@@ -1,0 +1,19 @@
+{
+  "comment": "Placeholder look of every M2-13a Era I production and infrastructure building (quarries, kilns, orchards, lodges, bridges, roads, plazas and the five Era I upgrades). Same shape as era1-slice.json: ResearchPanel merges both files, and the factory falls back to a grey box with one warning per unmapped type.",
+  "buildings": {
+    "quarry": { "colour": "#8D8D94", "shape": "hut", "scene": null, "icon": "◬" },
+    "clay_pit": { "colour": "#A9603F", "shape": "farm", "scene": null, "icon": "⬤" },
+    "potters_kiln": { "colour": "#B0724E", "shape": "house", "scene": null, "icon": "🏺" },
+    "orchard": { "colour": "#5E8C3F", "shape": "farm", "scene": null, "icon": "🍎" },
+    "cider_press": { "colour": "#C9A86A", "shape": "house", "scene": null, "icon": "🍏" },
+    "scouts_lodge": { "colour": "#7A5C3D", "shape": "hut", "scene": null, "icon": "🧭" },
+    "timber_bridge": { "colour": "#8A6A45", "shape": "road", "scene": null, "icon": "🌉" },
+    "plaza": { "colour": "#D8D2C0", "shape": "road", "scene": null, "icon": "◈" },
+    "cobbled_road": { "colour": "#9A9AA0", "shape": "road", "scene": null, "icon": "▦" },
+    "stone_storehouse": { "colour": "#8D8D94", "shape": "storehouse", "scene": null, "icon": "▤" },
+    "stone_shrine": { "colour": "#E4DECF", "shape": "shrine", "scene": null, "icon": "✦" },
+    "rotation_farm": { "colour": "#B8982F", "shape": "farm", "scene": null, "icon": "🌾" },
+    "fish_weir": { "colour": "#5E7E8C", "shape": "hut", "scene": null, "icon": "🎣" },
+    "communal_oven": { "colour": "#A9603F", "shape": "house", "scene": null, "icon": "🥖" }
+  }
+}

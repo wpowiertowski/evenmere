@@ -1,0 +1,15 @@
+{
+  "id": "pottery",
+  "era": 1,
+  "cost": 50,
+  "requires": ["cultivation"],
+  "effects": [
+    { "unlockBuilding": "clay_pit" },
+    { "unlockBuilding": "potters_kiln" }
+  ],
+  "inspiration": {
+    "when": {
+      "stock": { "good": "fish", "atLeast": 30 }
+    }
+  }
+}

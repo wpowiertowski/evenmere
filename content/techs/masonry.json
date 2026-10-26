@@ -1,0 +1,16 @@
+{
+  "id": "masonry",
+  "era": 1,
+  "cost": 90,
+  "requires": ["stonecutting"],
+  "effects": [
+    { "unlockBuilding": "stone_storehouse" },
+    { "unlockBuilding": "stone_shrine" },
+    { "unlockBuilding": "plaza" }
+  ],
+  "inspiration": {
+    "when": {
+      "produced": { "good": "stone", "atLeast": 40 }
+    }
+  }
+}

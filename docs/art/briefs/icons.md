@@ -1,7 +1,7 @@
 # Brief: icon set (ART-02)
 
-Painted PNG masters, imported natively by Godot. One language for 13 goods, 28 Era I
-buildings, 2 tiers, build-menu categories, knowledge and culture — every chip,
+Painted PNG masters, imported natively by Godot. One language for 13 goods, 32 Era I
+buildings (28 base plus 4 upgrades), 2 tiers, build-menu categories, knowledge and culture — every chip,
 card and badge in the game.
 
 **Format decision (settled from the `icons.png` concept sheet, ART-01 round 2):
@@ -61,12 +61,21 @@ the CVD close pairs in `palette.md` §7: the motif carries what colour cannot.
 | `clay` | Irregular lump, thumb-dent | `good.clay` |
 | `pottery` | Amphora, two handles | `good.pottery` |
 
-**Buildings (28):** the building's roof shape in three-quarter view plus its
+**Buildings (32):** the building's roof shape in three-quarter view plus its
 signature prop (the island-zoom read from its brief, miniaturised). Examples:
 windmill = tower + four-sail cross; fishing hut = hut + hanging net triangle;
 market = striped awning trapezoid; shrine = stone circle + flame.
 Full list follows the building briefs; ART-02 checks coverage against content IDs
 with a test (`IconLibrary` falls back to the visuals glyph when missing).
+
+**Era I upgrades (4):** each reads as its base building plus one cue.
+
+| Building | Motif | Cue |
+| --- | --- | --- |
+| `stone_shrine` | Stone cell + cap, circle + flame (as `shrine`) | Dressed-stone ashlar lines on the cell |
+| `fish_weir` | Plank hut (as `fishing_hut`) | Woven weir slats: three stakes, rail and net band |
+| `rotation_farm` | Soil field (as `grain_farm`) | Striped fields: sown half with wheat, resting half with stubble |
+| `communal_oven` | Wattle cottage + chimney (as `bakery`) | Twin domed ovens on the long face |
 
 **Tiers (2 now, 4 later):**
 

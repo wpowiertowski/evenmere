@@ -3,7 +3,8 @@
   "era": 1,
   "cost": 20,
   "effects": [
-    { "unlockBuilding": "shrine" }
+    { "unlockBuilding": "shrine" },
+    { "unlockBuilding": "communal_oven" }
   ],
   "inspiration": {
     "when": {

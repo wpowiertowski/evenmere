@@ -13,8 +13,8 @@ namespace Evenmere.Sim.Tests.Persistence;
 /// <summary>
 /// The condition-codec mirror: every operation <see cref="ConditionCodec"/> encodes remaps through
 /// <see cref="ConditionRemap"/> and decodes to the same condition rebuilt with the new IDs. The save's table sorts an
-/// extra good first, so old bread is raw 1 and new bread is raw 0; the conditions are built with the old raws and the
-/// expectation with the new ones.
+/// extra good first, so old indices are resolved by name (old bread is not raw 1 once content grows past it);
+/// the expectations use the new IDs.
 /// </summary>
 public sealed class ConditionRemapTests
 {
@@ -24,13 +24,16 @@ public sealed class ConditionRemapTests
     public void Remap_EveryOperation_MapsIdsAndDecodesToRebuiltCondition()
     {
         ContentDb content = Content;
+        string[] oldGoods = ["aardvark", .. content.Goods.Names];
+        int OldIndex(string name) => Array.IndexOf(oldGoods, name);
 
-        // Old raws in the shifted table: aardvark 0, bread 1, fish 2, flour 3. Everything else is the identity.
+        // Old raws in the shifted table, resolved by name: aardvark 0, then the content order.
+        // Everything else is the identity.
         Condition condition = new AllCondition(
         [
-            new ProducedCondition(GoodId.From(1), Amount.FromMilli(30_000)),
-            new ConsumedCondition(GoodId.From(3), Amount.FromMilli(1_000)),
-            new StockCondition(GoodId.From(1), Amount.FromMilli(2_000)),
+            new ProducedCondition(GoodId.From((ushort)OldIndex("bread")), Amount.FromMilli(30_000)),
+            new ConsumedCondition(GoodId.From((ushort)OldIndex("flour")), Amount.FromMilli(1_000)),
+            new StockCondition(GoodId.From((ushort)OldIndex("bread")), Amount.FromMilli(2_000)),
             new CountCondition(new BuildingTypeSelector(content.IdOf<BuildingTypeId>("windmill")), null, 2),
             new CountCondition(new BuildingTagSelector("fishing"), TerrainId.From(1), 3),
             new CountCondition(new BuildingCategorySelector(BuildingCategory.Production), null, 1),
@@ -50,7 +53,6 @@ public sealed class ConditionRemapTests
 
         long[] encoded = ConditionCodec.Encode(condition);
 
-        string[] oldGoods = ["aardvark", .. content.Goods.Names];
         SaveTables tables = TablesWith(content, oldGoods);
 
         long[]? remapped = ConditionRemap.Remap(encoded, tables, out bool dropped);

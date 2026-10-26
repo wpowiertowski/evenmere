@@ -1,0 +1,11 @@
+{
+  "id": "cobbled_road",
+  "category": "infrastructure",
+  "era": 1,
+  "footprint": [1, 1],
+  "placement": { "roadAccess": false },
+  "cost": { "stone": 1 },
+  "buildDays": 0,
+  "roadCost": 800,
+  "tags": ["road"]
+}

@@ -261,7 +261,7 @@ flowchart LR
 | Shrine | `shrine` | 2×2 | 1 Settler | Service coverage 14 · +1 culture | 6 timber | Hearth & Shrine |
 | Stone Shrine | `stone_shrine` | 2×2 | 1 Villager | Service coverage 18 · +2 culture; upgrade of Shrine | 4 stone | Masonry |
 | Scout's Lodge | `scouts_lodge` | 2×2 | 2 Settlers | One expedition at a time | 6 timber | Pathfinding |
-| Timber Bridge | `timber_bridge` | 1×(2–5) | — | Road across a river up to 3 tiles wide | 2 timber per tile | Bridge-building |
+| Timber Bridge | `timber_bridge` | 1×(2–5) | — | Road across a river up to 3 tiles wide · road cost 1000 per tile, the same as dirt road | 2 timber per tile | Bridge-building |
 | Scribe's Hall | `scribes_hall` | 3×3 | 4 Villagers | +4 knowledge · 1 Writing slot | 8 timber, 6 stone | Letters |
 | Storyteller's Circle | `storytellers_circle` | 3×3 | 2 Villagers | +3 culture · 1 creativity/day (Folk Epics) · 1 Writing slot | 6 timber, 4 stone | Oral Tradition |
 | Festival Ground | `festival_ground` | 4×4 | — | Hosts festivals | 8 timber | Harvest Rites |

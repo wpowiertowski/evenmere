@@ -1,0 +1,5 @@
+{
+  "id": "quarry_stone",
+  "outputs": { "stone": 1 },
+  "cycleSeconds": 40
+}

@@ -9,6 +9,10 @@
     "goods": { "fish": 3, "homespun": 3, "bread": 5 },
     "services": ["market", "shrine"]
   },
+  "comfortNeeds": {
+    "cider": 2,
+    "pottery": 1.5
+  },
   "outputs": { "knowledge": 10 },
   "start": true
 }
