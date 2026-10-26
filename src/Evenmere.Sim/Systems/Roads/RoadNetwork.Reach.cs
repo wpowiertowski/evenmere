@@ -24,11 +24,6 @@ internal sealed partial class RoadNetwork
     private Derived[] _derived = [];
     private int _derivedCount;
 
-    /// <summary>Tests whether some storehouse's reach covers the building. A storehouse is in its own reach.</summary>
-    /// <param name="building">The building or site.</param>
-    /// <returns><see langword="true"/> if a storehouse's road distance to the building is within that storehouse's reach.</returns>
-    public bool IsInStorehouseReach(EntityId building) => TryNearestStorehouse(building, out _, out _);
-
     /// <summary>
     /// Tests whether a footprint that is not built yet would lie in storehouse reach: some road tile beside it is inside a
     /// storehouse's field, within that storehouse's reach. It asks the same fields, with the same costs, as a building on that

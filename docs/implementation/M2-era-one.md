@@ -100,6 +100,7 @@ file per card as listed; never edit another card's file.
 | M2-31 | Window and input polish from the M1 playtest | game | M1 gate | done |
 | M2-32 | Look tuning: water strokes, terrain calibration, coast and map edge | game | M2-29 | done |
 | M2-33 | Long statistics history: a seasonal series | sim + game | M2-22 | done |
+| M2-34 | Advisors at scale | sim | M2-16 | done |
 
 ---
 
@@ -1109,13 +1110,42 @@ file per card as listed; never edit another card's file.
 
 ---
 
+### M2-34 · Advisors at scale
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| sim | M2-16 | `src/Evenmere.Sim/Systems/Advisors/**`, `tests/Evenmere.Sim.Tests/Advisors/**`; added in review: `src/Evenmere.Sim/Systems/Roads/**` (`RoadNetwork` internals) and `tests/Evenmere.Sim.Tests/Roads/**` |
+
+**Reads:** architecture.md (§Performance budgets, cadences); M2-16's perf reports.
+
+**Goal:** the advisors' daily evaluation fits its budget on the 20k reference save.
+
+**Found by M2-16:** on `perf-20k` (13,770 residents) the advisors system takes up to 248 ms on the tick it re-evaluates every rule, about once a day. That puts the happenings/advisors/statistics group over budget on average (Deck 0.394 ms against 0.15) and the whole tick over the 6 ms p99 budget (7.6 ms).
+
+**Steps:**
+
+1. **Profile** the daily evaluation on `perf-20k` and name the rule or rules that dominate, with numbers.
+2. **Make them cheap without changing behaviour.** Prefer caching what other systems already computed, early exits, and avoiding per-building or per-good rescans. The same advice must appear, on the same ticks, with the same state hash.
+3. **Only if a behaviour-preserving fix can't reach the budget,** propose spreading the evaluation across the day (bucketed like needs). Report before changing any state or timing.
+
+**Acceptance:**
+
+- `evenmere perf --save tests/fixtures/saves/perf-20k.evsave --ticks 2000`: the advisors max is under 6 ms raw, and the group's Deck-equivalent average is within its budget. Before and after reports are in the PR.
+- The slice golden hashes are unchanged.
+- `scripts/verify.sh` passes.
+
+**Out of scope:** new advice rules; budget changes.
+
+---
+
 ## Follow-ups found in review
 
 Small issues found while reviewing M2 tasks, each with the card or lane it belongs to. A card picks its item up when it touches the code anyway. Items with no home card are listed for a polish pass before the M2-28 playtest.
 
 | Found in | Follow-up | Home |
 | --- | --- | --- |
-| M2-16 | The advisors system spikes to 248 ms on some ticks on `perf-20k` (Deck p99 7.6 ms, over the 6 ms budget); its average is also over budget there. Not gating (the M2 gate binds on `perf-2k`), but it must be fixed before 20k-scale play. | New sim task before M3 |
+| M2-16 | ~~The advisors system spikes to 248 ms on some ticks on `perf-20k`.~~ Fixed by M2-34 (max 7.5 ms, average within budget). | M2-34 (done) |
+| M2-34 | Building the storehouse distance fields after a roads change still costs up to about 50 ms on `perf-20k` (953 storehouses). Logistics now pays it first (its Deck average is 0.42 against a 0.50 budget), and the tick's p99 is still about 7.9 ms Deck. Labelled per-tile costs, or incremental field updates, would remove it. Not gating. | Sim perf task before M3 |
 | M2-19 | The inspector names tradition, festival, happening and monument sources "from 0": `ExplainService.SourceArg` and `ExplainFormat` have no arms for them. | M2-13b (first real traditions) |
 | M2-19 | Completion toasts overlap right-docked panels (research, civics, statistics, overlays, inspector). | Polish pass |
 | M2-19 | `CivicGraphBuilder.DescribeEffects` duplicates the unlock formatting in `ResearchViewModel`; one shared formatter. | Polish pass |
