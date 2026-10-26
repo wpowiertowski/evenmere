@@ -54,6 +54,7 @@ public sealed partial class BuildMenu : PanelContainer
 
     private static readonly Color _lockColour = new(0.72f, 0.52f, 0.2f);
     private static readonly Color _fallbackSwatch = new(0.54f, 0.54f, 0.54f);
+    private readonly Dictionary<string, Texture2D?> _iconCache = new(StringComparer.Ordinal);
     private SimHost? _host;
     private ToolController? _tools;
     private Control? _research;
@@ -554,6 +555,16 @@ public sealed partial class BuildMenu : PanelContainer
         icon.AddThemeFontSizeOverride("font_size", IconFontSize);
         swatch.AddChild(icon);
 
+        // The ART-02 icon, over the glyph: visible when the content ID resolves to a texture, so a missing
+        // icon falls back to the placeholder glyph instead of blanking the card.
+        var image = new TextureRect
+        {
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+        swatch.AddChild(image);
+
         var info = new VBoxContainer();
         info.AddThemeConstantOverride("separation", 2);
         info.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
@@ -605,13 +616,13 @@ public sealed partial class BuildMenu : PanelContainer
         overlay.AddThemeStyleboxOverride("disabled", new StyleBoxEmpty());
         root.AddChild(overlay);
 
-        var row = new EntryRow(root, overlay, swatch, icon, name, hotkey, cost, workforce, detail, desc, lockLine);
+        var row = new EntryRow(root, overlay, swatch, icon, image, name, hotkey, cost, workforce, detail, desc, lockLine);
         overlay.Pressed += () => Select(row.Entry);
         overlay.FocusEntered += () => _scroll?.EnsureControlVisible(root);
         return row;
     }
 
-    private static void UpdateRow(
+    private void UpdateRow(
         EntryRow row,
         BuildMenuViewModel.BuildEntry entry,
         UiStrings strings,
@@ -635,7 +646,7 @@ public sealed partial class BuildMenu : PanelContainer
         row.Desc.Text = entry.Description;
         row.Lock.Visible = entry.Locked;
         row.Lock.Text = entry.LockText;
-        row.Icon.Text = entry.Icon;
+        ShowIcon(row, entry);
         row.Swatch.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = SwatchColour(entry.ColourHex) });
         row.Root.Modulate = entry.Locked ? new Color(1f, 1f, 1f, DimmedAlpha) : new Color(1f, 1f, 1f, 1f);
 
@@ -670,6 +681,40 @@ public sealed partial class BuildMenu : PanelContainer
 
     // The tooltip carries the full description (the card shows at most two lines, with an ellipsis when cut)
     // plus the action hint.
+    // The ART-02 icon for a card, cached per key (the demolish entry has none and keeps its glyph). A missing
+    // texture resolves once to null and then shows the placeholder glyph, so a missing icon never blanks a menu.
+    private void ShowIcon(EntryRow row, BuildMenuViewModel.BuildEntry entry)
+    {
+        Texture2D? image = IconFor(entry.Key);
+        row.IconImage.Visible = image is not null;
+        row.Icon.Visible = image is null;
+        if (image is not null)
+        {
+            row.IconImage.Texture = image;
+        }
+        else
+        {
+            row.Icon.Text = entry.Icon;
+        }
+    }
+
+    private Texture2D? IconFor(string key)
+    {
+        if (key.Length == 0)
+        {
+            return null;
+        }
+
+        if (_iconCache.TryGetValue(key, out Texture2D? cached))
+        {
+            return cached;
+        }
+
+        Texture2D? loaded = IconLibrary.LoadBuilding(key);
+        _iconCache[key] = loaded;
+        return loaded;
+    }
+
     private static string TipWithDesc(string action, BuildMenuViewModel.BuildEntry entry) =>
         entry.Description.Length > 0 ? entry.Description + "\n" + action : action;
 
@@ -1159,6 +1204,7 @@ public sealed partial class BuildMenu : PanelContainer
             Button overlay,
             PanelContainer swatch,
             Label icon,
+            TextureRect image,
             Label name,
             Label hotkey,
             Label cost,
@@ -1171,6 +1217,7 @@ public sealed partial class BuildMenu : PanelContainer
             Overlay = overlay;
             Swatch = swatch;
             Icon = icon;
+            IconImage = image;
             Name = name;
             Hotkey = hotkey;
             Cost = cost;
@@ -1190,6 +1237,8 @@ public sealed partial class BuildMenu : PanelContainer
         public PanelContainer Swatch { get; }
 
         public Label Icon { get; }
+
+        public TextureRect IconImage { get; }
 
         public Label Name { get; }
 

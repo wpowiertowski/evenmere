@@ -15,6 +15,10 @@ public sealed partial class HudChip : PanelContainer
     /// <summary>The calm warning tint for a short workforce, shared with the build menu's workforce line.</summary>
     public static readonly Color WarningTint = new(0.66f, 0.46f, 0.15f);
 
+    /// <summary>The ART-02 icon edge, in logical points: the 256 master scales to fit.</summary>
+    private const float IconEdge = 24f;
+
+    private TextureRect? _icon;
     private Label? _name;
     private Label? _value;
     private TrendArrow? _arrow;
@@ -23,8 +27,9 @@ public sealed partial class HudChip : PanelContainer
     /// <summary>Creates a chip.</summary>
     /// <param name="withTrend">Whether to add a trend arrow after the number.</param>
     /// <param name="widestValue">Sample text as wide as the number will get, which sets the minimum width of the number's label; <see langword="null"/> for none.</param>
+    /// <param name="withName">Whether to show the name beside the number; goods chips hide it (icon, amount and trend only) and carry the name in the tooltip instead, so thirteen goods fit one row.</param>
     /// <returns>The chip, not yet in the tree.</returns>
-    public static HudChip Create(bool withTrend, string? widestValue)
+    public static HudChip Create(bool withTrend, string? widestValue, bool withName = true)
     {
         var chip = new HudChip
         {
@@ -33,11 +38,27 @@ public sealed partial class HudChip : PanelContainer
         };
 
         var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-        row.AddThemeConstantOverride("separation", 8);
+        row.AddThemeConstantOverride("separation", 3);
         chip.AddChild(row);
 
-        chip._name = new Label { ThemeTypeVariation = "ChipNameLabel", MouseFilter = MouseFilterEnum.Ignore };
-        row.AddChild(chip._name);
+        // The ART-02 icon, hidden until SetIcon provides one: text-only chips keep their old layout.
+        chip._icon = new TextureRect
+        {
+            CustomMinimumSize = new Vector2(IconEdge, IconEdge),
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            MouseFilter = MouseFilterEnum.Ignore,
+            Visible = false,
+        };
+        row.AddChild(chip._icon);
+
+        chip._name = withName
+            ? new Label { ThemeTypeVariation = "ChipNameLabel", MouseFilter = MouseFilterEnum.Ignore }
+            : null;
+        if (chip._name is not null)
+        {
+            row.AddChild(chip._name);
+        }
 
         chip._value = new Label
         {
@@ -68,18 +89,35 @@ public sealed partial class HudChip : PanelContainer
         }
     }
 
-    /// <summary>Sets the name, the number and the tooltip.</summary>
+    /// <summary>Sets the name, the number and the tooltip. Nameless (compact) chips keep the name for the tooltip only.</summary>
     /// <param name="name">The name beside the number.</param>
     /// <param name="value">The formatted number.</param>
     /// <param name="tooltip">The tooltip text.</param>
     public void SetValue(string name, string value, string tooltip)
     {
-        if (_name is not null && _value is not null)
+        if (_name is not null)
         {
             _name.Text = name;
+        }
+
+        if (_value is not null)
+        {
             _value.Text = value;
             TooltipText = tooltip;
         }
+    }
+
+    /// <summary>Sets the ART-02 icon beside the name, or hides it for a <see langword="null"/> texture.</summary>
+    /// <param name="texture">The icon texture, or <see langword="null"/> to keep the text-only chip.</param>
+    public void SetIcon(Texture2D? texture)
+    {
+        if (_icon is null)
+        {
+            return;
+        }
+
+        _icon.Texture = texture;
+        _icon.Visible = texture is not null;
     }
 
     /// <summary>Sets the trend arrow, if the chip has one.</summary>
