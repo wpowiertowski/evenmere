@@ -205,19 +205,40 @@ public sealed class CheatTests
     }
 
     [Fact]
-    public void RevealAll_Enabled_ReportsMissingExploration()
+    public void RevealAll_Enabled_RevealsEverything()
     {
-        // Exploration is still a stub (M2-06): there is no fog to lift yet, so the enabled cheat says so.
-        // M2-06 replaces this rejection with the reveal and updates this test.
+        // M2-06: the cheat really reveals now. The empty test world holds no regions, so the reveal succeeds
+        // with no events; the region cases below prove the handler validates and applies.
         Simulation sim = NewSim(cheats: true);
 
         sim.Enqueue(new CheatRevealAll(CheatRevealAll.AllRegions));
         sim.Tick();
 
+        sim.DrainEvents().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void RevealAll_UnknownRegion_IsRejected()
+    {
+        Simulation sim = NewSim(cheats: true);
+
+        sim.Enqueue(new CheatRevealAll(7));
+        sim.Tick();
+
         sim.DrainEvents().ShouldHaveSingleItem().ShouldBeOfType<CommandRejected>()
-            .ShouldSatisfyAllConditions(
-                e => e.Code.ShouldBe(RejectReason.Invalid),
-                e => e.Detail.ShouldContain("M2-06"));
+            .Code.ShouldBe(RejectReason.Invalid);
+    }
+
+    [Fact]
+    public void RevealAll_NegativeRegion_IsRejected()
+    {
+        Simulation sim = NewSim(cheats: true);
+
+        sim.Enqueue(new CheatRevealAll(-2));
+        sim.Tick();
+
+        sim.DrainEvents().ShouldHaveSingleItem().ShouldBeOfType<CommandRejected>()
+            .Code.ShouldBe(RejectReason.Invalid);
     }
 
     [Fact]

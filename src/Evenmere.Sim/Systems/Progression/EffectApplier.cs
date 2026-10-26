@@ -161,7 +161,7 @@ internal sealed class EffectApplier : IProgressionService, IBindsContext
 
                 break;
             case RevealCoastlineEffect:
-                // TODO(M2-06): the exploration system reveals the coastline fog when it reads this flag.
+                // Exploration consumes this flag on its next run and reveals the coastal fog (M2-06).
                 _state.CoastlineRevealed = true;
                 break;
             case RequestFestivalEffect:

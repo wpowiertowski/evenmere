@@ -18,9 +18,9 @@ namespace Evenmere.Sim.Systems.Construction;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Errors block placement and are all reported, in the order the rules are checked: out of bounds, occupied, terrain not
-/// allowed, terrain access locked, slope too steep, not unlocked, unique already built, needs coastline, needs riverside,
-/// needs deposit, fertility too low. Warnings allow it and are reported only for a placement that has no error.
+/// Errors block placement and are all reported, in the order the rules are checked: out of bounds, occupied, fogged,
+/// terrain not allowed, terrain access locked, slope too steep, not unlocked, unique already built, needs coastline,
+/// needs riverside, needs deposit, fertility too low. Warnings allow it and are reported only for a placement that has no error.
 /// </para>
 /// <para>
 /// The reach and yield warnings are estimates made from the same queries the rest of the simulation reads: the roads
@@ -33,8 +33,9 @@ namespace Evenmere.Sim.Systems.Construction;
 /// <param name="map">The map queries.</param>
 /// <param name="roads">The roads queries.</param>
 /// <param name="progression">The progression queries.</param>
+/// <param name="exploration">The exploration queries for the fog rule; <see langword="null"/> treats every tile as revealed (tests without fog).</param>
 internal sealed class BuildingPlacement(
-    ContentDb content, ConstructionState state, IMapQueries map, IRoadsQueries roads, IProgressionQueries progression)
+    ContentDb content, ConstructionState state, IMapQueries map, IRoadsQueries roads, IProgressionQueries progression, IExplorationQueries? exploration = null)
     : IBuildingPlacement
 {
     /// <summary>The steepest slope class a building may stand on. No building declares its own limit in M1, so this is the default for all of them.</summary>
@@ -48,7 +49,7 @@ internal sealed class BuildingPlacement(
     /// <param name="state">Construction's state.</param>
     /// <returns>The check, which reads the live queries and so sees every earlier command of the tick.</returns>
     public static BuildingPlacement For(SimContext ctx, ConstructionState state) =>
-        new(ctx.Content, state, ctx.Queries.Map, ctx.Queries.Roads, ctx.Queries.Progression);
+        new(ctx.Content, state, ctx.Queries.Map, ctx.Queries.Roads, ctx.Queries.Progression, ctx.Queries.Exploration);
 
     /// <summary>Tests whether a building type id belongs to the loaded content.</summary>
     /// <param name="type">The id.</param>
@@ -150,6 +151,13 @@ internal sealed class BuildingPlacement(
         ImmutableArray<PlacementFinding>.Builder errors = ImmutableArray.CreateBuilder<PlacementFinding>();
         AddIfAny(errors, PlacementIssue.OutOfBounds, offMap);
         AddIfAny(errors, PlacementIssue.Occupied, occupied);
+        if (exploration is not null)
+        {
+            var fogged = new List<TileCoord>();
+            Placement.FogRule.CollectFogged(map, exploration, x, y, size.Width, size.Height, fogged);
+            AddIfAny(errors, PlacementIssue.Fogged, fogged);
+        }
+
         AddIfAny(errors, PlacementIssue.TerrainNotAllowed, notAllowed);
         AddIfAny(errors, PlacementIssue.TerrainAccessLocked, locked);
         AddIfAny(errors, PlacementIssue.SlopeTooSteep, tooSteep);

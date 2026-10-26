@@ -332,7 +332,46 @@ internal static class DefReaders
         }
 
         seasons.Sort(static (a, b) => string.CompareOrdinal(a.Tag, b.Tag));
-        return new RulesDef(cartTicksPerTile, outputBuffer, cartLoad, declineGraceDays, advanceStreakDays, inspirationDiscount, marketGating, [.. seasons], workforceReservePercent);
+        DiscoveryRewards? discoveries = ReadDiscoveryRewards(o);
+        return new RulesDef(cartTicksPerTile, outputBuffer, cartLoad, declineGraceDays, advanceStreakDays, inspirationDiscount, marketGating, [.. seasons], workforceReservePercent, discoveries);
+    }
+
+    // Reads the optional "discoveries" section of the rules: what ruins, shipwrecks and natural wonders grant when
+    // an expedition reveals them (M2-06). Absent means no grants. Unknown kinds error as unknown properties, and
+    // unknown goods error through GoodMap (EVL002), so `evenmere lint` catches both.
+    private static DiscoveryRewards? ReadDiscoveryRewards(ObjectView o)
+    {
+        using ObjectView? section = o.OptObject("discoveries");
+        if (section is null)
+        {
+            return null;
+        }
+
+        Amount ruinKnowledge = Amount.Zero;
+        using (ObjectView? ruin = section.OptObject("ruin"))
+        {
+            if (ruin is not null)
+            {
+                ruinKnowledge = ruin.OptAmount("knowledge", QuantityRange.Positive);
+            }
+        }
+
+        ImmutableArray<GoodAmount> shipwreckGoods = [];
+        using (ObjectView? wreck = section.OptObject("shipwreck"))
+        {
+            if (wreck is not null)
+            {
+                shipwreckGoods = wreck.GoodMap("goods", required: false);
+            }
+        }
+
+        // Natural wonders grant nothing at reveal (they register for Overlooks in M3-02), but the key is accepted
+        // so authors can say so explicitly; anything else errors as an unknown discovery kind.
+        using (section.OptObject("natural_wonder"))
+        {
+        }
+
+        return new DiscoveryRewards(ruinKnowledge, shipwreckGoods);
     }
 
     private static void ReadSeasonCurves(ObjectView curves, List<SeasonCurve> seasons)

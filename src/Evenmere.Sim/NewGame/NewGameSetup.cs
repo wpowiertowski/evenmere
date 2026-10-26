@@ -4,6 +4,7 @@ using Evenmere.Core.Ids;
 using Evenmere.Sim.Pipeline;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Construction;
+using Evenmere.Sim.Systems.Exploration;
 using Evenmere.Sim.Systems.Map;
 using Evenmere.Sim.Systems.Progression;
 
@@ -27,14 +28,16 @@ internal static class NewGameSetup
     /// <param name="context">The simulation's context, already bound to its services.</param>
     /// <param name="map">The map service, which loads the island into the map state.</param>
     /// <param name="progression">The progression system, which applies the start unlocks.</param>
+    /// <param name="exploration">The exploration system, which reveals the start region synchronously so tick-1 placements see the fog lifted. (M2-06.)</param>
     /// <param name="mapDef">The loaded map.</param>
     /// <exception cref="ArgumentException">The map was loaded against different content, or the start site is not a valid rotation.</exception>
     /// <exception cref="InvalidOperationException">The world already holds buildings.</exception>
-    internal static void Run(SimContext context, MapSystem map, ProgressionSystem progression, MapDef mapDef)
+    internal static void Run(SimContext context, MapSystem map, ProgressionSystem progression, ExplorationSystem exploration, MapDef mapDef)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(map);
         ArgumentNullException.ThrowIfNull(progression);
+        ArgumentNullException.ThrowIfNull(exploration);
         ArgumentNullException.ThrowIfNull(mapDef);
 
         map.LoadMap(mapDef);
@@ -55,6 +58,11 @@ internal static class NewGameSetup
         {
             context.Storage.Add(line.Good, line.Amount);
         }
+
+        // Fog lifts synchronously at new-game time (M2-06): the hall stands in the start region, so reveal it
+        // plus its neighbours before tick 0. Silent (no events), but the counters and discovery grants apply.
+        ushort hallRegion = context.World.Map.Region[(mapDef.StartSite.Y * context.World.Map.Width) + mapDef.StartSite.X];
+        exploration.RevealStart(context, hallRegion);
     }
 
     private static bool IsValidRotation(int rotation) => rotation is >= 0 and <= 3;

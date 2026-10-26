@@ -94,7 +94,7 @@ public sealed class Simulation : ISimulation, IProfilerReadout
         var simulation = new Simulation(content, WorldState.CreateNew(content, options.Seed));
         if (options.Map is not null)
         {
-            NewGameSetup.Run(simulation._context, simulation._roster.Map, simulation._roster.Progression, options.Map);
+            NewGameSetup.Run(simulation._context, simulation._roster.Map, simulation._roster.Progression, simulation._roster.Exploration, options.Map);
         }
 
         return simulation;

@@ -51,6 +51,9 @@ public enum PlacementIssue : byte
     /// <summary>Error: the river crossing bends; a bridge must be one straight run.</summary>
     BridgeNotStraight = 13,
 
+    /// <summary>Error: part of the footprint lies in fogged land; send an expedition first. (M2-06.)</summary>
+    Fogged = 14,
+
     /// <summary>Warning: no road touches the footprint, so the building cannot work until one is built.</summary>
     NoRoadAccess = 100,
 

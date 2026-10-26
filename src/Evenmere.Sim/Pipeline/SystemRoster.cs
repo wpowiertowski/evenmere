@@ -66,7 +66,7 @@ internal sealed class SystemRoster
         // M1-09 passes the logistics state and the content, with late-bound queries for the map like M1-05 does for roads.
         var logistics = new LogisticsSystem(world.Logistics, content, () => Queries ?? throw new InvalidOperationException("The logistics system was used before the roster finished building."));
 
-        var exploration = new ExplorationSystem();
+        var exploration = new ExplorationSystem(world.Exploration, world.Map, content);
 
         // M1-10 changes the next line to pass the needs state (and the population state, whose house records carry the need masks).
         var needs = new NeedsSystem(world.Needs, world.Population, content);
@@ -124,11 +124,12 @@ internal sealed class SystemRoster
 
         Map = map;
         Progression = progression;
+        Exploration = exploration;
 
         // The two halves of IPlacementQueries. PlacementQueries forwards to them.
-        // M1-06: Construction's building placement check.
+        // M1-06: Construction's building placement check. M2-06 passes the exploration queries for the fog rule.
         IBuildingPlacement buildingPlacement = new BuildingPlacement(
-            content, world.Construction, map.Queries, roads.Queries, progression.Queries);
+            content, world.Construction, map.Queries, roads.Queries, progression.Queries, exploration.Queries);
 
         // M1-05: Roads' road placement check.
         IRoadPlacement roadPlacement = roads.Placement;
@@ -197,6 +198,9 @@ internal sealed class SystemRoster
 
     /// <summary>Gets the progression system, so new-game setup can apply the start unlocks through it.</summary>
     internal ProgressionSystem Progression { get; }
+
+    /// <summary>Gets the exploration system, so new-game setup can reveal the start region through it. (M2-06.)</summary>
+    internal ExplorationSystem Exploration { get; }
 
     /// <summary>Gets the query facade over every system.</summary>
     public SimQueries Queries { get; }

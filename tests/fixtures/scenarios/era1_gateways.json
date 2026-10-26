@@ -12,7 +12,7 @@
     { "tick": 241, "type": "GrantPoints", "args": { "kind": "culture", "amount": 1000 } }
   ],
   "expect": {
-    "hash": "00b5ae0ca3be9fe9",
+    "hash": "d3a7084573a982ab",
     "events": [
       { "type": "TechResearched", "exactly": 2 },
       { "type": "CivicAdopted", "exactly": 1 },

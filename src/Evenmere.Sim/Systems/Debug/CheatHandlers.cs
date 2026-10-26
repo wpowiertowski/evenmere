@@ -281,8 +281,9 @@ internal sealed class CheatSetEraHandler : ICommandHandler<CheatSetEra>
 }
 
 /// <summary>
-/// Handles <see cref="CheatRevealAll"/>. Exploration is still a stub (M2-06), so there is no fog to lift yet:
-/// the handler validates the cheats flag and the region number, then reports that the reveal needs M2-06.
+/// Handles <see cref="CheatRevealAll"/>: reveals fog through the exploration system. <see cref="CheatRevealAll.AllRegions"/>
+/// reveals every region; any other value reveals one region by number (map data, so the command-log remap leaves it
+/// alone). (M2-06 replaces the M2-26 stub, which reported that the reveal needed exploration.)
 /// </summary>
 internal sealed class CheatRevealAllHandler : ICommandHandler<CheatRevealAll>
 {
@@ -303,7 +304,16 @@ internal sealed class CheatRevealAllHandler : ICommandHandler<CheatRevealAll>
             return CommandResult.Reject(RejectReason.Invalid, "A reveal names a region number, or -1 for all regions.");
         }
 
-        return CommandResult.Reject(RejectReason.Invalid, "Revealing needs exploration (M2-06): the island has no fog yet.");
+        if (command.Region != CheatRevealAll.AllRegions)
+        {
+            ushort region = (ushort)command.Region;
+            if (!Exploration.ExpeditionMath.RegionExists(ctx.World.Map, region))
+            {
+                return CommandResult.Reject(RejectReason.Invalid, $"There is no region {command.Region} on this island.");
+            }
+        }
+
+        return CommandResult.Ok;
     }
 
     /// <inheritdoc />
@@ -311,6 +321,15 @@ internal sealed class CheatRevealAllHandler : ICommandHandler<CheatRevealAll>
     {
         ArgumentNullException.ThrowIfNull(ctx);
         ArgumentNullException.ThrowIfNull(command);
+
+        if (command.Region == CheatRevealAll.AllRegions)
+        {
+            Exploration.ExplorationCheats.RevealAll(ctx);
+        }
+        else
+        {
+            Exploration.ExplorationCheats.RevealOne(ctx, (ushort)command.Region);
+        }
     }
 }
 

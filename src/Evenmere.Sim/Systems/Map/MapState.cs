@@ -46,6 +46,23 @@ public struct BuildingRecord
 }
 
 /// <summary>
+/// One discovery kept in the map state, copied from <c>MapDef.Discoveries</c> when the island loads (M2-06, per the M2-02b follow-up).
+/// The region, kind, tile and name seed are map data, not content IDs, so the remap leaves them alone.
+/// </summary>
+/// <param name="Region">The region number of the tile the discovery stands on.</param>
+/// <param name="Kind">The kind of discovery: natural wonder, ruins or a shipwreck.</param>
+/// <param name="X">The column of the feature's representative tile.</param>
+/// <param name="Y">The row of the feature's representative tile.</param>
+/// <param name="NameSeed">The seed that picks the display name.</param>
+[MessagePackObject]
+public readonly record struct StoredDiscovery(
+    [property: Key(0)] ushort Region,
+    [property: Key(1)] DiscoveryKind Kind,
+    [property: Key(2)] int X,
+    [property: Key(3)] int Y,
+    [property: Key(4)] int NameSeed);
+
+/// <summary>
 /// The map system's slice of the world state: the tile grid with its terrain layers, and the building registry with its
 /// occupancy grid. Per-tile data is flattened into arrays indexed by <c>Y × Width + X</c> (rows from the top), with no
 /// floats and no dictionaries, so equal maps serialise to equal bytes. A new game has an empty 0 × 0 map until
@@ -119,6 +136,15 @@ public sealed class MapState
     [NotContentIndexed("entity IDs of the covering buildings, not content IDs")]
     public int[] Occupancy { get; set; } = [];
 
+    /// <summary>Gets or sets which guarantee attempt produced the island: 0 for hand-authored maps, otherwise the successful re-seed attempt. Copied from <c>MapDef.SubSeed</c> on load; exploration never changes it.</summary>
+    [Key(12)]
+    public byte SubSeed { get; set; }
+
+    /// <summary>Gets or sets the discoveries placed on the island, in region-then-kind order, copied from <c>MapDef.Discoveries</c> on load. Exploration matches its per-feature state by index into this array.</summary>
+    [Key(13)]
+    [NotContentIndexed("map feature indices, not content IDs")]
+    public StoredDiscovery[] Discoveries { get; set; } = [];
+
     /// <summary>
     /// Checks that a state read from bytes is complete and consistent with the loaded content, so a corrupt or foreign save
     /// fails at load instead of far into a run: array sizes, value ranges, and an occupancy grid that matches the registry
@@ -132,7 +158,7 @@ public sealed class MapState
         ArgumentNullException.ThrowIfNull(content);
 
         // MessagePack writes nil for a null member, so a damaged file can leave any reference member null.
-        object?[] members = [Terrain, Elevation, Features, RiverWidth, Region, Deposit, Fertility, Slope, Buildings, Occupancy];
+        object?[] members = [Terrain, Elevation, Features, RiverWidth, Region, Deposit, Fertility, Slope, Buildings, Occupancy, Discoveries];
         if (Array.IndexOf(members, null) >= 0)
         {
             throw new InvalidDataException("The map state is missing a required member.");
@@ -157,6 +183,7 @@ public sealed class MapState
 
         ValidateTiles(content);
         ValidateBuildings(content, nextEntityId);
+        ValidateDiscoveries();
     }
 
     private void ValidateTiles(ContentDb content)
@@ -227,6 +254,24 @@ public sealed class MapState
         if (occupied != covered)
         {
             throw new InvalidDataException($"The occupancy grid claims {occupied} tiles but the buildings cover {covered}.");
+        }
+    }
+
+    private void ValidateDiscoveries()
+    {
+        // Map data, not content IDs: the kind must name a DiscoveryKind and the tile must lie on the map.
+        // An empty map (a test world without an island) holds no discoveries.
+        foreach (StoredDiscovery discovery in Discoveries)
+        {
+            if (!Enum.IsDefined(discovery.Kind))
+            {
+                throw new InvalidDataException($"A discovery names an unknown kind {(int)discovery.Kind}.");
+            }
+
+            if (discovery.X < 0 || discovery.Y < 0 || discovery.X >= Width || discovery.Y >= Height)
+            {
+                throw new InvalidDataException($"A discovery at ({discovery.X}, {discovery.Y}) leaves the {Width} × {Height} map.");
+            }
         }
     }
 }

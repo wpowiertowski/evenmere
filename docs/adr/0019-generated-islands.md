@@ -43,3 +43,9 @@ live in the generator output directly.
 Storing discoveries in sim state at new-game time instead of `MapDef`: rejected, because
 the CLI gallery, the new-game preview and tests all need the features without a running
 simulation.
+
+## Addendum (M2-06)
+
+Discovery rewards are data in `rules/core.json` (the `discoveries` section: ruins pay knowledge,
+shipwrecks pay goods, natural wonders pay nothing now). The exploration system reads them from the
+rules definition; the schema and the loader enforce the shape and resolve the good IDs.

@@ -10,6 +10,7 @@ using Evenmere.Sim.Systems.Culture.Commands;
 using Evenmere.Sim.Systems.Culture.Festivals.Commands;
 using Evenmere.Sim.Systems.Culture.Traditions.Commands;
 using Evenmere.Sim.Systems.Debug.Commands;
+using Evenmere.Sim.Systems.Exploration.Commands;
 using Evenmere.Sim.Systems.Happenings.Commands;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
@@ -123,6 +124,7 @@ public sealed class CommandLogCoverageTests
                 // Slice content defines no happenings yet, so the sample names ID 0 and rides the default
                 // passthrough. M2-13b (happening content) adds the RemapCommand case and names a real happening.
                 _ when type == typeof(ChooseHappeningOption) => new ChooseHappeningOption(HappeningId.From(0), 0),
+                _ when type == typeof(StartExpedition) => new StartExpedition(new EntityId(7), 3),
                 _ when type == typeof(DismissAdvice) => new DismissAdvice(3),
                 _ when type == typeof(CheatGrantGoods) => new CheatGrantGoods(content.IdOf<GoodId>("timber"), Amount.FromUnits(2)),
                 _ when type == typeof(CheatCompleteNode) => new CheatCompleteNode(content.IdOf<TechId>("cultivation"), null),

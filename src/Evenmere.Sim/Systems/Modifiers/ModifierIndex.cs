@@ -43,7 +43,7 @@ internal sealed class ModifierIndex
     private readonly ContentDb _content;
     private readonly List<Entry>[] _byStat;
     private readonly Dictionary<EffectSource, List<SourceRef>> _bySource = new();
-    private readonly Dictionary<ulong, CachedAnswer> _cache = [];
+    private readonly Dictionary<CacheKey, CachedAnswer> _cache = [];
     private IModifierEnvironment _environment = DetachedEnvironment.Instance;
 
     /// <summary>Initializes a new instance of the <see cref="ModifierIndex"/> class with no modifiers.</summary>
@@ -177,7 +177,7 @@ internal sealed class ModifierIndex
         }
 
         Season season = _environment.Season;
-        ulong key = KeyOf(stat, context, season);
+        CacheKey key = KeyOf(stat, context, season);
         if (!_cache.TryGetValue(key, out CachedAnswer answer))
         {
             answer = Build(entries, context);
@@ -227,15 +227,19 @@ internal sealed class ModifierIndex
         return byKind != 0 ? byKind : left.Value.CompareTo(right.Value);
     }
 
-    // Every cache key part is a ushort ID plus one (0 for "none"), so 17 bits each; the stat and season fit in the rest.
-    private static ulong KeyOf(Stat stat, in ModifierContext context, Season season) =>
-        (ulong)(byte)stat
-        | ((ulong)(byte)season << 8)
-        | (Part(context.BuildingType?.Value) << 10)
-        | (Part(context.Tier?.Value) << 27)
-        | (Part(context.Good?.Value) << 44);
+    // The cache key is the whole context, exactly: the stat, the season and every context field, including the
+    // discovery kind, so wonder modifiers cache apart from other contexts with no hashing and no collisions (M2-06).
+    // The cache is only ever looked up, never iterated, so its order cannot reach the simulation.
+    private readonly record struct CacheKey(
+        Stat Stat,
+        Season Season,
+        ushort? BuildingType,
+        ushort? Tier,
+        ushort? Good,
+        DiscoveryKind? Discovery);
 
-    private static ulong Part(ushort? id) => id is { } value ? value + 1UL : 0UL;
+    private static CacheKey KeyOf(Stat stat, in ModifierContext context, Season season) =>
+        new(stat, season, context.BuildingType?.Value, context.Tier?.Value, context.Good?.Value, context.Discovery);
 
     private static bool HasTag(ReadOnlySpan<string> tags, string tag)
     {
@@ -345,9 +349,10 @@ internal sealed class ModifierIndex
             case ModifierTargetKind.Good:
                 return context.Good is { } good && good.Value == entry.TargetValue;
             default:
-                // Discovery modifiers (natural wonders and the like) have nothing in ModifierContext to match yet.
-                // TODO(M2-06): the exploration system asks about discoveries and adds the context for them.
-                return false;
+                // Discovery modifiers (natural wonders and the like) match the discovery kind in the context (M2-06).
+                return entry.TargetKind == ModifierTargetKind.Discovery
+                    && context.Discovery is { } kind
+                    && (int)kind == entry.TargetValue;
         }
     }
 
