@@ -65,7 +65,7 @@ public sealed class GeneratedHeightmap
     /// <summary>Gets the deposit under each tile: 0 for none. Zeroed; M2-02 places deposits.</summary>
     public byte[] Deposit { get; }
 
-    /// <summary>Gets the fertility bit mask of each tile. Zeroed; M2-02 paints fertility.</summary>
+    /// <summary>Gets the fertility bit mask of each tile. Zeroed by the heightmap stage; painted by the terrain stage.</summary>
     public uint[] Fertility { get; }
 
     /// <summary>Gets the number of tiles, <c>Size × Size</c>.</summary>
@@ -113,5 +113,29 @@ public static class IslandGenerator
 
         int tiles = size * size;
         return new GeneratedHeightmap(size, terrain, elevation, new byte[tiles], new ushort[tiles], new byte[tiles], new uint[tiles]);
+    }
+
+    /// <summary>
+    /// Generates the terrain stage of an island: the M2-01 heightmap plus traced rivers, placed deposits
+    /// with offshore reefs, filled noise pockets, and fertility patches. Enclosed seawater pockets of four
+    /// tiles or fewer are filled with neighbouring land; bigger pockets stay water. Regions and discoveries
+    /// stay zeroed for M2-02b. Like <see cref="GenerateHeightmap"/>, a pure function of
+    /// <c>(seed, size, content)</c>: the same arguments give the same arrays on every CPU.
+    /// </summary>
+    /// <param name="seed">The generator seed.</param>
+    /// <param name="size">The width and height in tiles: 256, 320 or 384.</param>
+    /// <param name="content">The loaded content, which must define the island terrains.</param>
+    /// <returns>The painted terrain, owning fresh arrays on every call.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="content"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="size"/> is not 256, 320 or 384.</exception>
+    /// <exception cref="KeyNotFoundException">The content does not define a terrain the painters need.</exception>
+    public static GeneratedHeightmap GenerateTerrain(int seed, int size, ContentDb content)
+    {
+        GeneratedHeightmap map = GenerateHeightmap(seed, size, content);
+        RiverTracer.Trace(map, seed, content);
+        DepositPlacer.Place(map, seed, content);
+        RiverTracer.FillTinyPockets(map, content);
+        FertilityPainter.Paint(map, seed, content);
+        return map;
     }
 }
