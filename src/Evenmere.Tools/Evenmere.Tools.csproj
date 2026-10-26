@@ -16,4 +16,9 @@
     <ProjectReference Include="..\Evenmere.Core\Evenmere.Core.csproj" />
   </ItemGroup>
 
+  <!-- Lets tests reach the internal mapgen renderer, PNG writer and command (M2-03). -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Evenmere.Tools.Tests" />
+  </ItemGroup>
+
 </Project>

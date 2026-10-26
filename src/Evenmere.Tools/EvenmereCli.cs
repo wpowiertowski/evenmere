@@ -70,6 +70,7 @@ internal static class EvenmereCli
             BuildReplay(content, environment),
             BuildBalance(content, environment),
             BuildPerf(content, environment),
+            BuildMapGen(content, environment),
         };
         return root;
     }
@@ -170,6 +171,73 @@ internal static class EvenmereCli
                     environment.Error));
         });
         return perf;
+    }
+
+    private static Command BuildMapGen(Option<string[]> content, ToolEnvironment environment)
+    {
+        var seed = new Option<int>("--seed")
+        {
+            Description = "The generator seed for a single island.",
+            HelpName = "s",
+            DefaultValueFactory = _ => 1,
+        };
+
+        var size = new Option<int>("--size")
+        {
+            Description = "The island size in tiles: 256, 320 or 384.",
+            HelpName = "n",
+            DefaultValueFactory = _ => 320,
+        };
+
+        var output = new Option<string?>("--out")
+        {
+            Description = "Where to write the PNG (or the ASCII text with --ascii). Required except for --ascii to stdout.",
+            HelpName = "file",
+        };
+
+        var layer = new Option<string>("--layer")
+        {
+            Description = "terrain, elevation, regions, deposits or fertility:<crop> (for example fertility:grain).",
+            HelpName = "name",
+            DefaultValueFactory = _ => "terrain",
+        };
+
+        var ascii = new Option<bool>("--ascii")
+        {
+            Description = "Write the ASCII terrain grid (map-format legend characters) instead of a PNG.",
+            DefaultValueFactory = _ => false,
+        };
+
+        var gallery = new Option<string?>("--gallery")
+        {
+            Description = "Write a labelled contact sheet for a seed range like 1..20 instead of one island.",
+            HelpName = "first..last",
+        };
+
+        var mapgen = new Command(
+            "mapgen",
+            "Preview generated islands without opening Godot: one layer to a PNG, ASCII to text, or a seed gallery. stdout: a one-line JSON summary (or the ASCII grid with --ascii and no --out).")
+        {
+            seed,
+            size,
+            output,
+            layer,
+            ascii,
+            gallery,
+        };
+        mapgen.SetAction(parsed =>
+            WithContentRoots(parsed, content, environment, roots =>
+                MapGenCommand.Execute(
+                    roots,
+                    parsed.GetValue(seed),
+                    parsed.GetValue(size),
+                    parsed.GetValue(output),
+                    parsed.GetValue(layer) ?? "terrain",
+                    parsed.GetValue(ascii),
+                    parsed.GetValue(gallery),
+                    environment.Output,
+                    environment.Error)));
+        return mapgen;
     }
 
     private static Command BuildLint(Option<string[]> content, ToolEnvironment environment)
