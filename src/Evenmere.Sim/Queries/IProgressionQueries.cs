@@ -85,4 +85,13 @@ public interface IProgressionQueries
     /// <param name="slot">The slot type.</param>
     /// <returns>The number of slots; zero or more.</returns>
     int TraditionSlotCount(TraditionSlotType slot);
+
+    /// <summary>
+    /// Reports whether an era's two gateways are complete, so advisors can say which half is missing
+    /// (for example "Era II needs Village Moot (culture)"). A gateway counts as done when its source's effects have
+    /// been applied, which research and culture do exactly once on completion. (M2-11, per ADR-0017.)
+    /// </summary>
+    /// <param name="era">The era whose gateways are asked about.</param>
+    /// <returns>Whether the tech gateway is done and whether the civic gateway is done; both false for an unknown era.</returns>
+    GatewayStatus GatewayStatus(EraId era);
 }

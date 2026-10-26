@@ -42,10 +42,10 @@ internal sealed class ProgressionSystem : ISimSystem
         Counters = new MilestoneCounters(state);
         Ledger = new PointsLedger(state);
         var evaluator = new ConditionEvaluator(state, content, Counters, holder);
+        Queries = new ProgressionQueries(state, modifiers.Index, Counters, evaluator, content);
         modifiers.Attach(evaluator);
 
         Service = new EffectApplier(state, modifiers, Ledger, holder);
-        Queries = new ProgressionQueries(state, modifiers.Index, Counters, evaluator);
     }
 
     /// <inheritdoc />
@@ -72,7 +72,8 @@ internal sealed class ProgressionSystem : ISimSystem
     /// <inheritdoc />
     public void Run(SimContext ctx)
     {
-        // Nothing to do daily in M1. TODO(M2-11): check the era gateways here and advance the era.
+        // Research and culture run before this system each day, so the gateways they completed today are done already.
+        Eras.EraAdvancement.Check(_state, ctx);
     }
 
     /// <summary>

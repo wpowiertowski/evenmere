@@ -35,6 +35,7 @@ internal static class ScenarioJson
             new TileCoordJsonConverter(),
             new RotationJsonConverter(),
             new TraditionSlotTypeJsonConverter(),
+            new PointKindJsonConverter(),
             new ContentIdJsonConverterFactory(content),
         },
     };
@@ -149,6 +150,22 @@ internal static class ScenarioJson
 
         /// <inheritdoc />
         public override void Write(Utf8JsonWriter writer, TraditionSlotType value, JsonSerializerOptions options) =>
+            writer.WriteStringValue(value.ToString().ToLowerInvariant());
+    }
+
+    /// <summary>Reads a <see cref="PointKind\"/> from its lowercase name (for example <c>\"knowledge\"</c>).</summary>
+    private sealed class PointKindJsonConverter : JsonConverter<PointKind>
+    {
+        /// <inheritdoc />
+        public override PointKind Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+            reader.TokenType == JsonTokenType.String
+            && Enum.TryParse<PointKind>(reader.GetString(), ignoreCase: true, out PointKind kind)
+            && Enum.IsDefined(kind)
+                ? kind
+                : throw new JsonException("A point kind is one of \"knowledge\", \"culture\" or \"coin\".");
+
+        /// <inheritdoc />
+        public override void Write(Utf8JsonWriter writer, PointKind value, JsonSerializerOptions options) =>
             writer.WriteStringValue(value.ToString().ToLowerInvariant());
     }
 

@@ -23,6 +23,7 @@ internal sealed class FakeProgressionQueries : IProgressionQueries
     private readonly HashSet<(FeatureKind Feature, GreatWorkTypeId? Type)> _features = [];
     private readonly HashSet<TraditionId> _traditions = [];
     private readonly HashSet<FestivalId> _festivals = [];
+    private readonly Dictionary<EraId, (bool TechDone, bool CivicDone)> _gateways = [];
     private readonly int[] _traditionSlots = new int[Enum.GetValues<TraditionSlotType>().Length];
     private readonly List<(Stat Stat, ModifierContribution Contribution, Func<ModifierContext, bool>? AppliesTo)> _modifiers = [];
     private readonly SortedDictionary<(CounterKind Kind, int Subject), long> _counters = [];
@@ -187,6 +188,21 @@ internal sealed class FakeProgressionQueries : IProgressionQueries
     /// <inheritdoc />
     int IProgressionQueries.TraditionSlotCount(TraditionSlotType slot) =>
         (uint)slot < (uint)_traditionSlots.Length ? _traditionSlots[(int)slot] : 0;
+
+    /// <summary>Sets an era's gateway status, as the advisors read it.</summary>
+    /// <param name="era">The era.</param>
+    /// <param name="techDone">Whether the tech gateway counts as done.</param>
+    /// <param name="civicDone">Whether the civic gateway counts as done.</param>
+    /// <returns>This fake.</returns>
+    public FakeProgressionQueries SetGateway(EraId era, bool techDone, bool civicDone)
+    {
+        _gateways[era] = (techDone, civicDone);
+        return this;
+    }
+
+    /// <inheritdoc />
+    GatewayStatus IProgressionQueries.GatewayStatus(EraId era) =>
+        _gateways.TryGetValue(era, out (bool TechDone, bool CivicDone) status) ? new GatewayStatus(status.TechDone, status.CivicDone) : new GatewayStatus(false, false);
 
     /// <inheritdoc />
     public bool Evaluate(Condition condition) => ConditionEvaluator(condition);
