@@ -15,20 +15,21 @@ public sealed class QueriesTests
             query.Map, query.Roads, query.Storage, query.Modifiers, query.Construction, query.Workforce, query.Production,
             query.Logistics, query.Exploration, query.Needs, query.Population, query.Economy, query.Research, query.Culture,
             query.Progression, query.Happenings, query.Advisors, query.Statistics, query.Placement, query.Explain,
+            query.Overlay,
         ];
 
-        all.Length.ShouldBe(20);
+        all.Length.ShouldBe(21);
         all.ShouldAllBe(q => q != null);
-        all.Distinct().Count().ShouldBe(20);
+        all.Distinct().Count().ShouldBe(21);
     }
 
     [Fact]
     public void Query_PerSystemInterfaces_MatchTheSystemFolders()
     {
-        // One property per system (named like the system) plus Placement and Explain.
+        // One property per system (named like the system) plus Placement, Explain and Overlay (which holds no state and never ticks).
         string[] properties = [.. typeof(ISimQueries).GetProperties().Select(static p => p.Name).Order()];
 
-        string[] expected = [.. Enum.GetNames<SystemId>().Append("Placement").Append("Explain").Order()];
+        string[] expected = [.. Enum.GetNames<SystemId>().Append("Placement").Append("Explain").Append("Overlay").Order()];
         properties.ShouldBe(expected);
         foreach (System.Reflection.PropertyInfo property in typeof(ISimQueries).GetProperties())
         {

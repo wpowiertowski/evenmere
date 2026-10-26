@@ -12,6 +12,7 @@ using Evenmere.Sim.Systems.Logistics;
 using Evenmere.Sim.Systems.Map;
 using Evenmere.Sim.Systems.Modifiers;
 using Evenmere.Sim.Systems.Needs;
+using Evenmere.Sim.Systems.Overlays;
 using Evenmere.Sim.Systems.Population;
 using Evenmere.Sim.Systems.Production;
 using Evenmere.Sim.Systems.Progression;
@@ -154,6 +155,10 @@ internal sealed class SystemRoster
             new(SystemId.Statistics, statistics, Cadence.Daily),
         ];
 
+        // M2-20: overlays read the map, roads and progression through the facade and the road network's fields.
+        // They hold no state and run on demand, so they are built here and never ticked.
+        var overlays = new OverlayQueries(content, () => Queries ?? throw new InvalidOperationException("The overlay queries were used before the roster finished building."), roads.Network, () => world.Clock.Tick);
+
         Queries = new SimQueries
         {
             Map = map.Queries,
@@ -178,6 +183,9 @@ internal sealed class SystemRoster
 
             // M1-12: the explain service answers the good, building and house queries.
             Explain = new ExplainQueries(content, () => Queries ?? throw new InvalidOperationException("The explain service was used before the roster finished building."), () => world.Clock),
+
+            // M2-20: the overlay layers for the view.
+            Overlay = overlays,
         };
     }
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3]
+[gd_scene load_steps=23 format=3]
 
 [ext_resource type="Script" uid="uid://bub5wqwnne33" path="res://host/Main.cs" id="1_main"]
 [ext_resource type="Script" uid="uid://dcmhwhll1gsvl" path="res://host/SimHost.cs" id="2_host"]
@@ -18,6 +18,8 @@
 [ext_resource type="Script" path="res://ui/notifications/NotificationFeed.cs" id="15_feed"]
 [ext_resource type="Script" path="res://ui/build_menu/BuildMenu.cs" id="16_buildmenu"]
 [ext_resource type="Script" path="res://rendering/life/LifeRenderer.cs" id="16_life"]
+[ext_resource type="Script" path="res://rendering/overlays/OverlayRenderer.cs" id="22_overlays"]
+[ext_resource type="Script" path="res://rendering/overlays/OverlayPanel.cs" id="23_overlaypanel"]
 [ext_resource type="Script" path="res://ui/stats/StatsPanel.cs" id="21_stats"]
 
 [sub_resource type="Environment" id="Environment_sky"]
@@ -87,3 +89,9 @@ script = ExtResource("15_feed")
 
 [node name="StatsPanel" type="PanelContainer" parent="."]
 script = ExtResource("21_stats")
+
+[node name="Overlays" type="Node3D" parent="."]
+script = ExtResource("22_overlays")
+
+[node name="OverlayPanel" type="PanelContainer" parent="."]
+script = ExtResource("23_overlaypanel")

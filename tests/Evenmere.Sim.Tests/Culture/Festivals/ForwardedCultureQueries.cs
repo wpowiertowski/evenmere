@@ -68,4 +68,7 @@ internal sealed class ForwardedCultureQueries(ISimQueries inner, ICultureQueries
 
     /// <inheritdoc />
     public IExplainQueries Explain => inner.Explain;
+
+    /// <inheritdoc />
+    public IOverlayQueries Overlay => inner.Overlay;
 }

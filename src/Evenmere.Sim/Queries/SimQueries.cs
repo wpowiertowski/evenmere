@@ -62,4 +62,7 @@ internal sealed class SimQueries : ISimQueries
 
     /// <inheritdoc />
     public required IExplainQueries Explain { get; init; }
+
+    /// <inheritdoc />
+    public required IOverlayQueries Overlay { get; init; }
 }

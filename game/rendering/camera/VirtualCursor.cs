@@ -1,4 +1,5 @@
 using Evenmere.Game.Controls;
+using Evenmere.Game.Rendering.Overlays;
 using Godot;
 
 namespace Evenmere.Game.Rendering.Camera;
@@ -86,6 +87,7 @@ public sealed partial class VirtualCursor : Node3D
                 AlbedoColor = RingColor,
                 Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
                 CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+                RenderPriority = OverlayRenderer.AfterLookPriority,
             },
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         });

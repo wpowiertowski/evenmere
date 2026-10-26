@@ -86,7 +86,7 @@ file per card as listed; never edit another card's file.
 | M2-17b | Multi-seed balance runs and pacing sign-off | tools | M2-17a + pacing-window confirmation (human) | todo |
 | M2-18 | Tech tree graph view | game | M2-09 | done |
 | M2-19 | Civics tree and traditions board | game | M2-07 | todo |
-| M2-20 | Overlays: coverage, reach, fertility and deposits | game | M2-00 | todo |
+| M2-20 | Overlays: coverage, reach, fertility and deposits | game | M2-00 | done |
 | M2-21 | Production chain viewer | game | M2-00 | done |
 | M2-22 | Statistics graphs | game | M2-00 | done |
 | M2-23 | Fog, regions and expedition UI | game | M2-06 | todo |
