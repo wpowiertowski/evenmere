@@ -6,6 +6,11 @@
   "advanceStreakDays": 6,
   "inspirationDiscountPerMille": 400,
   "marketGating": true,
+  "discoveries": {
+    "ruin": { "knowledge": 15 },
+    "shipwreck": { "goods": { "timber": 8 } },
+    "natural_wonder": {}
+  },
   "seasons": {
     "seasonal": { "spring": 1000, "summer": 1200, "autumn": 1100, "winter": 700 }
   },

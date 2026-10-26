@@ -332,9 +332,6 @@ internal sealed class FakeExplainQueries : IExplainQueries
 /// <summary>A stand-in for <see cref="IModifiersQueries"/>, which has no members in M1.</summary>
 internal sealed class FakeModifiersQueries : IModifiersQueries;
 
-/// <summary>A stand-in for <see cref="IExplorationQueries"/>, which has no members in M1.</summary>
-internal sealed class FakeExplorationQueries : IExplorationQueries;
-
 /// <summary>A stand-in for <see cref="IEconomyQueries"/>, which has no members in M1.</summary>
 internal sealed class FakeEconomyQueries : IEconomyQueries;
 

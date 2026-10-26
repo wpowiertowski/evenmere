@@ -44,9 +44,8 @@ one gate, and debug-build-only presentation is the second.
   pure `CheatParser` and enqueues them like any command. Both nodes are created only in
   debug builds, both ignore the mouse except the console's click-to-type field, and the
   focus walk skips both on purpose: the console is gamepad-unreachable by design.
-- **`CheatRevealAll` until M2-06:** exploration is still a stub, so there is no fog to
-  lift. Past the flag gate the handler reports that the reveal needs M2-06 instead of
-  pretending. M2-06 replaces that rejection with the reveal and updates the cheat test.
+- **`CheatRevealAll` (M2-06):** exploration holds the fog, so past the flag gate the handler reveals through
+  it: `-1` reveals every region, any other value reveals one region by number (map data, never remapped).
 
 ## Consequences
 

@@ -51,6 +51,15 @@ internal static class MapStateLoader
         state.Fertility = [.. map.Fertility];
         state.Slope = slope;
         state.Occupancy = new int[tiles];
+        state.SubSeed = map.SubSeed;
+        var discoveries = new StoredDiscovery[map.Discoveries.Length];
+        for (int i = 0; i < discoveries.Length; i++)
+        {
+            MapDiscovery source = map.Discoveries[i];
+            discoveries[i] = new StoredDiscovery(source.Region, source.Kind, source.X, source.Y, source.NameSeed);
+        }
+
+        state.Discoveries = discoveries;
     }
 
     // The largest elevation difference to a neighbour that exists, as a class.

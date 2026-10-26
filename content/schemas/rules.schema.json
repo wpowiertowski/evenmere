@@ -47,6 +47,32 @@
       "description": "Whether a house can draw goods only inside a market's coverage.",
       "type": "boolean"
     },
+    "discoveries": {
+      "description": "What an expedition's discovery grants when its fog lifts (M2-06): ruins pay knowledge, shipwrecks pay goods, natural wonders pay nothing now.",
+      "type": "object",
+      "properties": {
+        "ruin": {
+          "type": "object",
+          "properties": {
+            "knowledge": { "$ref": "common.schema.json#/$defs/quantity" }
+          },
+          "additionalProperties": false
+        },
+        "shipwreck": {
+          "type": "object",
+          "properties": {
+            "goods": { "$ref": "common.schema.json#/$defs/goodAmounts" }
+          },
+          "additionalProperties": false
+        },
+        "natural_wonder": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "seasons": {
       "description": "Productivity multipliers per season, in per-mille, for buildings that carry the tag named by the key.",
       "type": "object",

@@ -300,6 +300,34 @@
         "Type": "Evenmere.Core.Ids.TraditionId"
       }
     },
+    "Evenmere.Sim.Systems.Exploration.ExpeditionRecord": {
+      "0": {
+        "Member": "property TargetRegion",
+        "Type": "System.UInt16"
+      },
+      "1": {
+        "Member": "property DaysLeft",
+        "Type": "System.Int32"
+      },
+      "2": {
+        "Member": "property Lodge",
+        "Type": "Evenmere.Core.Ids.EntityId"
+      }
+    },
+    "Evenmere.Sim.Systems.Exploration.ExplorationState": {
+      "0": {
+        "Member": "property RevealedRegions",
+        "Type": "System.UInt64[]"
+      },
+      "1": {
+        "Member": "property Expeditions",
+        "Type": "Evenmere.Core.Collections.IdTable\u00601\u003CEvenmere.Sim.Systems.Exploration.ExpeditionRecord\u003E"
+      },
+      "2": {
+        "Member": "property DiscoveriesApplied",
+        "Type": "System.Boolean[]"
+      }
+    },
     "Evenmere.Sim.Systems.Happenings.HappeningsState": {
       "0": {
         "Member": "property Pending",
@@ -445,6 +473,14 @@
         "Member": "property Occupancy",
         "Type": "System.Int32[]"
       },
+      "12": {
+        "Member": "property SubSeed",
+        "Type": "System.Byte"
+      },
+      "13": {
+        "Member": "property Discoveries",
+        "Type": "Evenmere.Sim.Systems.Map.StoredDiscovery[]"
+      },
       "2": {
         "Member": "property Terrain",
         "Type": "System.Byte[]"
@@ -476,6 +512,28 @@
       "9": {
         "Member": "property Slope",
         "Type": "System.Byte[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Map.StoredDiscovery": {
+      "0": {
+        "Member": "property Region",
+        "Type": "System.UInt16"
+      },
+      "1": {
+        "Member": "property Kind",
+        "Type": "Evenmere.Content.Definitions.DiscoveryKind"
+      },
+      "2": {
+        "Member": "property X",
+        "Type": "System.Int32"
+      },
+      "3": {
+        "Member": "property Y",
+        "Type": "System.Int32"
+      },
+      "4": {
+        "Member": "property NameSeed",
+        "Type": "System.Int32"
       }
     },
     "Evenmere.Sim.Systems.Modifiers.ActiveModifier": {

@@ -289,12 +289,12 @@ internal sealed class OverlayQueries : IOverlayQueries
             {
                 TileInfo tile = map.GetTile(x, y);
 
-                // Mirrors the terrain, slope and access rules of the placement check (BuildingPlacement): the overlay
+                // Mirrors the terrain, slope, access and fog rules of the placement check (BuildingPlacement): the overlay
                 // answers "could a building stand here at all", not "could this building stand here".
-                // TODO(M2-06): check exploration.IsRevealed here once fog lands; every tile counts as revealed until then.
                 bool buildable = _content.Get(tile.Terrain).Buildable
                     && tile.Slope <= BuildingPlacement.MaxSlope
-                    && TerrainAccessCheck.IsUsable(tile, _content, progression);
+                    && TerrainAccessCheck.IsUsable(tile, _content, progression)
+                    && queries.Exploration.IsRevealed(tile.Region);
                 bytes[(y * layer.Width) + x] = buildable ? (byte)1 : (byte)0;
             }
         }

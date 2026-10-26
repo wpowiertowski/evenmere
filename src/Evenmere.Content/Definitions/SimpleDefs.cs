@@ -227,6 +227,14 @@ public sealed record SeasonCurve(string Tag, Ratio Spring, Ratio Summer, Ratio A
 }
 
 /// <summary>
+/// What one expedition discovery grants when its fog lifts (M2-06): ruins pay knowledge now (a Relic great work
+/// from M3-03), shipwrecks pay goods, natural wonders pay nothing now (they register for Overlook bonuses in M3-02).
+/// </summary>
+/// <param name="RuinKnowledge">The knowledge a ruin grants; zero for none.</param>
+/// <param name="ShipwreckGoods">The goods a shipwreck grants, sorted by good ID, each above zero; empty for none.</param>
+public sealed record DiscoveryRewards(Amount RuinKnowledge, ImmutableArray<GoodAmount> ShipwreckGoods);
+
+/// <summary>
 /// The game-wide tunables in <c>content/rules/core.json</c>. Systems read tunables from here and never from constants.
 /// Road costs are not here: roads are buildings with a <see cref="BuildingDef.RoadCost"/>.
 /// </summary>
@@ -239,6 +247,7 @@ public sealed record SeasonCurve(string Tag, Ratio Spring, Ratio Summer, Ratio A
 /// <param name="MarketGating">Whether a house can draw goods only inside a market's coverage.</param>
 /// <param name="Seasons">Season curves per building tag, sorted by tag; empty when seasons are not configured.</param>
 /// <param name="WorkforceReservePercent">The spare-worker reserve the workforce hold keeps per tier, in percent: a house advances only if the tier's remaining workers still cover demand, planned demand and this share of both (ADR-0016).</param>
+/// <param name="Discoveries">What expedition discoveries grant when their fog lifts, by kind; empty rewards when the rules name none. (M2-06.)</param>
 public sealed record RulesDef(
     int CartTicksPerTile,
     Amount OutputBuffer,
@@ -248,4 +257,5 @@ public sealed record RulesDef(
     Ratio InspirationDiscount,
     bool MarketGating,
     ImmutableArray<SeasonCurve> Seasons,
-    int WorkforceReservePercent = 20);
+    int WorkforceReservePercent = 20,
+    DiscoveryRewards? Discoveries = null);

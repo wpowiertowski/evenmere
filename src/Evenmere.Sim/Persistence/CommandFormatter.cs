@@ -8,6 +8,7 @@ using Evenmere.Sim.Systems.Culture.Commands;
 using Evenmere.Sim.Systems.Culture.Festivals.Commands;
 using Evenmere.Sim.Systems.Culture.Traditions.Commands;
 using Evenmere.Sim.Systems.Debug.Commands;
+using Evenmere.Sim.Systems.Exploration.Commands;
 using Evenmere.Sim.Systems.Happenings.Commands;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
@@ -122,6 +123,11 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
                 writer.Write(choose.Happening.Value);
                 writer.Write(choose.OptionIndex);
                 break;
+            case StartExpedition expedition:
+                writer.WriteArrayHeader(2);
+                writer.Write(expedition.Lodge.Value);
+                writer.Write(expedition.Region);
+                break;
             case CheatGrantGoods grant:
                 {
                     writer.WriteArrayHeader(2);
@@ -204,6 +210,7 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
                 nameof(SetTradition) => ReadSetTradition(ref reader),
                 nameof(HoldFestival) => ReadHoldFestival(ref reader),
                 nameof(ChooseHappeningOption) => ReadChooseHappeningOption(ref reader),
+                nameof(StartExpedition) => ReadStartExpedition(ref reader),
                 nameof(CheatGrantGoods) => ReadCheatGrantGoods(ref reader),
                 nameof(CheatCompleteNode) => ReadCheatCompleteNode(ref reader),
                 nameof(CheatSetEra) => ReadCheatSetEra(ref reader),
@@ -391,6 +398,14 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
         ushort happening = reader.ReadUInt16();
         int option = reader.ReadInt32();
         return new ChooseHappeningOption(HappeningId.From(happening), option);
+    }
+
+    private static StartExpedition ReadStartExpedition(ref MessagePackReader reader)
+    {
+        ExpectFields(ref reader, 2);
+        int lodge = reader.ReadInt32();
+        int region = reader.ReadInt32();
+        return new StartExpedition(new EntityId(lodge), region);
     }
 
     private static CheatGrantGoods ReadCheatGrantGoods(ref MessagePackReader reader)

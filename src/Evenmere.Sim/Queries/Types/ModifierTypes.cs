@@ -1,3 +1,4 @@
+using Evenmere.Content.Definitions;
 using Evenmere.Core.Ids;
 using MessagePack;
 
@@ -110,7 +111,8 @@ public readonly record struct EffectSource([property: Key(0)] EffectSourceKind K
 /// <param name="Building">The building, so building-local site bonuses and auras can apply; <see cref="EntityId.None"/> when the query is about a type or about no building.</param>
 /// <param name="Tier">The population tier, or <see langword="null"/>.</param>
 /// <param name="Good">The good, or <see langword="null"/>.</param>
-public readonly record struct ModifierContext(BuildingTypeId? BuildingType, EntityId Building, TierId? Tier, GoodId? Good)
+/// <param name="Discovery">The discovery kind, or <see langword="null"/> when the query is not about a discovery. (M2-06, per ADR-0017.)</param>
+public readonly record struct ModifierContext(BuildingTypeId? BuildingType, EntityId Building, TierId? Tier, GoodId? Good, DiscoveryKind? Discovery = null)
 {
     /// <summary>Gets the context of an island-wide query.</summary>
     public static ModifierContext Island => default;
@@ -119,28 +121,33 @@ public readonly record struct ModifierContext(BuildingTypeId? BuildingType, Enti
     /// <param name="building">The building's entity ID.</param>
     /// <param name="type">The building's type.</param>
     /// <returns>The context.</returns>
-    public static ModifierContext ForBuilding(EntityId building, BuildingTypeId type) => new(type, building, null, null);
+    public static ModifierContext ForBuilding(EntityId building, BuildingTypeId type) => new(type, building, null, null, null);
 
     /// <summary>Creates the context of a building type, for queries that are not about one particular building.</summary>
     /// <param name="type">The building type.</param>
     /// <returns>The context.</returns>
-    public static ModifierContext ForBuildingType(BuildingTypeId type) => new(type, EntityId.None, null, null);
+    public static ModifierContext ForBuildingType(BuildingTypeId type) => new(type, EntityId.None, null, null, null);
 
     /// <summary>Creates the context of a population tier.</summary>
     /// <param name="tier">The tier.</param>
     /// <returns>The context.</returns>
-    public static ModifierContext ForTier(TierId tier) => new(null, EntityId.None, tier, null);
+    public static ModifierContext ForTier(TierId tier) => new(null, EntityId.None, tier, null, null);
 
     /// <summary>Creates the context of a tier consuming or producing one good.</summary>
     /// <param name="tier">The tier.</param>
     /// <param name="good">The good.</param>
     /// <returns>The context.</returns>
-    public static ModifierContext ForTierAndGood(TierId tier, GoodId good) => new(null, EntityId.None, tier, good);
+    public static ModifierContext ForTierAndGood(TierId tier, GoodId good) => new(null, EntityId.None, tier, good, null);
 
     /// <summary>Creates the context of a good.</summary>
     /// <param name="good">The good.</param>
     /// <returns>The context.</returns>
-    public static ModifierContext ForGood(GoodId good) => new(null, EntityId.None, null, good);
+    public static ModifierContext ForGood(GoodId good) => new(null, EntityId.None, null, good, null);
+
+    /// <summary>Creates the context of a discovery kind, for natural-wonder and similar modifiers.</summary>
+    /// <param name="kind">The discovery kind.</param>
+    /// <returns>The context.</returns>
+    public static ModifierContext ForDiscovery(DiscoveryKind kind) => new(null, EntityId.None, null, null, kind);
 }
 
 /// <summary>One modifier that matches a stat query, for the explain queries.</summary>
