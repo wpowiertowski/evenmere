@@ -182,6 +182,8 @@ internal sealed class FakeConstructionQueries : IConstructionQueries
 internal sealed class FakeStatisticsQueries : IStatisticsQueries
 {
     private readonly Dictionary<StatKey, long[]> _series = [];
+    private readonly Dictionary<StatKey, long[]> _seasonal = [];
+    private long _seasonsSampled;
 
     /// <summary>Sets a series, oldest sample first.</summary>
     /// <param name="key">The series.</param>
@@ -190,6 +192,18 @@ internal sealed class FakeStatisticsQueries : IStatisticsQueries
     public FakeStatisticsQueries SetSeries(StatKey key, params long[] samples)
     {
         _series[key] = samples;
+        return this;
+    }
+
+    /// <summary>Sets a seasonal series, oldest sample first.</summary>
+    /// <param name="key">The series.</param>
+    /// <param name="seasonsSampled">The total seasons sampled, for axis labels.</param>
+    /// <param name="samples">The samples, oldest first.</param>
+    /// <returns>This fake.</returns>
+    public FakeStatisticsQueries SetSeasonalSeries(StatKey key, long seasonsSampled, params long[] samples)
+    {
+        _seasonal[key] = samples;
+        _seasonsSampled = seasonsSampled;
         return this;
     }
 
@@ -205,6 +219,19 @@ internal sealed class FakeStatisticsQueries : IStatisticsQueries
         int count = Math.Min(destination.Length, samples.Length);
         samples.AsSpan(samples.Length - count).CopyTo(destination);
         return count;
+    }
+
+    /// <inheritdoc />
+    public (int Written, long Seasons) SeasonalSeries(StatKey key, Span<long> destination)
+    {
+        if (!_seasonal.TryGetValue(key, out long[]? samples))
+        {
+            return (0, _seasonsSampled);
+        }
+
+        int count = Math.Min(destination.Length, samples.Length);
+        samples.AsSpan(samples.Length - count).CopyTo(destination);
+        return (count, _seasonsSampled);
     }
 }
 

@@ -136,6 +136,8 @@ public sealed class SimChainDataTests
 
             return count;
         }
+
+        public (int Written, long Seasons) SeasonalSeries(StatKey key, Span<long> destination) => (0, 0);
     }
 
     private sealed class FakeExplains : IExplainQueries

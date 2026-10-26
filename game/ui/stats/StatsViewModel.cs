@@ -28,6 +28,15 @@ public interface IStatsData
     /// <returns>How many samples were written.</returns>
     int ReadSeries(StatKey key, Span<long> destination);
 
+    /// <summary>
+    /// Copies the most recent seasonal samples of a series, oldest first: one per season, eight seasons deep.
+    /// Each sample averages the season's ten days, in the same units as the daily window.
+    /// </summary>
+    /// <param name="key">The series.</param>
+    /// <param name="destination">Receives the samples from the start.</param>
+    /// <returns>How many samples were written and the seasons sampled in all (for season labels).</returns>
+    (int Written, long Seasons) ReadSeasonalSeries(StatKey key, Span<long> destination);
+
     /// <summary>Gets the tiers to chart, lowest tier first.</summary>
     ImmutableArray<(TierId Id, string Name)> Tiers { get; }
 
@@ -57,16 +66,24 @@ public sealed record StatsLine(
 /// <summary>
 /// The numbers behind the statistics panel, as plain properties the panel binds to. It has no Godot types: it
 /// reads an <see cref="IStatsData"/>, formats through <see cref="UiStrings"/> (the <c>ui.stats.*</c> locale keys),
-/// and refreshes at most four times a second (<see cref="ViewModel"/>).
+/// and refreshes at most four times a second (<see cref="ViewModel"/>). The 40-day window plots daily samples;
+/// the two-year window plots the sim's seasonal series, one point per season, eight seasons deep.
 /// </summary>
 public sealed class StatsViewModel : ViewModel
 {
     /// <summary>The most daily samples one read holds, mirroring the sim's 40-day ring.</summary>
     public const int MaxSamples = 40;
 
+    /// <summary>The most seasonal samples one read holds, mirroring the sim's 8-season ring.</summary>
+    public const int MaxSeasonalSamples = 8;
+
+    /// <summary>How many sampled seasons the long view needs before it draws: a single point is no trend.</summary>
+    public const int MinSeasonsForLongView = 2;
+
     private readonly IStatsData _data;
     private readonly UiStrings _strings;
     private readonly long[] _buffer = new long[MaxSamples];
+    private readonly long[] _seasonalBuffer = new long[MaxSeasonalSamples];
 
     /// <summary>Initializes a new instance of the <see cref="StatsViewModel"/> class.</summary>
     /// <param name="data">Where the series come from.</param>
@@ -91,6 +108,18 @@ public sealed class StatsViewModel : ViewModel
 
     /// <summary>Gets how many days one plotted point covers (1 for the 40-day window, 10 for the 2-year window).</summary>
     public int DayStep { get; private set; } = 1;
+
+    /// <summary>Gets the seasons sampled in all at the last refresh, for the long-view labels and readiness.</summary>
+    public long SeasonsSampled { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the long view has enough history to draw: two full seasons, so one point
+    /// never poses as a trend.
+    /// </summary>
+    public bool LongViewReady => SeasonsSampled >= MinSeasonsForLongView;
+
+    /// <summary>Gets one axis label per plotted point in the two-year window ("Spring Y2"), oldest first.</summary>
+    public ImmutableArray<string> SeasonLabels { get; private set; } = [];
 
     /// <summary>Gets the resident lines, one per tier.</summary>
     public ImmutableArray<StatsLine> PopulationLines { get; private set; } = [];
@@ -163,13 +192,51 @@ public sealed class StatsViewModel : ViewModel
             NetLine = NetLine with { Values = [], SampleCount = 0, LastRaw = 0 };
             KnowledgeLine = KnowledgeLine with { Values = [], SampleCount = 0, LastRaw = 0 };
             CultureLine = CultureLine with { Values = [], SampleCount = 0, LastRaw = 0 };
+            SeasonLabels = [];
+            SeasonsSampled = 0;
             DebugSummary = _strings.Get("ui.stats.empty");
             return;
         }
 
         HasData = true;
         CurrentDay = _data.CurrentTick / GameTime.TicksPerDay;
-        DayStep = Window == StatsWindow.TwoYears ? StatsWindowShape.BucketDays : 1;
+        if (Window == StatsWindow.TwoYears)
+        {
+            RefreshSeasonal();
+        }
+        else
+        {
+            RefreshDaily();
+        }
+
+        StartDay = CurrentDay - Math.Max(0, PlottedCount() - 1) * DayStep;
+
+        DebugSummary =
+            $"pop n={MaxSampleCount(PopulationLines)} · " +
+            $"{SelectedGoodName} stock n={StockLine.SampleCount} last={FormatValue(StockLine.LastRaw, true)} · " +
+            $"net n={NetLine.SampleCount} last={FormatValue(NetLine.LastRaw, true)}/d · " +
+            $"knowledge n={KnowledgeLine.SampleCount} last={FormatValue(KnowledgeLine.LastRaw, true)}/d · " +
+            $"culture n={CultureLine.SampleCount} last={FormatValue(CultureLine.LastRaw, true)}/d";
+    }
+
+    /// <summary>Gets the label of one plotted point: a day number in the daily window, a season in the long view.</summary>
+    /// <param name="index">The point's index, oldest first.</param>
+    /// <returns>"Day 12" or "Spring Y2".</returns>
+    public string PointLabel(int index)
+    {
+        if (Window == StatsWindow.TwoYears && index >= 0 && index < SeasonLabels.Length)
+        {
+            return SeasonLabels[index];
+        }
+
+        return $"Day {StartDay + ((long)index * DayStep)}";
+    }
+
+    private void RefreshDaily()
+    {
+        DayStep = 1;
+        SeasonLabels = [];
+        SeasonsSampled = 0;
 
         ImmutableArray<StatsLine>.Builder population = ImmutableArray.CreateBuilder<StatsLine>(_data.Tiers.Length);
         int order = 0;
@@ -184,6 +251,64 @@ public sealed class StatsViewModel : ViewModel
         SelectedGoodName = GoodNameOf(SelectedGood);
         long[] produced = ReadCopy(StatKey.Produced(SelectedGood));
         long[] consumed = ReadCopy(StatKey.Consumed(SelectedGood));
+        StockLine = Plot(_strings.Get("ui.stats.stock"), ReadCopy(StatKey.Stock(SelectedGood)), isMilli: true, StatsPalette.Stock);
+        NetLine = Plot(_strings.Get("ui.stats.net"), NetOf(produced, consumed), isMilli: true, StatsPalette.Net);
+        KnowledgeLine = Plot(
+            _strings.Get("ui.stats.knowledge"),
+            ReadCopy(StatKey.KnowledgePerDay), isMilli: true, StatsPalette.Knowledge);
+        CultureLine = Plot(
+            _strings.Get("ui.stats.culture"),
+            ReadCopy(StatKey.CulturePerDay), isMilli: true, StatsPalette.Culture);
+    }
+
+    private void RefreshSeasonal()
+    {
+        DayStep = GameTime.DaysPerSeason;
+
+        ImmutableArray<StatsLine>.Builder population = ImmutableArray.CreateBuilder<StatsLine>(_data.Tiers.Length);
+        int order = 0;
+        long seasons = 0;
+        foreach ((TierId id, string name) in _data.Tiers)
+        {
+            (long[] values, long lineSeasons) = ReadSeasonalCopy(StatKey.Residents(id));
+            seasons = Math.Max(seasons, lineSeasons);
+            population.Add(SeasonalLine(name, values, isMilli: false, StatsPalette.PopulationTier(order)));
+            order++;
+        }
+
+        PopulationLines = population.MoveToImmutable();
+
+        SelectedGoodName = GoodNameOf(SelectedGood);
+        (long[] produced, long producedSeasons) = ReadSeasonalCopy(StatKey.Produced(SelectedGood));
+        (long[] consumed, long consumedSeasons) = ReadSeasonalCopy(StatKey.Consumed(SelectedGood));
+        (long[] stock, long stockSeasons) = ReadSeasonalCopy(StatKey.Stock(SelectedGood));
+        (long[] knowledge, long knowledgeSeasons) = ReadSeasonalCopy(StatKey.KnowledgePerDay);
+        (long[] culture, long cultureSeasons) = ReadSeasonalCopy(StatKey.CulturePerDay);
+        seasons = MaxOf(seasons, producedSeasons, consumedSeasons, stockSeasons, knowledgeSeasons, cultureSeasons);
+        SeasonsSampled = seasons;
+
+        StockLine = SeasonalLine(_strings.Get("ui.stats.stock"), stock, isMilli: true, StatsPalette.Stock);
+        NetLine = SeasonalLine(_strings.Get("ui.stats.net"), NetOf(produced, consumed), isMilli: true, StatsPalette.Net);
+        KnowledgeLine = SeasonalLine(
+            _strings.Get("ui.stats.knowledge"), knowledge, isMilli: true, StatsPalette.Knowledge);
+        CultureLine = SeasonalLine(
+            _strings.Get("ui.stats.culture"), culture, isMilli: true, StatsPalette.Culture);
+
+        int points = PlottedCount();
+        ImmutableArray<string>.Builder labels = ImmutableArray.CreateBuilder<string>(points);
+        for (int i = 0; i < points; i++)
+        {
+            labels.Add(SeasonLabel(seasons - points + i));
+        }
+
+        SeasonLabels = labels.MoveToImmutable();
+
+        // Points are whole seasons: the oldest plotted point starts its season's first day.
+        StartDay = (seasons - points) * GameTime.DaysPerSeason;
+    }
+
+    private static long[] NetOf(long[] produced, long[] consumed)
+    {
         int netCount = Math.Min(produced.Length, consumed.Length);
         long[] net = new long[netCount];
         for (int i = 0; i < netCount; i++)
@@ -191,23 +316,38 @@ public sealed class StatsViewModel : ViewModel
             net[i] = checked(produced[i] - consumed[i]);
         }
 
-        StockLine = Plot(_strings.Get("ui.stats.stock"), ReadCopy(StatKey.Stock(SelectedGood)), isMilli: true, StatsPalette.Stock);
-        NetLine = Plot(_strings.Get("ui.stats.net"), net, isMilli: true, StatsPalette.Net);
-        KnowledgeLine = Plot(
-            _strings.Get("ui.stats.knowledge"),
-            ReadCopy(StatKey.KnowledgePerDay), isMilli: true, StatsPalette.Knowledge);
-        CultureLine = Plot(
-            _strings.Get("ui.stats.culture"),
-            ReadCopy(StatKey.CulturePerDay), isMilli: true, StatsPalette.Culture);
+        return net;
+    }
 
-        StartDay = CurrentDay - Math.Max(0, PlottedCount() - 1) * DayStep;
+    private static long MaxOf(long first, params long[] rest)
+    {
+        long max = first;
+        foreach (long value in rest)
+        {
+            max = Math.Max(max, value);
+        }
 
-        DebugSummary =
-            $"pop n={MaxSampleCount(PopulationLines)} · " +
-            $"{SelectedGoodName} stock n={StockLine.SampleCount} last={FormatValue(StockLine.LastRaw, true)} · " +
-            $"net n={NetLine.SampleCount} last={FormatValue(NetLine.LastRaw, true)}/d · " +
-            $"knowledge n={KnowledgeLine.SampleCount} last={FormatValue(KnowledgeLine.LastRaw, true)}/d · " +
-            $"culture n={CultureLine.SampleCount} last={FormatValue(CultureLine.LastRaw, true)}/d";
+        return max;
+    }
+
+    /// <summary>Names one season from the world start: "Spring Y2" for the sixth season.</summary>
+    /// <param name="seasonIndex">The zero-based season from the world start; negative means before the start.</param>
+    /// <returns>The display label, or an empty string when the index predates the world.</returns>
+    public string SeasonLabel(long seasonIndex)
+    {
+        if (seasonIndex < 0)
+        {
+            return string.Empty;
+        }
+
+        string season = ((Season)(seasonIndex % GameTime.SeasonsPerYear)) switch
+        {
+            Season.Spring => _strings.Get("ui.hud.season.spring"),
+            Season.Summer => _strings.Get("ui.hud.season.summer"),
+            Season.Autumn => _strings.Get("ui.hud.season.autumn"),
+            _ => _strings.Get("ui.hud.season.winter"),
+        };
+        return $"{season} Y{(seasonIndex / GameTime.SeasonsPerYear) + 1}";
     }
 
     private int PlottedCount()
@@ -254,6 +394,21 @@ public sealed class StatsViewModel : ViewModel
         long[] copy = new long[count];
         Array.Copy(_buffer, copy, count);
         return copy;
+    }
+
+    private (long[] Values, long Seasons) ReadSeasonalCopy(StatKey key)
+    {
+        (int written, long seasons) = _data.ReadSeasonalSeries(key, _seasonalBuffer);
+        long[] copy = new long[written];
+        Array.Copy(_seasonalBuffer, copy, written);
+        return (copy, seasons);
+    }
+
+    private static StatsLine SeasonalLine(string label, long[] values, bool isMilli, int colorIndex)
+    {
+        // Seasonal samples arrive as per-day averages: no further bucketing, same units as the daily window.
+        long lastRaw = values.Length == 0 ? 0 : values[^1];
+        return new StatsLine(label, values, isMilli, values.Length, lastRaw, colorIndex);
     }
 
     private StatsLine Plot(string label, long[] raw, bool isMilli, int colorIndex)

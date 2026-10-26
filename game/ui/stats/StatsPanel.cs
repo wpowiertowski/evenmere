@@ -11,17 +11,17 @@ using Godot;
 namespace Evenmere.Game.Ui.Stats;
 
 /// <summary>
-/// The statistics graphs panel (M2-22): calm line charts of population per tier, the picked good's stock and
-/// net per day, and knowledge and culture per day, all from <see cref="IStatisticsQueries.Series"/> (daily
-/// samples, newest last). It is a docked panel on the right like the inspector, shows the last 40 days, and
-/// names exact values on hover. It owns its <see cref="StatsViewModel"/>; the charts are <see cref="LineChart"/>
+/// The statistics graphs panel (M2-22, long view M2-33): calm line charts of population per tier, the picked good's stock and
+/// net per day, and knowledge and culture per day. The 40-day window plots daily samples newest last; the two-year
+/// window plots the sim's seasonal series, one point per season with season labels, and says so calmly when fewer
+/// than two seasons exist. It is a docked panel on the right like the inspector and names exact values on hover. It owns its <see cref="StatsViewModel"/>; the charts are <see cref="LineChart"/>
 /// controls. A longer view needs a seasonal series in the sim (M2 follow-up); the 40-day ring is all the panel shows.
 /// </summary>
 /// <remarks>
 /// Input: no new input actions. The close button and every control take keyboard and gamepad focus through the
 /// built-in <c>ui_*</c> actions. Debug only: <c>--demo-stats</c> opens the panel through the toggles bar for
-/// screenshots, the same way <c>--demo-buildings</c> stages the world; <c>--stats-debug</c> shows the raw
-/// series summary that proves the charts match the queries.
+/// screenshots, the same way <c>--demo-buildings</c> stages the world (<c>--demo-stats=long</c> opens it on the
+/// two-year window); <c>--stats-debug</c> shows the raw series summary that proves the charts match the queries.
 /// </remarks>
 public sealed partial class StatsPanel : PanelContainer
 {
@@ -49,6 +49,8 @@ public sealed partial class StatsPanel : PanelContainer
     private Button? _closeButton;
     private Label? _goodsLabel;
     private OptionButton? _goodsOption;
+    private Label? _windowLabel;
+    private OptionButton? _windowOption;
     private VBoxContainer? _chartsBox;
     private Label? _debugLabel;
     private bool _showDebug;
@@ -149,7 +151,7 @@ public sealed partial class StatsPanel : PanelContainer
             _demoOpened = true;
             foreach (string arg in OS.GetCmdlineUserArgs())
             {
-                if (arg == DemoStatsFlag)
+                if (arg == DemoStatsFlag || arg.StartsWith(DemoStatsFlag + "=", StringComparison.Ordinal))
                 {
                     // Screenshots travel the real toggle path when the toggles bar exists.
                     if (GetNodeOrNull<PanelToggles>(TogglesPath) is { } toggles)
@@ -159,6 +161,12 @@ public sealed partial class StatsPanel : PanelContainer
                     else
                     {
                         Open();
+                    }
+
+                    if (arg == DemoStatsFlag + "=long" && _model is not null)
+                    {
+                        _model.SetWindow(StatsWindow.TwoYears);
+                        SyncWindowOption();
                     }
 
                     break;
@@ -272,6 +280,18 @@ public sealed partial class StatsPanel : PanelContainer
         _goodsOption.ItemSelected += OnGoodSelected;
         goodsRow.AddChild(_goodsOption);
 
+        var windowRow = new HBoxContainer();
+        windowRow.AddThemeConstantOverride("separation", 8);
+        top.AddChild(windowRow);
+
+        var windowLabel = new Label();
+        _windowLabel = windowLabel;
+        windowRow.AddChild(windowLabel);
+
+        _windowOption = new OptionButton { FocusMode = FocusModeEnum.All, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        _windowOption.ItemSelected += OnWindowSelected;
+        windowRow.AddChild(_windowOption);
+
         var scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         scroll.Name = "Scroll";
         scroll.FollowFocus = true;
@@ -314,7 +334,8 @@ public sealed partial class StatsPanel : PanelContainer
     private void Retitle()
     {
         if (_strings is null || _title is null || _closeButton is null
-            || _goodsLabel is null || _goodsOption is null || _debugLabel is null)
+            || _goodsLabel is null || _goodsOption is null || _debugLabel is null
+            || _windowLabel is null || _windowOption is null)
         {
             return;
         }
@@ -324,7 +345,22 @@ public sealed partial class StatsPanel : PanelContainer
         _closeButton.Text = strings.Get("ui.stats.close");
         _closeButton.TooltipText = strings.Get("ui.stats.close.tip");
         _goodsLabel.Text = strings.Get("ui.stats.good");
+        _windowLabel.Text = strings.Get("ui.stats.window");
+        _windowOption.Clear();
+        _windowOption.AddItem(strings.Get("ui.stats.window.days"), (int)StatsWindow.Last40Days);
+        _windowOption.AddItem(strings.Get("ui.stats.window.years"), (int)StatsWindow.TwoYears);
+        SyncWindowOption();
         _debugLabel.Text = _model?.DebugSummary ?? string.Empty;
+    }
+
+    private void SyncWindowOption()
+    {
+        if (_windowOption is null || _model is null)
+        {
+            return;
+        }
+
+        _windowOption.Select((int)_model.Window);
     }
 
     private void RebuildGoodsOption()
@@ -361,6 +397,16 @@ public sealed partial class StatsPanel : PanelContainer
         _model.SelectGood(_data.Goods[(int)index].Id);
     }
 
+    private void OnWindowSelected(long index)
+    {
+        if (_model is null || index < 0 || index > (long)StatsWindow.TwoYears)
+        {
+            return;
+        }
+
+        _model.SetWindow((StatsWindow)index);
+    }
+
     private void RefreshCharts()
     {
         if (_model is null || _strings is null || _chartsBox is null || _debugLabel is null)
@@ -371,51 +417,86 @@ public sealed partial class StatsPanel : PanelContainer
         UiStrings strings = _strings;
         EnsureBlocks(strings);
 
+        bool longView = _model.Window == StatsWindow.TwoYears;
+        bool ready = !longView || _model.LongViewReady;
+        string emptyText = longView && !ready ? strings.Get("ui.stats.long.empty") : strings.Get("ui.stats.empty");
+        (string first, string last) = AxisEnds(_model, longView && ready);
+
         SetBlock(
             0,
             strings.Get("ui.stats.population.title"),
-            _model.PopulationLines,
+            ready ? _model.PopulationLines : [],
             floorZero: true,
-            _model.StartDay,
-            _model.DayStep,
-            strings);
+            first,
+            last,
+            strings,
+            emptyText);
         SetBlock(
             1,
             strings.Format("ui.stats.stock.title", ("good", _model.SelectedGoodName)),
-            [_model.StockLine],
+            ready ? [_model.StockLine] : [],
             floorZero: true,
-            _model.StartDay,
-            _model.DayStep,
-            strings);
+            first,
+            last,
+            strings,
+            emptyText);
         SetBlock(
             2,
             strings.Format("ui.stats.net.title", ("good", _model.SelectedGoodName)),
-            [_model.NetLine],
+            ready ? [_model.NetLine] : [],
             floorZero: false,
-            _model.StartDay,
-            _model.DayStep,
-            strings);
+            first,
+            last,
+            strings,
+            emptyText);
         SetBlock(
             3,
             strings.Get("ui.stats.knowledge.title"),
-            [_model.KnowledgeLine],
+            ready ? [_model.KnowledgeLine] : [],
             floorZero: true,
-            _model.StartDay,
-            _model.DayStep,
-            strings);
+            first,
+            last,
+            strings,
+            emptyText);
         SetBlock(
             4,
             strings.Get("ui.stats.culture.title"),
-            [_model.CultureLine],
+            ready ? [_model.CultureLine] : [],
             floorZero: true,
-            _model.StartDay,
-            _model.DayStep,
-            strings);
+            first,
+            last,
+            strings,
+            emptyText);
 
         if (_debugLabel.Visible)
         {
             _debugLabel.Text = _model.DebugSummary;
         }
+    }
+
+    private static (string First, string Last) AxisEnds(StatsViewModel model, bool seasons)
+    {
+        if (seasons && model.SeasonLabels.Length > 0)
+        {
+            return (model.SeasonLabels[0], model.SeasonLabels[^1]);
+        }
+
+        long lastDay = model.StartDay + ((long)Math.Max(0, PlottedWidth(model) - 1) * model.DayStep);
+        return ($"Day {model.StartDay}", $"Day {lastDay}");
+    }
+
+    private static int PlottedWidth(StatsViewModel model)
+    {
+        int n = 0;
+        foreach (StatsLine line in model.PopulationLines)
+        {
+            n = Math.Max(n, line.Values.Length);
+        }
+
+        n = Math.Max(n, model.StockLine.Values.Length);
+        n = Math.Max(n, model.NetLine.Values.Length);
+        n = Math.Max(n, model.KnowledgeLine.Values.Length);
+        return Math.Max(n, model.CultureLine.Values.Length);
     }
 
     private void EnsureBlocks(UiStrings strings)
@@ -445,11 +526,10 @@ public sealed partial class StatsPanel : PanelContainer
             _blocks.Add(block);
         }
 
-        string latest = strings.Get("ui.stats.latest");
+        string latestWord = strings.Get("ui.stats.latest");
         foreach (ChartBlock block in _blocks)
         {
-            block.LatestWord = latest;
-            block.EmptyText = strings.Get("ui.stats.empty");
+            block.LatestWord = latestWord;
         }
     }
 
@@ -458,9 +538,10 @@ public sealed partial class StatsPanel : PanelContainer
         string title,
         ImmutableArray<StatsLine> lines,
         bool floorZero,
-        long startDay,
-        int dayStep,
-        UiStrings strings)
+        string firstLabel,
+        string lastLabel,
+        UiStrings strings,
+        string emptyText)
     {
         ChartBlock block = _blocks[index];
         block.Title.Text = title;
@@ -481,19 +562,14 @@ public sealed partial class StatsPanel : PanelContainer
             latest.Append(StatsViewModel.FormatValue(line.Values.Length == 0 ? 0 : line.Values[^1], line.IsMilli));
         }
 
-        block.LatestText = $"{block.LatestWord}: {(latest.Length == 0 ? strings.Get("ui.stats.empty") : latest)}";
-        block.Chart.SetData(chartLines, (int)Math.Clamp(startDay, int.MinValue, int.MaxValue), dayStep, block.EmptyText);
-        UpdateInfo(block, startDay, dayStep);
+        block.LatestText = $"{block.LatestWord}: {(latest.Length == 0 ? emptyText : latest)}";
+        block.Chart.SetData(chartLines, firstLabel, lastLabel, emptyText);
+        UpdateInfo(block);
     }
 
     private void OnHover(ChartBlock block)
     {
-        if (_model is null)
-        {
-            return;
-        }
-
-        UpdateInfo(block, _model.StartDay, _model.DayStep);
+        UpdateInfo(block);
     }
 
     private static string ChartKindName(int kind) => kind switch
@@ -505,8 +581,13 @@ public sealed partial class StatsPanel : PanelContainer
         _ => "Culture",
     };
 
-    private static void UpdateInfo(ChartBlock block, long startDay, int dayStep)
+    private void UpdateInfo(ChartBlock block)
     {
+        if (_model is null)
+        {
+            return;
+        }
+
         int hover = block.Chart.HoverIndex;
         if (hover < 0 || block.Lines.Length == 0)
         {
@@ -514,10 +595,9 @@ public sealed partial class StatsPanel : PanelContainer
             return;
         }
 
-        long day = startDay + ((long)hover * dayStep);
+        string where = _model.PointLabel(hover);
         var text = new System.Text.StringBuilder();
-        text.Append("Day ");
-        text.Append(day);
+        text.Append(where);
         text.Append(": ");
         bool first = true;
         foreach (StatsLine line in block.Lines)
@@ -575,7 +655,6 @@ public sealed partial class StatsPanel : PanelContainer
         public ImmutableArray<StatsLine> Lines { get; set; } = [];
         public string LatestText { get; set; } = string.Empty;
         public string LatestWord { get; set; } = "Latest";
-        public string EmptyText { get; set; } = "No data yet.";
     }
 
     private sealed class SimHostStatsData : IStatsData
@@ -613,5 +692,8 @@ public sealed partial class StatsPanel : PanelContainer
 
         public int ReadSeries(StatKey key, Span<long> destination) =>
             _host.Query.Statistics.Series(key, destination);
+
+        public (int Written, long Seasons) ReadSeasonalSeries(StatKey key, Span<long> destination) =>
+            _host.Query.Statistics.SeasonalSeries(key, destination);
     }
 }

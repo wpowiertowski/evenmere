@@ -9,8 +9,8 @@ public enum StatsWindow
     Last40Days = 0,
 
     /// <summary>
-    /// Up to two years, averaged into 10-day buckets (the sim's own season length), so long trends read at a
-    /// glance. The sim keeps 40 daily samples in M2, so this view shows what history exists, up to four buckets.
+    /// Up to two years: one point per season from the sim's seasonal series (eight seasons deep), so long trends
+    /// read at a glance. With fewer than two seasons sampled the panel says so instead of drawing.
     /// </summary>
     TwoYears = 1,
 }
