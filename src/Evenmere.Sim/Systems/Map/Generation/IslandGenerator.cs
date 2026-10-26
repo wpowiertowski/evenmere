@@ -1,5 +1,10 @@
+using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 using Evenmere.Content;
+using Evenmere.Content.Definitions;
+using Evenmere.Content.Maps;
 using Evenmere.Core.Ids;
+using Evenmere.Core.Numerics;
 
 namespace Evenmere.Sim.Systems.Map.Generation;
 
@@ -137,5 +142,96 @@ public static class IslandGenerator
         RiverTracer.FillTinyPockets(map, content);
         FertilityPainter.Paint(map, seed, content);
         return map;
+    }
+
+    /// <summary>
+    /// Generates the finished island for a new game: the M2-01 heightmap plus the M2-02a terrain layers, M2-02b regions
+    /// and discoveries, and a hall site chosen by the start guarantee. When the island fails the guarantee it is
+    /// re-seeded with a deterministic sub-seed (recorded in <c>MapDef.SubSeed</c>), up to 16 attempts. Like the other
+    /// entry points, a pure function of <c>(seed, size, content)</c>: the same arguments give the same island on every CPU.
+    /// </summary>
+    /// <param name="seed">The generator seed.</param>
+    /// <param name="size">The width and height in tiles: 256, 320 or 384.</param>
+    /// <param name="content">The loaded content, which must define the island terrains, the hall, the start goods and the discovery kinds.</param>
+    /// <returns>The finished island, ready to pass as <c>NewGameOptions.Map</c>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="content"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="size"/> is not 256, 320 or 384.</exception>
+    /// <exception cref="KeyNotFoundException">The content does not define a terrain, good or building this generator needs.</exception>
+    /// <exception cref="InvalidOperationException">No sub-seed satisfied the start guarantee.</exception>
+    public static MapDef Generate(int seed, int size, ContentDb content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        if (size != MinSize && size != DefaultSize && size != MaxSize)
+        {
+            throw new ArgumentOutOfRangeException(nameof(size), size, $"A generated island is {MinSize}, {DefaultSize} or {MaxSize} tiles across.");
+        }
+
+        for (int attempt = 0; attempt < StartGuarantee.MaxAttempts; attempt++)
+        {
+            int effective = attempt == 0 ? seed : unchecked(seed ^ (attempt * unchecked((int)0x9E3779B9)));
+            GeneratedHeightmap map = GenerateTerrain(effective, size, content);
+            int regions = RegionBuilder.Build(map, effective, content);
+            MapDiscovery[] discoveries = DiscoveryPlacer.Place(map, effective, content);
+            MapStartSite site = StartGuarantee.FindStartSite(map, content);
+            MapDef island = Assemble(seed, map, content, regions, site, discoveries, (byte)attempt);
+            if (StartGuarantee.IsSatisfied(island, content))
+            {
+                return island;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Seed {seed} at size {size} failed the start guarantee on all {StartGuarantee.MaxAttempts} sub-seeds; " +
+            "report the seed rather than raising the attempt cap (M2-02b).");
+    }
+
+    // Converts a finished heightmap into the immutable map definition the rest of the simulation loads: terrain
+    // features by terrain name (the same rule the authored loader uses), one generated region name per region, and
+    // the starter stock that every Era I island begins with. The arrays are freshly generated for this call, so they
+    // transfer without copying, exactly as MapLoader does for authored maps.
+    private static MapDef Assemble(
+        int seed,
+        GeneratedHeightmap map,
+        ContentDb content,
+        int regions,
+        MapStartSite site,
+        MapDiscovery[] discoveries,
+        byte subSeed)
+    {
+        var features = new MapTerrainFeatures[content.Terrains.Count];
+        for (int i = 0; i < features.Length; i++)
+        {
+            features[i] = MapTerrainRules.FeaturesOf(content.Terrains.Names[i]);
+        }
+
+        var names = new MapRegionName[regions];
+        for (int r = 0; r < regions; r++)
+        {
+            names[r] = new MapRegionName((ushort)r, $"region.generated.{r}");
+        }
+
+        GoodAmount[] stock = new[]
+        {
+            new GoodAmount(content.IdOf<GoodId>("timber"), Amount.FromUnits(40)),
+            new GoodAmount(content.IdOf<GoodId>("fish"), Amount.FromUnits(20)),
+            new GoodAmount(content.IdOf<GoodId>("wood"), Amount.FromUnits(10)),
+        };
+        Array.Sort(stock, static (a, b) => a.Good.Value.CompareTo(b.Good.Value));
+
+        return MapDef.CreateGenerated(
+            $"generated_{seed}_{map.Size}",
+            map.Size,
+            ImmutableCollectionsMarshal.AsImmutableArray(map.Terrain),
+            ImmutableCollectionsMarshal.AsImmutableArray(map.Elevation),
+            ImmutableCollectionsMarshal.AsImmutableArray(map.RiverWidth),
+            ImmutableCollectionsMarshal.AsImmutableArray(map.Region),
+            ImmutableCollectionsMarshal.AsImmutableArray(map.Deposit),
+            ImmutableCollectionsMarshal.AsImmutableArray(map.Fertility),
+            ImmutableCollectionsMarshal.AsImmutableArray(features),
+            site,
+            ImmutableCollectionsMarshal.AsImmutableArray(stock),
+            ImmutableCollectionsMarshal.AsImmutableArray(names),
+            subSeed,
+            ImmutableCollectionsMarshal.AsImmutableArray(discoveries));
     }
 }

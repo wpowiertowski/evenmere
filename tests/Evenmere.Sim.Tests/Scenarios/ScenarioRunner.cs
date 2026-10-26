@@ -3,7 +3,10 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Evenmere.Content;
+using Evenmere.Content.Definitions;
 using Evenmere.Content.Maps;
+using Evenmere.Sim.Systems.Construction.Commands;
+using Evenmere.Sim.Systems.Roads.Commands;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Sim.Diagnostics;
@@ -50,7 +53,8 @@ internal static class ScenarioRunner
         ContentDb content = LoadContent(scenario);
         MapDef? mapDef = LoadMap(scenario, content);
         JsonSerializerOptions json = ScenarioJson.CreateOptions(content);
-        List<PreparedCommand> commands = PrepareCommands(scenario, content, json);
+        bool generated = ScenarioJson.GeneratedSource.TryParse(scenario.Map, out _, out _);
+        List<PreparedCommand> commands = PrepareCommands(scenario, content, json, generated);
         List<(StockExpectation Expectation, GoodId Good)> stockChecks = PrepareStock(scenario, content);
         List<(ResidentExpectation Expectation, TierId Tier)> residentChecks = PrepareResidents(scenario, content);
         CheckEventNames(scenario);
@@ -60,11 +64,16 @@ internal static class ScenarioRunner
 
         var events = new List<SimEvent>();
         int next = 0;
+        ScenarioJson.GeneratedSiteContext? sites = null;
         for (int tick = 1; tick <= scenario.Ticks; tick++)
         {
             while (next < commands.Count && commands[next].Tick == tick)
             {
-                sim.Enqueue(ResolveCommand(scenario, sim, commands[next], json));
+                foreach (Command command in ResolveCommand(scenario, sim, content, commands[next], json, ref sites))
+                {
+                    sim.Enqueue(command);
+                }
+
                 next++;
             }
 
@@ -122,12 +131,18 @@ internal static class ScenarioRunner
     }
 
     // Maps live outside the content database, so the named map is loaded through MapLoader with the scenario's content
-    // roots. A null map keeps the empty world the harness uses.
+    // roots. A null map keeps the empty world the harness uses. A generated:<seed>:<size> source builds a generated
+    // island instead (M2-02b); hand-authored map names never contain a colon.
     private static MapDef? LoadMap(ScenarioDefinition scenario, ContentDb content)
     {
         if (scenario.Map is null)
         {
             return null;
+        }
+
+        if (ScenarioJson.GeneratedSource.TryParse(scenario.Map, out int seed, out int size))
+        {
+            return ScenarioJson.GeneratedSource.Load(seed, size, content);
         }
 
         string folder = ScenarioPaths.Resolve(scenario.ContentPath);
@@ -146,7 +161,7 @@ internal static class ScenarioRunner
     // Every command is resolved and deserialised before the first tick, so a mistake in the last command fails at once.
     // An entity id may be written as { "at": [x, y] }, which the runner resolves to the building on that tile when the
     // command is enqueued, at its own tick. The shape is checked here, up front; the tile must hold a building then.
-    private static List<PreparedCommand> PrepareCommands(ScenarioDefinition scenario, ContentDb content, JsonSerializerOptions json)
+    private static List<PreparedCommand> PrepareCommands(ScenarioDefinition scenario, ContentDb content, JsonSerializerOptions json, bool generated)
     {
         CommandRegistry registry = CommandRegistry.Default;
         var prepared = new List<PreparedCommand>(scenario.Commands.Count);
@@ -160,9 +175,19 @@ internal static class ScenarioRunner
 
             List<AtResolution> atForms = ReadAtForms(scenario, entry, registration);
             JsonElement args = atForms.Count == 0 ? entry.Args : SubstitutePlaceholders(entry.Args, atForms);
+            ScenarioJson.SiteRequest? site = null;
+            if (generated)
+            {
+                (site, args) = ScenarioJson.ReadSite(entry.Type, args, content, where);
+            }
+            else if (args.ValueKind == JsonValueKind.Object && args.TryGetProperty("site", out _))
+            {
+                throw new ScenarioException($"{where}.args.site: site-resolved placements need a generated:<seed>:<size> map.");
+            }
+
             try
             {
-                prepared.Add(new PreparedCommand(entry.Tick, entry.Index, CommandRegistry.Deserialize(registration, args, json), registration, entry.Args, atForms));
+                prepared.Add(new PreparedCommand(entry.Tick, entry.Index, CommandRegistry.Deserialize(registration, args, json), registration, args, atForms, site));
             }
             catch (Exception ex) when (ex is JsonException or NotSupportedException or InvalidOperationException)
             {
@@ -262,12 +287,42 @@ internal static class ScenarioRunner
         return JsonDocument.Parse(patched.ToJsonString()).RootElement;
     }
 
-    // Enqueues a prepared command, resolving its tile forms against the island as it stands on the command's tick.
-    private static Command ResolveCommand(ScenarioDefinition scenario, Simulation sim, PreparedCommand prepared, JsonSerializerOptions json)
+    // Resolves a command's tile forms ({at:} and site:) against the island as it stands. A site-resolved building
+    // comes back with its dirt connector first, so the building applies with road access.
+    private static List<Command> ResolveCommand(
+        ScenarioDefinition scenario,
+        Simulation sim,
+        ContentDb content,
+        PreparedCommand prepared,
+        JsonSerializerOptions json,
+        ref ScenarioJson.GeneratedSiteContext? sites)
     {
+        if (prepared.Site is not null)
+        {
+            sites ??= ScenarioJson.GeneratedSiteContext.Create(sim, content);
+            Footprint footprint = content.Get(prepared.Site.Type).Footprint;
+            try
+            {
+                ScenarioJson.SitePlacement placement = sites.FindSite(sim, prepared.Site.Type, footprint.Width, footprint.Height);
+                var pair = new List<Command>();
+                if (placement.Road.Length > 0)
+                {
+                    pair.Add(new PlaceRoad(placement.Road, content.Required.DirtRoad));
+                }
+
+                pair.Add(new PlaceBuilding(prepared.Site.Type, placement.X, placement.Y, placement.Rotation));
+                return pair;
+            }
+            catch (ScenarioException ex)
+            {
+                throw new ScenarioException(
+                    $"{scenario.DisplayName}: commands[{prepared.Index}] ({content.NameOf(prepared.Site.Type)}): {ex.Message}", ex);
+            }
+        }
+
         if (prepared.AtResolutions.Count == 0)
         {
-            return prepared.Command;
+            return [prepared.Command];
         }
 
         var node = JsonNode.Parse(prepared.Args.GetRawText());
@@ -291,7 +346,7 @@ internal static class ScenarioRunner
         JsonElement args = JsonDocument.Parse(patched.ToJsonString()).RootElement;
         try
         {
-            return CommandRegistry.Deserialize(prepared.Registration, args, json);
+            return [CommandRegistry.Deserialize(prepared.Registration, args, json)];
         }
         catch (Exception ex) when (ex is JsonException or NotSupportedException or InvalidOperationException)
         {
@@ -423,7 +478,7 @@ internal static class ScenarioRunner
         return (cut < 0 ? message : message[..cut]).Trim();
     }
 
-    private sealed record PreparedCommand(int Tick, int Index, Command Command, CommandRegistration Registration, JsonElement Args, IReadOnlyList<AtResolution> AtResolutions);
+    private sealed record PreparedCommand(int Tick, int Index, Command Command, CommandRegistration Registration, JsonElement Args, IReadOnlyList<AtResolution> AtResolutions, ScenarioJson.SiteRequest? Site);
 
     /// <summary>One <c>{ "at": [x, y] }</c> tile form in a command's args: the args property it sits on and the tile.</summary>
     /// <param name="Property">The args property name as written in the file, which names an entity id of the command.</param>
