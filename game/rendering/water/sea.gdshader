@@ -8,45 +8,13 @@
 shader_type spatial;
 render_mode blend_mix;
 
-uniform sampler2D shore_tex : filter_linear_mipmap, repeat_disable;
-uniform vec2 map_size = vec2(128.0, 128.0);
-uniform vec3 shallow_color : source_color = vec3(0.23, 0.52, 0.58);
-uniform vec3 reef_color : source_color = vec3(0.2, 0.6, 0.55);
-uniform vec3 deep_color : source_color = vec3(0.04, 0.2, 0.36);
-uniform vec3 foam_color : source_color = vec3(0.92, 0.96, 0.95);
-uniform vec3 ripple_color : source_color = vec3(0.18, 0.29, 0.33);
+#include "sea_common.gdshaderinc"
+
+// M2-32: foam width, warm tint and offshore density below are the classic values. The hand-drawn
+// variant (sea_hd.gdshader) overrides them for its own tuning.
 uniform float foam_width_tiles = 2.5;
-uniform float max_distance_tiles = 12.0;
-
-// The late-afternoon warmth on the neutral key, linear space (the light.key family); the post pass
-// grades the frame warmer still. The scene sun stays neutral white in every mode.
 uniform vec3 warm_key = vec3(1.0, 1.0, 1.0); // Neutral: the warmth lives on the scene sun (LookScene).
-
-// The scene ambient (Main.tscn WorldEnvironment colour x energy) lifts every band; the material setup reads
-// the live environment so the single source stays in the scene.
-uniform vec3 ambient_color : source_color = vec3(0.51, 0.53, 0.55);
-
-// Band boundaries in NdotL, matching the terrain pass.
-uniform float band_high = 0.5;
-uniform float band_low = 0.0;
-uniform float band_softness = 0.02;
-uniform float band_mid = 0.75;
-uniform float band_shade = 0.45;
-
-// The look toggle: 0 restores the M1 smooth shading and still water, 1 bands the key light and draws the
-// ripple strokes with the broken foam. The renderer sets it from the active look mode.
-uniform float look_amount = 0.0;
-
-// Ripple strokes: the ART-04 hand-placed arcs where bound (about 40 per tile at a 12-tile period, so roughly one
-// stroke per four tiles), procedural wobbled arcs otherwise. The painted tile runs west-east; near shores the
-// transposed sample blends in by the shore tangent, which stays seamless (transpose maps tiles to tiles).
-uniform sampler2D ripple_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
-uniform float has_ripple_tex = 0.0;
-const float RIPPLE_MID = 0.2159;
-const float RIPPLE_WORLD_TILES = 12.0;
 uniform float stroke_density_offshore = 0.5;
-uniform float stroke_density_shore = 1.0;
-uniform float stroke_sharpness = 0.9;
 
 varying vec3 world_pos;
 
@@ -54,13 +22,6 @@ void vertex() {
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	VERTEX.y += sin(TIME * 0.8 + VERTEX.x * 0.35 + VERTEX.z * 0.27) * 0.06
 		+ sin(TIME * 1.7 + VERTEX.z * 0.9 - VERTEX.x * 0.5) * 0.03;
-}
-
-float hash12(vec2 p)
-{
-	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-	p3 += dot(p3, p3.yzx + 33.33);
-	return fract((p3.x + p3.y) * p3.z);
 }
 
 void fragment() {

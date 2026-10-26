@@ -20,8 +20,17 @@ public static class LookScene
     // linear light math can land on the tokens through it. The hand-drawn look uses the linear tonemap:
     // WYSIWYG palette response. Classic keeps the M1 tonemap untouched.
 
+    /// <summary>The shared palette path for data-driven scene colours (background sea tone).</summary>
+    private static readonly string _palettePath = "res://data/visuals/palette.tres";
+
     /// <summary>The cool fill ambient the key is matched against, linear space to match the shader maths.
     /// Calibrated 2026-10-26 with the warm sun: together they land a lit flat tile on its token.</summary>
+    /// <remarks>
+    /// The engine linearises <c>Color</c> inputs (node properties and <c>source_color</c> shader uniforms)
+    /// on use, treating them as sRGB (M2-32 measurement). The environment therefore stores the sRGB encoding
+    /// of this intent (<see cref="ToSrgb"/>); the vertex-colour path keeps pre-linearised values instead,
+    /// because vertex buffers pass through raw. Classic runs never reach here and keep the M1 scene values.
+    /// </remarks>
     public static readonly Color AmbientColor = new(0.2f, 0.38f, 0.65f);
 
     /// <summary>The ambient energy.</summary>
@@ -59,9 +68,14 @@ public static class LookScene
         Godot.Environment? environment = holder?.Environment;
         if (environment is not null)
         {
-            environment.AmbientLightColor = AmbientColor;
+            environment.AmbientLightColor = ToSrgb(AmbientColor);
             environment.AmbientLightEnergy = AmbientEnergy;
             environment.TonemapMode = Godot.Environment.ToneMapper.Linear;
+            // The far sea meets the background with no seam: the clear colour is the deep-water token,
+            // read from the shared palette (not hardcoded) so a palette change cannot bring the seam back.
+            // Node colours are treated as sRGB, so the token goes in raw.
+            // Classic returns early above and keeps the M1 sky.
+            environment.BackgroundColor = DeepWaterColor();
             applied = true;
         }
         else
@@ -75,5 +89,31 @@ public static class LookScene
         }
 
         return applied;
+    }
+
+    // The sRGB encoding (the inverse of Colour.SrgbToLinear): the engine treats incoming colours as sRGB,
+    // so the scene stores the encoding of a linear intent. Pure, Godot-free maths, unit-testable without the engine.
+    private static Color ToSrgb(Color linear)
+    {
+        return new Color(Encode(linear.R), Encode(linear.G), Encode(linear.B), linear.A);
+    }
+
+    // The deep-water background tone, read from the shared palette so it always matches the far sea.
+    // Falls back to the palette.md water.deep hex when the palette resource is missing.
+    private static Color DeepWaterColor()
+    {
+        if (GD.Load<Resource>(_palettePath) is LookPalette palette)
+        {
+            return palette.SrgbOf("water.deep");
+        }
+
+        GD.PushWarning("[Evenmere] Look: missing palette; using the water.deep fallback.");
+        return Color.FromHtml("1A3B61");
+    }
+
+    private static float Encode(float channel)
+    {
+        float clamped = Math.Clamp(channel, 0f, 1f);
+        return clamped <= 0.0031308f ? 12.92f * clamped : (1.055f * MathF.Pow(clamped, 1f / 2.4f)) - 0.055f;
     }
 }

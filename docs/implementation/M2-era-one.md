@@ -98,7 +98,7 @@ file per card as listed; never edit another card's file.
 | M2-29 | Look development: hand-drawn rendering prototype | game | M1 gate | done |
 | M2-30 | Upgrade lines: design pass, crew stat and Era I upgrades | human + content | M2-00 | done |
 | M2-31 | Window and input polish from the M1 playtest | game | M1 gate | done |
-| M2-32 | Look tuning: water strokes, terrain calibration, coast and map edge | game | M2-29 | todo |
+| M2-32 | Look tuning: water strokes, terrain calibration, coast and map edge | game | M2-29 | done |
 | M2-33 | Long statistics history: a seasonal series | sim + game | M2-22 | done |
 
 ---

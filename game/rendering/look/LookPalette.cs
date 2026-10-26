@@ -38,4 +38,26 @@ public sealed partial class LookPalette : Resource
 
         return new Color(0.7f, 0.3f, 0.7f).SrgbToLinear();
     }
+
+    /// <summary>
+    /// Looks up the raw sRGB colour for a palette token, for shader <c>uniform</c> slots. The engine linearises
+    /// <c>source_color</c> uniform colours on upload, so uniform-bound colours must stay sRGB (M2-32); only the
+    /// vertex-colour path (<see cref="ColourOf"/>) pre-linearises, because vertex buffers pass through raw.
+    /// </summary>
+    /// <param name="token">The token, such as <c>ink.water</c>.</param>
+    /// <returns>The authored sRGB palette colour, or a magenta fallback when the token has no entry.</returns>
+    public Color SrgbOf(string token)
+    {
+        if (Colors.TryGetValue(token, out Color colour))
+        {
+            return colour;
+        }
+
+        if (_warned.Add(token))
+        {
+            GD.PushWarning($"[Evenmere] Look: no palette token '{token}'; using the fallback.");
+        }
+
+        return new Color(0.7f, 0.3f, 0.7f);
+    }
 }

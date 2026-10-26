@@ -3,6 +3,7 @@ using Evenmere.Game.Data.Visuals.Terrain;
 using Evenmere.Game.Host;
 using Evenmere.Game.Rendering.Look;
 using Evenmere.Game.Rendering.Camera;
+using Evenmere.Game.Rendering.Water;
 using Evenmere.Sim.Queries;
 using Evenmere.Sim.Queries.Types;
 using Godot;
@@ -252,6 +253,13 @@ public sealed partial class TerrainRenderer : Node3D
         Color sceneAmbient = SceneAmbient();
         _material.SetShaderParameter("ambient_color", sceneAmbient);
 
+        // A coast-distance texture for smooth beach transitions (M2-32): land tiles take a beach tint
+        // fading with distance to open water, blended in-shader only when the look is on, so classic keeps
+        // its hard tile edges pixel-exact. Uniforms take sRGB colours (see WaterRenderer).
+        _material.SetShaderParameter("coast_tex", BakeCoastTexture(map));
+        _material.SetShaderParameter("coast_map_size", new Vector2(map.Width, map.Height));
+        _material.SetShaderParameter("beach_color", palette.SrgbOf("beach"));
+
         // Classic restores the M1 materials: smooth shading and the mud riverbed under the M1 strip colours.
         _material.SetShaderParameter("look_amount", LookSettings.ActiveLook == LookMode.HandDrawn ? 1f : 0f);
         if (LookSettings.ActiveLook != LookMode.HandDrawn)
@@ -321,6 +329,41 @@ public sealed partial class TerrainRenderer : Node3D
         }
 
         return environment.AmbientLightColor * environment.AmbientLightEnergy;
+    }
+
+    // Bakes the beach-blend mask: land tiles bordering open water take 1.0, fading to 0.0 about a tile and
+    // a half inland; open water takes 0.0. Uploaded once as a linear mask (single channel, no colour).
+    private ImageTexture BakeCoastTexture(IMapQueries map)
+    {
+        byte[] distance = ShoreDistanceField.Compute(map.Width, map.Height, (x, y) => IsOpenWater(map, x, y));
+        // Rgba8, not R8: single-channel mipmap generation comes out white on this driver, while the
+        // four-channel path (the same one the water distance field uses) downsamples correctly.
+        var image = Image.CreateEmpty(map.Width, map.Height, false, Image.Format.Rgba8);
+        for (int y = 0; y < map.Height; y++)
+        {
+            for (int x = 0; x < map.Width; x++)
+            {
+                int d = distance[(y * map.Width) + x];
+                float blend = d <= 0 ? 0f : Math.Max(0f, 1f - ((d - 1) / 0.75f));
+                image.SetPixel(x, y, new Color(blend, blend, blend));
+            }
+        }
+
+        int rim = 0; int land = 0; int water = 0; long total = 0;
+        for (int i = 0; i < distance.Length; i++) { total += distance[i]; if (distance[i] == 1) { rim++; } else if (distance[i] == 0) { water++; } else { land++; } }
+        GD.Print("[Evenmere] Terrain: coast bake water=" + water + " rim=" + rim + " land=" + land + " meanDist=" + ((float)total / distance.Length).ToString("F2"));
+        image.GenerateMipmaps();
+        return ImageTexture.CreateFromImage(image);
+    }
+
+    // Whether tile (x, y) is open water for the beach blend: sea, deep water or reef. Rivers keep their
+    // own banks (the river strips ink them), so they do not count.
+    private bool IsOpenWater(IMapQueries map, int x, int y)
+    {
+        TileInfo tile = map.GetTile(x, y);
+        string name = _host?.Content.Terrains.Names[tile.Terrain.Value] ?? string.Empty;
+        WaterKind kind = TerrainSurface.Classify(name, (tile.Features & TileFeatures.River) != 0);
+        return kind is WaterKind.Sea or WaterKind.Deep or WaterKind.Reef;
     }
 
     private int ChunksX() => _chunks.GetLength(0);
