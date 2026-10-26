@@ -499,7 +499,7 @@ public sealed class StructureTests
         ContentLoadResult result = content.Load();
 
         result.Db.ShouldBeNull();
-        result.Raw.Items.Length.ShouldBe(25 + 1);
+        result.Raw.Items.Length.ShouldBe(26 + 1);
         RawItemSnapshot(result, ContentType.Buildings, "sawpit").Json.ShouldNotBeNull();
         result.Raw.ContentHash.ShouldNotBe(0UL);
     }

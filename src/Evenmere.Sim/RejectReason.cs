@@ -42,4 +42,19 @@ public enum RejectReason
 
     /// <summary>A style card is already slotted, and only one style may be active at a time. (M2-07.)</summary>
     StyleAlreadySlotted = 11,
+
+    /// <summary>A festival is not unlocked, or the content does not define it. (M2-08.)</summary>
+    FestivalNotUnlocked = 12,
+
+    /// <summary>A festival cannot be held in the current season. (M2-08.)</summary>
+    WrongSeason = 13,
+
+    /// <summary>A festival is already running, and only one runs island-wide at a time. (M2-08.)</summary>
+    FestivalAlreadyRunning = 14,
+
+    /// <summary>A festival type was already held this year. (M2-08.)</summary>
+    FestivalHeldThisYear = 15,
+
+    /// <summary>The pool cannot pay a festival's discounted cost. (M2-08.)</summary>
+    FestivalGoodsShort = 16,
 }

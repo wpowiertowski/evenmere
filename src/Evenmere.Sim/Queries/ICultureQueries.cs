@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
+using Evenmere.Sim.Systems.Culture.Festivals;
 using Evenmere.Sim.Systems.Culture.Traditions;
 
 namespace Evenmere.Sim.Queries;
@@ -65,4 +66,26 @@ public interface ICultureQueries
     /// </summary>
     /// <returns>The slotted style card, or <see langword="null"/> when none is slotted.</returns>
     TraditionId? ActiveStyle();
+
+    /// <summary>
+    /// Tests whether a festival is running island-wide. While one runs, every house's decline timer is paused.
+    /// (M2-08.)
+    /// </summary>
+    /// <returns><see langword="true"/> while a festival runs.</returns>
+    bool IsFestivalRunning();
+
+    /// <summary>
+    /// Gets the running festival, if one is running. (M2-08.)
+    /// </summary>
+    /// <returns>The run with its ground and days left, or <see langword="null"/> when none runs.</returns>
+    FestivalRun? ActiveFestival();
+
+    /// <summary>
+    /// Counts how often a festival type was held in a year. Each type may be held once per year, so this is 1
+    /// when the type was held that year and 0 otherwise. (M2-08.)
+    /// </summary>
+    /// <param name="festival">The festival.</param>
+    /// <param name="year">The calendar year.</param>
+    /// <returns>1 when the type was held that year; 0 otherwise.</returns>
+    int FestivalsHeldInYear(FestivalId festival, int year);
 }

@@ -1,0 +1,11 @@
+{
+  "id": "test_harvest",
+  "seasons": [],
+  "cost": { "fish": 20, "wood": 10 },
+  "days": 5,
+  "culturePerDay": 5,
+  "seasonBonus": { "season": "autumn", "percent": 50 },
+  "effects": [
+    { "modifier": { "stat": "settlerArrival", "percent": 50 } }
+  ]
+}

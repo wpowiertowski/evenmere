@@ -6,6 +6,7 @@ using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Advisors.Commands;
 using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
+using Evenmere.Sim.Systems.Culture.Festivals.Commands;
 using Evenmere.Sim.Systems.Culture.Traditions.Commands;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
@@ -113,6 +114,9 @@ public sealed class CommandLogCoverageTests
                 _ when type == typeof(SetCivicTarget) => new SetCivicTarget(content.IdOf<CivicId>("hearth_and_shrine")),
                 _ when type == typeof(SetCivicQueue) => new SetCivicQueue([content.IdOf<CivicId>("hearth_and_shrine")]),
                 _ when type == typeof(SetTradition) => new SetTradition(TraditionSlotType.Hearth, 0, null),
+                // Slice content defines no festivals yet, so the sample names ID 0 and rides the default
+                // passthrough. M2-13b (festival content) adds the RemapCommand case and names a real festival.
+                _ when type == typeof(HoldFestival) => new HoldFestival(new EntityId(7), FestivalId.From(0)),
                 _ when type == typeof(DismissAdvice) => new DismissAdvice(3),
                 _ => null,
             };

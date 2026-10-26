@@ -1,0 +1,9 @@
+{
+  "id": "test_festival_ground",
+  "category": "culture",
+  "era": 1,
+  "footprint": [2, 2],
+  "buildDays": 0,
+  "start": true,
+  "tags": ["festival_ground"]
+}

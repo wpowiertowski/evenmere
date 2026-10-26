@@ -235,6 +235,10 @@
         "Member": "property Done",
         "Type": "System.UInt64[]"
       },
+      "10": {
+        "Member": "property FestivalRunning",
+        "Type": "System.Boolean"
+      },
       "2": {
         "Member": "property Inspired",
         "Type": "System.UInt64[]"
@@ -258,6 +262,28 @@
       "7": {
         "Member": "property Slotted",
         "Type": "Evenmere.Sim.Systems.Culture.Traditions.SlottedTradition[]"
+      },
+      "8": {
+        "Member": "property Active",
+        "Type": "System.Nullable\u00601\u003CEvenmere.Sim.Systems.Culture.Festivals.FestivalRun\u003E"
+      },
+      "9": {
+        "Member": "property FestivalLastHeldYear",
+        "Type": "System.Int32[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Culture.Festivals.FestivalRun": {
+      "0": {
+        "Member": "property Festival",
+        "Type": "Evenmere.Core.Ids.FestivalId"
+      },
+      "1": {
+        "Member": "property Ground",
+        "Type": "Evenmere.Core.Ids.EntityId"
+      },
+      "2": {
+        "Member": "property DaysLeft",
+        "Type": "System.Int32"
       }
     },
     "Evenmere.Sim.Systems.Culture.Traditions.SlottedTradition": {

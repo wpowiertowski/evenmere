@@ -22,6 +22,7 @@ internal sealed class FakeProgressionQueries : IProgressionQueries
     private readonly HashSet<TerrainAccess> _access = [];
     private readonly HashSet<(FeatureKind Feature, GreatWorkTypeId? Type)> _features = [];
     private readonly HashSet<TraditionId> _traditions = [];
+    private readonly HashSet<FestivalId> _festivals = [];
     private readonly int[] _traditionSlots = new int[Enum.GetValues<TraditionSlotType>().Length];
     private readonly List<(Stat Stat, ModifierContribution Contribution, Func<ModifierContext, bool>? AppliesTo)> _modifiers = [];
     private readonly SortedDictionary<(CounterKind Kind, int Subject), long> _counters = [];
@@ -122,6 +123,15 @@ internal sealed class FakeProgressionQueries : IProgressionQueries
         return this;
     }
 
+    /// <summary>Unlocks festivals.</summary>
+    /// <param name="festivals">The festivals.</param>
+    /// <returns>This fake.</returns>
+    public FakeProgressionQueries UnlockFestivals(params FestivalId[] festivals)
+    {
+        _festivals.UnionWith(festivals);
+        return this;
+    }
+
     /// <summary>Sets how many tradition slots of a type have been granted.</summary>
     /// <param name="slot">The slot type.</param>
     /// <param name="count">The number of slots.</param>
@@ -170,6 +180,9 @@ internal sealed class FakeProgressionQueries : IProgressionQueries
 
     /// <inheritdoc />
     bool IProgressionQueries.IsTraditionUnlocked(TraditionId tradition) => _traditions.Contains(tradition);
+
+    /// <inheritdoc />
+    bool IProgressionQueries.IsFestivalUnlocked(FestivalId festival) => _festivals.Contains(festival);
 
     /// <inheritdoc />
     int IProgressionQueries.TraditionSlotCount(TraditionSlotType slot) =>

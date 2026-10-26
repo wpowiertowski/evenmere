@@ -33,7 +33,7 @@ public sealed class Migration0001To0002Tests
         // A version-1 state whose arrays predate content additions: one slot each, so the migration must grow them.
         var state = WorldState.CreateNew(content, 7);
         state.Research.EnsureSlots(1);
-        state.Culture.EnsureSlots(1);
+        state.Culture.EnsureSlots(1, 0);
         state.Advisors.EnsureSlots(1, 1);
         state.Research.Progress[0] = Amount.FromMilli(123);
         state.Research.Done = [1UL];
