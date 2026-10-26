@@ -6,9 +6,9 @@ using Godot;
 namespace Evenmere.Game.Ui.Progress;
 
 /// <summary>
-/// The two buttons beside the HUD that open the research and civics panels. They sit at the top-left just under
+/// The three buttons beside the HUD that open the research, civics and statistics panels. They sit at the top-left just under
 /// the HUD bar, where an open panel (docked right) never covers them. Each button toggles its panel and closes the
-/// other, so at most one panel is open. The buttons take keyboard and gamepad focus like the HUD's own, so the
+/// others, so at most one panel is open. The buttons take keyboard and gamepad focus like the HUD's own, so the
 /// panels stay reachable from the HUD focus chain.
 /// </summary>
 public sealed partial class PanelToggles : HBoxContainer
@@ -18,6 +18,7 @@ public sealed partial class PanelToggles : HBoxContainer
     private Control? _hudBar;
     private Button? _researchButton;
     private Button? _cultureButton;
+    private Button? _statsButton;
 
     /// <summary>Gets or sets the path to the HUD bar, whose bottom edge the buttons sit under.</summary>
     [Export]
@@ -34,6 +35,39 @@ public sealed partial class PanelToggles : HBoxContainer
     /// <summary>Gets or sets the path to the civics panel, relative to this node.</summary>
     [Export]
     public NodePath CulturePath { get; set; } = new("../CulturePanel");
+
+    /// <summary>Gets or sets the path to the statistics panel, relative to this node.</summary>
+    [Export]
+    public NodePath StatsPath { get; set; } = new("../StatsPanel");
+
+    /// <summary>
+    /// Toggles the statistics panel, closing the research and civics panels when it opens. The debug stats flag
+    /// calls this so screenshots travel the same path as a button press.
+    /// </summary>
+    public void ToggleStats()
+    {
+        Control? stats = GetNodeOrNull<Control>(StatsPath);
+        if (stats is null)
+        {
+            return;
+        }
+
+        bool show = !stats.Visible;
+        if (show)
+        {
+            if (GetNodeOrNull<Control>(ResearchPath) is { } research)
+            {
+                research.Visible = false;
+            }
+
+            if (GetNodeOrNull<Control>(CulturePath) is { } culture)
+            {
+                culture.Visible = false;
+            }
+        }
+
+        stats.Visible = show;
+    }
 
     /// <inheritdoc />
     public override void _Ready()
@@ -99,22 +133,33 @@ public sealed partial class PanelToggles : HBoxContainer
         var strings = new UiStrings(host.Locale);
         Control? research = GetNodeOrNull<Control>(ResearchPath);
         Control? culture = GetNodeOrNull<Control>(CulturePath);
+        Control? stats = GetNodeOrNull<Control>(StatsPath);
         _researchButton = MakeButton(
             strings.Get("ui.research.open"),
             strings.Get("ui.research.open.tip"),
             research,
-            culture);
+            culture,
+            stats);
         AddChild(_researchButton);
 
         _cultureButton = MakeButton(
             strings.Get("ui.culture.open"),
             strings.Get("ui.culture.open.tip"),
             culture,
-            research);
+            research,
+            stats);
         AddChild(_cultureButton);
+
+        _statsButton = MakeButton(
+            strings.Get("ui.stats.open"),
+            strings.Get("ui.stats.open.tip"),
+            stats,
+            research,
+            culture);
+        AddChild(_statsButton);
     }
 
-    private static Button MakeButton(string text, string tip, Control? panel, Control? other)
+    private static Button MakeButton(string text, string tip, Control? panel, params Control?[] others)
     {
         var button = new Button
         {
@@ -128,9 +173,15 @@ public sealed partial class PanelToggles : HBoxContainer
             button.Pressed += () =>
             {
                 bool show = !panel.Visible;
-                if (show && other is not null)
+                if (show)
                 {
-                    other.Visible = false;
+                    foreach (Control? other in others)
+                    {
+                        if (other is not null)
+                        {
+                            other.Visible = false;
+                        }
+                    }
                 }
 
                 panel.Visible = show;

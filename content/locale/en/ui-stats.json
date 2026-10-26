@@ -1,0 +1,19 @@
+{
+  "ui.stats.title": "Statistics",
+  "ui.stats.open": "Statistics",
+  "ui.stats.open.tip": "Open the statistics graphs",
+  "ui.stats.close": "Close",
+  "ui.stats.close.tip": "Close the statistics graphs.",
+  "ui.stats.good": "Good",
+  "ui.stats.population.title": "Population",
+  "ui.stats.stock.title": "{good} stock",
+  "ui.stats.stock": "Stock",
+  "ui.stats.net.title": "{good} net per day",
+  "ui.stats.net": "Net per day",
+  "ui.stats.knowledge.title": "Knowledge per day",
+  "ui.stats.knowledge": "Knowledge per day",
+  "ui.stats.culture.title": "Culture per day",
+  "ui.stats.culture": "Culture per day",
+  "ui.stats.latest": "Latest",
+  "ui.stats.empty": "No data yet."
+}
