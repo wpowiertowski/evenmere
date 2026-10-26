@@ -99,14 +99,16 @@ internal static class HeightmapBuilder
     public static int SeaMarginFor(int size) => Math.Max(MinSeaMargin, (size * SeaMarginPerHundred) / 100);
 
     /// <summary>
-    /// Builds the elevation grid for a square island of the given size.
+    /// Builds the fine-grained relief grid for a square island of the given size: the per-mille heights
+    /// that <see cref="BuildElevation"/> quantises into steps. Drainage runs on this field, which keeps
+    /// the sub-step detail quantising would flatten into plateaus.
     /// </summary>
     /// <param name="size">The width and height in tiles.</param>
     /// <param name="seed">The generator seed.</param>
-    /// <returns><c>size × size</c> elevations in <c>[0, 15]</c>, rows from the top edge.</returns>
-    public static byte[] BuildElevation(int size, int seed)
+    /// <returns>The relief, sea level and summit: <c>size × size</c> per-mille heights with the sea-level
+    /// step and the summit step the quantiser uses.</returns>
+    public static (int[] Height, int SeaLevel, int Summit) BuildRelief(int size, int seed)
     {
-        byte[] elevation = new byte[size * size];
         int[] height = new int[size * size];
 
         // The per-seed envelope: an ellipse (orientation, aspect, centre) that the falloff bowl follows.
@@ -212,6 +214,19 @@ internal static class HeightmapBuilder
         // The island's summit always maps to the top step, so every island has peaks and highlands
         // no matter how calm its noise is. The envelope centre always clears the sea level (its relief
         // is 1000 and the radial term alone exceeds it), so the divisor below stays positive.
+        return (height, seaLevel, summit);
+    }
+
+    /// <summary>
+    /// Builds the elevation grid for a square island of the given size.
+    /// </summary>
+    /// <param name="size">The width and height in tiles.</param>
+    /// <param name="seed">The generator seed.</param>
+    /// <returns><c>size × size</c> elevations in <c>[0, 15]</c>, rows from the top edge.</returns>
+    public static byte[] BuildElevation(int size, int seed)
+    {
+        byte[] elevation = new byte[size * size];
+        (int[] height, int seaLevel, int summit) = BuildRelief(size, seed);
         int headroom = summit - seaLevel;
         for (int i = 0; i < height.Length; i++)
         {
