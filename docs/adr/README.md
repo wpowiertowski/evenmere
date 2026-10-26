@@ -17,7 +17,7 @@ Each file records one decision: its context, the decision itself and its consequ
 | [0009](0009-economy-staging.md) | Goods-only Era I; coin introduced by Coinage | Accepted |
 | [0010](0010-progression-gating.md) | Dual era gateways, alternating tier unlocks, decline always on | Accepted |
 | [0011](0011-m1-simulation-contract.md) | The M1 simulation contract | Accepted |
-| 0012 | Cheat commands and the cheats flag (M2-26) | Reserved for M2-26 |
+| [0012](0012-cheat-commands.md) | Cheat commands and the cheats flag (M2-26) | Accepted |
 | [0014](0014-workforce-hold.md) | Workforce hold on house advancement | Accepted |
 | [0013](0013-art-direction.md) | Art direction: hand-drawn isometric, through a non-photorealistic pass over low-poly 3D | Accepted |
 | [0015](0015-crew-stat.md) | Crew stat: modifiers that reduce a building's required workers | Proposed (M2-30) |

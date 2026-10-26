@@ -1,11 +1,13 @@
 using Evenmere.Content.Definitions;
 using Evenmere.Core.Ids;
+using Evenmere.Core.Numerics;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Advisors.Commands;
 using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
 using Evenmere.Sim.Systems.Culture.Festivals.Commands;
 using Evenmere.Sim.Systems.Culture.Traditions.Commands;
+using Evenmere.Sim.Systems.Debug.Commands;
 using Evenmere.Sim.Systems.Happenings.Commands;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
@@ -120,6 +122,40 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
                 writer.Write(choose.Happening.Value);
                 writer.Write(choose.OptionIndex);
                 break;
+            case CheatGrantGoods grant:
+                {
+                    writer.WriteArrayHeader(2);
+                    writer.Write(grant.Good.Value);
+                    writer.Write(grant.Amount.Milli);
+                    break;
+                }
+            case CheatCompleteNode complete:
+                {
+                    writer.WriteArrayHeader(4);
+                    writer.Write(complete.Tech.HasValue);
+                    writer.Write(complete.Tech is { } nodeTech ? nodeTech.Value : (ushort)0);
+                    writer.Write(complete.Civic.HasValue);
+                    writer.Write(complete.Civic is { } nodeCivic ? nodeCivic.Value : (ushort)0);
+                    break;
+                }
+            case CheatSetEra era:
+                {
+                    writer.WriteArrayHeader(1);
+                    writer.Write(era.Era.Value);
+                    break;
+                }
+            case CheatRevealAll reveal:
+                {
+                    writer.WriteArrayHeader(1);
+                    writer.Write(reveal.Region);
+                    break;
+                }
+            case CheatAddResidents residents:
+                {
+                    writer.WriteArrayHeader(1);
+                    writer.Write(residents.Count);
+                    break;
+                }
             case DismissAdvice dismiss:
                 writer.WriteArrayHeader(1);
                 writer.Write(dismiss.AdviceId);
@@ -168,6 +204,11 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
                 nameof(SetTradition) => ReadSetTradition(ref reader),
                 nameof(HoldFestival) => ReadHoldFestival(ref reader),
                 nameof(ChooseHappeningOption) => ReadChooseHappeningOption(ref reader),
+                nameof(CheatGrantGoods) => ReadCheatGrantGoods(ref reader),
+                nameof(CheatCompleteNode) => ReadCheatCompleteNode(ref reader),
+                nameof(CheatSetEra) => ReadCheatSetEra(ref reader),
+                nameof(CheatRevealAll) => ReadCheatRevealAll(ref reader),
+                nameof(CheatAddResidents) => ReadCheatAddResidents(ref reader),
                 nameof(DismissAdvice) => ReadDismissAdvice(ref reader),
                 _ => throw new MessagePackSerializationException($"The command log names an unknown command type '{name}'."),
             };
@@ -350,6 +391,42 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
         ushort happening = reader.ReadUInt16();
         int option = reader.ReadInt32();
         return new ChooseHappeningOption(HappeningId.From(happening), option);
+    }
+
+    private static CheatGrantGoods ReadCheatGrantGoods(ref MessagePackReader reader)
+    {
+        ExpectFields(ref reader, 2);
+        ushort good = reader.ReadUInt16();
+        long milli = reader.ReadInt64();
+        return new CheatGrantGoods(GoodId.From(good), Amount.FromMilli(milli));
+    }
+
+    private static CheatCompleteNode ReadCheatCompleteNode(ref MessagePackReader reader)
+    {
+        ExpectFields(ref reader, 4);
+        bool hasTech = reader.ReadBoolean();
+        ushort tech = reader.ReadUInt16();
+        bool hasCivic = reader.ReadBoolean();
+        ushort civic = reader.ReadUInt16();
+        return new CheatCompleteNode(hasTech ? TechId.From(tech) : null, hasCivic ? CivicId.From(civic) : null);
+    }
+
+    private static CheatSetEra ReadCheatSetEra(ref MessagePackReader reader)
+    {
+        ExpectFields(ref reader, 1);
+        return new CheatSetEra(EraId.From(reader.ReadUInt16()));
+    }
+
+    private static CheatRevealAll ReadCheatRevealAll(ref MessagePackReader reader)
+    {
+        ExpectFields(ref reader, 1);
+        return new CheatRevealAll(reader.ReadInt32());
+    }
+
+    private static CheatAddResidents ReadCheatAddResidents(ref MessagePackReader reader)
+    {
+        ExpectFields(ref reader, 1);
+        return new CheatAddResidents(reader.ReadInt32());
     }
 
     private static DismissAdvice ReadDismissAdvice(ref MessagePackReader reader)

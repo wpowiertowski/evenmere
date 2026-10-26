@@ -97,4 +97,13 @@ internal sealed class SaveHeader
     /// <summary>Gets or sets the terrain string IDs in save-ID order.</summary>
     [Key(21)]
     public string[] Terrains { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether cheat commands are enabled for this save. The game sets it at new-game time
+    /// (debug builds, or with the <c>--cheats</c> launch flag) and the simulation carries it at runtime; it defaults
+    /// to <see langword="false"/> and rides version 2 with no migration (ADR-0012, ADR-0018). The load list reads it
+    /// without touching the body.
+    /// </summary>
+    [Key(22)]
+    public bool CheatsUsed { get; set; }
 }

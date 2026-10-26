@@ -42,6 +42,11 @@ public sealed class Simulation : ISimulation, IProfilerReadout
         _roster = roster;
         _pipeline = new SystemPipeline(roster.Entries, _profiler);
         _pipeline.RegisterCommands(_router);
+
+        // Cheat commands are host tooling, not a ticked system: they register with no pipeline entry, no
+        // cadence and no random stream (ADR-0012). The owner stays null, so the current system is untouched.
+        Systems.Debug.CheatHandlers.RegisterAll(_router);
+
         Query = roster.Queries;
         _context = new SimContext(content, world, roster.Queries, _events, roster.Services);
     }
@@ -51,6 +56,13 @@ public sealed class Simulation : ISimulation, IProfilerReadout
 
     /// <inheritdoc />
     public ISimQueries Query { get; }
+
+    /// <inheritdoc />
+    public bool CheatsUsed
+    {
+        get => _context.CheatsUsed;
+        set => _context.CheatsUsed = value;
+    }
 
     /// <summary>Gets the world state, for tests and for M1-14's persistence. Hosts and views must not use it.</summary>
     internal WorldState World => _world;

@@ -55,6 +55,17 @@ public sealed partial class ExplanationView : VBoxContainer
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(strings);
         ArgumentNullException.ThrowIfNull(explainGood);
+        if (ReferenceEquals(_content, content)
+            && ReferenceEquals(_strings, strings)
+            && _explainGood == explainGood
+            && _buildingName == buildingName
+            && _storehouseReach == storehouseReach)
+        {
+            // Idempotent refresh (M2-26 focus walk): the same lookups keep their live controls instead of
+            // rebuilding them, so focus never sits on a freed button and repeated refreshes cost nothing.
+            return;
+        }
+
         _content = content;
         _strings = strings;
         _explainGood = explainGood;
@@ -86,6 +97,15 @@ public sealed partial class ExplanationView : VBoxContainer
     public void ShowRoot(Explanation explanation, string title = "")
     {
         ArgumentNullException.ThrowIfNull(explanation);
+        if (_stack.Count == 1
+            && string.Equals(_titles[0], title, StringComparison.Ordinal)
+            && _stack[0].Equals(explanation))
+        {
+            // Idempotent refresh (M2-26 focus walk): showing the same explanation keeps its live controls instead
+            // of rebuilding them, so focus never sits on a freed button and repeated refreshes cost nothing.
+            return;
+        }
+
         _stack.Clear();
         _titles.Clear();
         _stack.Add(explanation);

@@ -846,6 +846,7 @@ public sealed partial class NotificationFeed : Control
         {
             SizeFlagsVertical = Control.SizeFlags.ExpandFill,
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            FollowFocus = true,
         };
         top.AddChild(scroll);
         _adviceScroll = scroll;
@@ -1051,6 +1052,7 @@ public sealed partial class NotificationFeed : Control
         {
             SizeFlagsVertical = Control.SizeFlags.ExpandFill,
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            FollowFocus = true,
         };
         top.AddChild(scroll);
 
@@ -1408,8 +1410,57 @@ public sealed partial class NotificationFeed : Control
             _advicePanel.Visible = _pins.Count > 0;
         }
 
+        WireDismissNeighbours();
         RetitleAdvice();
         LayoutAdvice();
+    }
+
+    /// <summary>
+    /// Links the watching notes' Dismiss buttons top to bottom in display order (M2-26 focus walk): the engine's
+    /// automatic search skips controls clipped by the scroll view, so gamepad players could never reach a Dismiss
+    /// button below the fold. Rewired on every refresh, so rebuilt rows never keep stale paths. Up-links stay
+    /// automatic: the nearest visible button above is always the right one.
+    /// </summary>
+    private void WireDismissNeighbours()
+    {
+        if (_adviceRows is null)
+        {
+            return;
+        }
+
+        Button? previous = null;
+        foreach (Node child in _adviceRows.GetChildren())
+        {
+            if (child is not Control row || FindDismiss(row) is not { } dismiss)
+            {
+                continue;
+            }
+
+            if (previous is not null)
+            {
+                previous.FocusNeighborBottom = dismiss.GetPath();
+            }
+
+            previous = dismiss;
+        }
+    }
+
+    private static Button? FindDismiss(Control node)
+    {
+        foreach (Node child in node.GetChildren())
+        {
+            if (child is Button button)
+            {
+                return button;
+            }
+
+            if (child is Control control && FindDismiss(control) is { } found)
+            {
+                return found;
+            }
+        }
+
+        return null;
     }
 
     private PanelContainer MakePin(SimHost host, AdviceView advice)

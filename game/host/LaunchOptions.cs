@@ -7,6 +7,7 @@ namespace Evenmere.Game.Host;
 /// the island (a folder under <c>maps/</c>, default <see cref="DefaultMap"/>), and <c>--smoke-ticks=N</c> turns on the
 /// headless smoke mode (run N ticks, print the state hash, quit). With <c>--smoke-save</c> and <c>--smoke-log</c> the
 /// smoke loads that save and replays that log across real frames instead of starting a new game.
+/// <c>--cheats</c> enables cheat commands for the new game (debug builds enable them anyway; ADR-0012).
 /// Arguments that are not recognised are ignored, so other tooling can share the command line.
 /// </summary>
 /// <param name="Seed">The world seed.</param>
@@ -14,7 +15,8 @@ namespace Evenmere.Game.Host;
 /// <param name="SmokeTicks">The number of ticks to run in smoke mode, or <see langword="null"/> for a normal run.</param>
 /// <param name="SmokeSave">The save to load in smoke v2, or <see langword="null"/> to start a new game.</param>
 /// <param name="SmokeLog">The command log to replay in smoke v2, or <see langword="null"/> for no log.</param>
-internal sealed record LaunchOptions(ulong Seed, string Map, int? SmokeTicks, string? SmokeSave, string? SmokeLog)
+/// <param name="Cheats">Whether cheat commands are enabled for the new game (debug builds enable them anyway).</param>
+internal sealed record LaunchOptions(ulong Seed, string Map, int? SmokeTicks, string? SmokeSave, string? SmokeLog, bool Cheats)
 {
     /// <summary>The seed used when <c>--seed</c> is not given.</summary>
     public const ulong DefaultSeed = 42;
@@ -27,6 +29,7 @@ internal sealed record LaunchOptions(ulong Seed, string Map, int? SmokeTicks, st
     private const string SmokeTicksPrefix = "--smoke-ticks";
     private const string SmokeSavePrefix = "--smoke-save=";
     private const string SmokeLogPrefix = "--smoke-log=";
+    private const string CheatsFlag = "--cheats";
 
     /// <summary>Tests whether the arguments ask for smoke mode, even if their values are malformed.</summary>
     /// <param name="userArgs">The user arguments, as <c>OS.GetCmdlineUserArgs()</c> returns them.</param>
@@ -45,6 +48,7 @@ internal sealed record LaunchOptions(ulong Seed, string Map, int? SmokeTicks, st
         int? smokeTicks = null;
         string? smokeSave = null;
         string? smokeLog = null;
+        bool cheats = false;
 
         foreach (string arg in userArgs)
         {
@@ -83,8 +87,12 @@ internal sealed record LaunchOptions(ulong Seed, string Map, int? SmokeTicks, st
                     ? text
                     : throw new FormatException($"--smoke-log needs a log path, not '{arg}'.");
             }
+            else if (arg == CheatsFlag)
+            {
+                cheats = true;
+            }
         }
 
-        return new LaunchOptions(seed, map, smokeTicks, smokeSave, smokeLog);
+        return new LaunchOptions(seed, map, smokeTicks, smokeSave, smokeLog, cheats);
     }
 }

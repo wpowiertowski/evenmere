@@ -147,15 +147,20 @@ public sealed partial class SimHost : Node
     /// </summary>
     /// <param name="seed">The world seed.</param>
     /// <param name="mapId">The island to start on (a folder under <c>maps/</c>); the starter island by default.</param>
+    /// <param name="cheatsUsed">Whether cheat commands are processed for the new game (ADR-0012).</param>
     /// <exception cref="ContentLoadException">The content has errors.</exception>
     /// <exception cref="MapLoadException">The map has errors.</exception>
-    public void StartNewGame(ulong seed, string mapId = LaunchOptions.DefaultMap)
+    public void StartNewGame(ulong seed, string mapId = LaunchOptions.DefaultMap, bool cheatsUsed = false)
     {
         EnsureContent();
         MapDef map = MapLoader.Load([ContentPaths.Resolve()], mapId, Content!).GetMapOrThrow();
 
         // Held as the interface on purpose: the host exposes queries, never the concrete simulation or its state.
         _sim = Evenmere.Sim.Simulation.CreateNew(Content!, new NewGameOptions { Seed = seed, Map = map });
+
+        // Cheat commands are processed only for cheats-enabled saves (ADR-0012): every debug new game, or a
+        // release new game with the launch flag. Loaded saves carry the flag in their header instead.
+        _sim.CheatsUsed = cheatsUsed || OS.IsDebugBuild();
         _seed = seed;
         _mapId = mapId;
         _stepper.Reset();

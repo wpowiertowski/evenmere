@@ -38,6 +38,7 @@ public sealed partial class HudRoot : Control
     private GoodId[] _stripGoods = [];
     private PanelContainer? _explainPopup;
     private ExplanationView? _explainView;
+    private UiStrings? _tipStrings;
     private PanelContainer? _workforceTipPopup;
     private Label? _workforceTipLabel;
     private string _debugWorkforceTier = string.Empty;
@@ -319,6 +320,7 @@ public sealed partial class HudRoot : Control
         _residentChips.Clear();
         _goodChips.Clear();
         _stripGoods = [];
+        _tipStrings = null;
         if (_workforceTipPopup is not null)
         {
             RemoveChild(_workforceTipPopup);
@@ -589,6 +591,7 @@ public sealed partial class HudRoot : Control
     private void BuildExplainPopup(SimHost host, UiStrings strings)
     {
         _stripGoods = [.. HudViewModel.DefaultStripGoods(host.Content)];
+        _tipStrings = strings;
         _explainPopup = new PanelContainer
         {
             Visible = false,
@@ -608,10 +611,54 @@ public sealed partial class HudRoot : Control
             int index = i;
             HudChip chip = _goodChips[i];
             chip.MouseEntered += () => ShowGoodTip(index);
-            chip.MouseExited += HideGoodTip;
+            // Deferred, and keeping the tooltip while the pointer or focus stays inside the chips or the
+            // tooltip itself: the tooltip holds link buttons, and hiding it on the chip's own exit would pull
+            // it away while the player reaches for a link (M2-26 focus walk).
+            chip.MouseExited += () => CallDeferred(nameof(HideGoodTipUnlessHovered));
             chip.FocusEntered += () => ShowGoodTip(index);
-            chip.FocusExited += HideGoodTip;
+            chip.FocusExited += () => CallDeferred(nameof(HideGoodTipUnlessFocused));
         }
+
+        if (_explainPopup is not null)
+        {
+            _explainPopup.MouseExited += HideGoodTip;
+        }
+    }
+
+    /// <summary>Hides the good tooltip unless the pointer sits over a good chip or the tooltip itself.</summary>
+    private void HideGoodTipUnlessHovered()
+    {
+        if (_explainPopup is { Visible: true } popup)
+        {
+            Vector2 mouse = GetGlobalMousePosition();
+            if (popup.GetGlobalRect().HasPoint(mouse))
+            {
+                return;
+            }
+
+            foreach (HudChip chip in _goodChips)
+            {
+                if (chip.Visible && chip.GetGlobalRect().HasPoint(mouse))
+                {
+                    return;
+                }
+            }
+        }
+
+        HideGoodTip();
+    }
+
+    /// <summary>Hides the good tooltip unless gamepad/keyboard focus sits on a good chip or inside the tooltip.</summary>
+    private void HideGoodTipUnlessFocused()
+    {
+        Control? owner = GetViewport().GuiGetFocusOwner();
+        if (owner is not null && _explainPopup is { Visible: true } popup
+            && (popup.IsAncestorOf(owner) || (owner is HudChip chip && _goodChips.Contains(chip))))
+        {
+            return;
+        }
+
+        HideGoodTip();
     }
 
     private void ShowGoodTip(int index)
@@ -627,7 +674,9 @@ public sealed partial class HudRoot : Control
         }
 
         GoodId good = _stripGoods[index];
-        _explainView.Setup(host.Content, new UiStrings(host.Locale), host.Query.Explain.ExplainGood);
+        // Reuse the popup's own strings so a refocused good keeps its live explanation instead of rebuilding
+        // it: rebuilding on every focus would churn the link buttons under keyboard navigation (M2-26).
+        _explainView.Setup(host.Content, _tipStrings ?? new UiStrings(host.Locale), host.Query.Explain.ExplainGood);
         _explainView.MaxDepth = 2;
         _explainView.ShowRoot(host.Query.Explain.ExplainGood(good));
         _explainPopup.Visible = true;

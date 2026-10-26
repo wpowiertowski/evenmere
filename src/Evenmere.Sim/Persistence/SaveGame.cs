@@ -61,6 +61,7 @@ public static class SaveGame
             Happenings = [.. meta.Content.Happenings.Names],
             Eras = [.. meta.Content.Eras.Names],
             Terrains = [.. meta.Content.Terrains.Names],
+            CheatsUsed = sim.CheatsUsed,
         };
 
         byte[] headerBytes = MessagePackSerializer.Serialize(header, SimResolver.Options);
@@ -121,6 +122,7 @@ public static class SaveGame
         WriteTable(writer, "happenings", meta.Content.Happenings.Names);
         WriteTable(writer, "eras", meta.Content.Eras.Names);
         WriteTable(writer, "terrains", meta.Content.Terrains.Names);
+        writer.WriteBoolean("cheatsUsed", sim.CheatsUsed);
         writer.WritePropertyName("body");
         writer.WriteRawValue(bodyJson);
         writer.WriteEndObject();
@@ -188,7 +190,29 @@ public static class SaveGame
             throw new InvalidDataException("The remapped state is not a valid world state.", exception);
         }
 
+        // The flag is permission, not state: it travels in the header and the runtime carries it from here on.
+        simulation.CheatsUsed = header.CheatsUsed;
+
         return (simulation, report, tables);
+    }
+
+    /// <summary>
+    /// Reads a save's cheats flag: parses the framing and the header only, with no content needed and without
+    /// touching the body, so the load list can show it. Missing files and corrupt saves read as disabled.
+    /// </summary>
+    /// <param name="stream">The save.</param>
+    /// <returns><see langword="true"/> when the save was written with cheats enabled.</returns>
+    public static bool ReadCheatsUsed(Stream stream)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        try
+        {
+            return ReadHeader(stream).Header.CheatsUsed;
+        }
+        catch (InvalidDataException)
+        {
+            return false;
+        }
     }
 
     /// <summary>Reads a save's state hash: parses the framing, decompresses the body and hashes it, with no content needed.</summary>
@@ -203,6 +227,35 @@ public static class SaveGame
     }
 
     private static (SaveHeader Header, byte[] Canonical, ushort Version) ReadSections(Stream stream)
+    {
+        (SaveHeader header, ushort version) = ReadHeader(stream);
+
+        Span<byte> prefix = stackalloc byte[4];
+        SaveFormat.ReadExactly(stream, prefix);
+        int bodyLength = SaveFormat.ReadLengthPrefix(prefix);
+        if (bodyLength < 0)
+        {
+            throw new InvalidDataException("The save holds a negative body length.");
+        }
+
+        byte[] body = new byte[bodyLength];
+        SaveFormat.ReadExactly(stream, body);
+
+        byte[] canonical;
+        try
+        {
+            canonical = MessagePackSerializer.Deserialize<byte[]>(body, _bodyOptions)
+                ?? throw new InvalidDataException("The save holds no body.");
+        }
+        catch (MessagePackSerializationException exception)
+        {
+            throw new InvalidDataException("The save's body is not a valid compressed state.", exception);
+        }
+
+        return (header, canonical, version);
+    }
+
+    private static (SaveHeader Header, ushort Version) ReadHeader(Stream stream)
     {
         Span<byte> magic = stackalloc byte[4];
         SaveFormat.ReadExactly(stream, magic);
@@ -250,28 +303,7 @@ public static class SaveGame
             throw new InvalidDataException($"The save's outer version is {version} but its header says {header.FormatVersion}.");
         }
 
-        SaveFormat.ReadExactly(stream, prefix);
-        int bodyLength = SaveFormat.ReadLengthPrefix(prefix);
-        if (bodyLength < 0)
-        {
-            throw new InvalidDataException("The save holds a negative body length.");
-        }
-
-        byte[] body = new byte[bodyLength];
-        SaveFormat.ReadExactly(stream, body);
-
-        byte[] canonical;
-        try
-        {
-            canonical = MessagePackSerializer.Deserialize<byte[]>(body, _bodyOptions)
-                ?? throw new InvalidDataException("The save holds no body.");
-        }
-        catch (MessagePackSerializationException exception)
-        {
-            throw new InvalidDataException("The save's body is not a valid compressed state.", exception);
-        }
-
-        return (header, canonical, version);
+        return (header, version);
     }
 
     private static void WriteTable(Utf8JsonWriter writer, string name, System.Collections.Immutable.ImmutableArray<string> names)

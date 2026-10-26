@@ -82,6 +82,13 @@ public sealed class SimContext
     /// <summary>Gets or sets the system whose stream <see cref="Rng"/> returns; the pipeline and the command router set it.</summary>
     internal SystemId CurrentSystem { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether cheat commands are enabled for this world. The simulation copies it from
+    /// <see cref="ISimulation.CheatsUsed"/>; command handlers read it here, and tests set it directly (ADR-0012).
+    /// It is permission, not state: it never reaches the state hash.
+    /// </summary>
+    public bool CheatsUsed { get; internal set; }
+
     /// <summary>Tests whether a daily-bucketed system should process an entity on this tick (<c>id % 120 == tick % 120</c>).</summary>
     /// <param name="id">The entity.</param>
     /// <returns><see langword="true"/> if the entity's bucket is the current tick of the day.</returns>

@@ -1,6 +1,7 @@
 using Evenmere.Content;
 using Evenmere.Content.Definitions;
 using Evenmere.Core.Ids;
+using Evenmere.Core.Numerics;
 using Evenmere.Sim.Persistence;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Advisors.Commands;
@@ -8,6 +9,7 @@ using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
 using Evenmere.Sim.Systems.Culture.Festivals.Commands;
 using Evenmere.Sim.Systems.Culture.Traditions.Commands;
+using Evenmere.Sim.Systems.Debug.Commands;
 using Evenmere.Sim.Systems.Happenings.Commands;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
@@ -122,6 +124,11 @@ public sealed class CommandLogCoverageTests
                 // passthrough. M2-13b (happening content) adds the RemapCommand case and names a real happening.
                 _ when type == typeof(ChooseHappeningOption) => new ChooseHappeningOption(HappeningId.From(0), 0),
                 _ when type == typeof(DismissAdvice) => new DismissAdvice(3),
+                _ when type == typeof(CheatGrantGoods) => new CheatGrantGoods(content.IdOf<GoodId>("timber"), Amount.FromUnits(2)),
+                _ when type == typeof(CheatCompleteNode) => new CheatCompleteNode(content.IdOf<TechId>("cultivation"), null),
+                _ when type == typeof(CheatSetEra) => new CheatSetEra(content.IdOf<EraId>("founding")),
+                _ when type == typeof(CheatRevealAll) => new CheatRevealAll(CheatRevealAll.AllRegions),
+                _ when type == typeof(CheatAddResidents) => new CheatAddResidents(3),
                 _ => null,
             };
             return sample is not null;

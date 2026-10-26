@@ -61,6 +61,10 @@ namespace Evenmere.Game.Host.Debug;
 /// <c>--life-walkers=N</c>: spawn N synthetic walkers spread over the existing buildings for the M1-22 walker bench,
 /// ignoring the residents rule but using the same routes, caching and MultiMesh path. Zero keeps the rule.
 /// </param>
+/// <param name="FocusWalk">
+/// <c>--focus-walk</c>: run the automated focus walk (M2-26) instead of the game: open every panel in turn and assert
+/// that every enabled control is reachable by <c>ui_*</c> focus navigation with no traps. Debug builds only.
+/// </param>
 /// <param name="ToolBuild">
 /// <c>--tool-build=ID</c>: start the M1-21 build tool with the named building type, for the tool screenshots.
 /// Empty starts no tool.
@@ -119,7 +123,8 @@ internal sealed record DebugLaunchOptions(
     bool ToolInvalid,
     bool ToolGamepad,
     bool CartOverlay,
-    int LifeWalkers)
+    int LifeWalkers,
+    bool FocusWalk)
 {
     private const string BenchFramesPrefix = "--bench-frames";
     private const string CameraViewPrefix = "--camera-view=";
@@ -142,9 +147,10 @@ internal sealed record DebugLaunchOptions(
     private const string DemoFeedPrefix = "--demo-feed=";
     private const string CartOverlayFlag = "--cart-overlay";
     private const string LifeWalkersPrefix = "--life-walkers=";
+    private const string FocusWalkFlag = "--focus-walk";
 
     /// <summary>The options for a normal run: no bench, default camera, no checks.</summary>
-    public static DebugLaunchOptions None => new(string.Empty, false, string.Empty, null, string.Empty, false, false, string.Empty, false, false, string.Empty, string.Empty, string.Empty, false, string.Empty, string.Empty, string.Empty, false, false, false, 0);
+    public static DebugLaunchOptions None => new(string.Empty, false, string.Empty, null, string.Empty, false, false, string.Empty, false, false, string.Empty, string.Empty, string.Empty, false, string.Empty, string.Empty, string.Empty, false, false, false, 0, false);
 
     /// <summary>Reads the debug options from the user arguments.</summary>
     /// <param name="userArgs">The user arguments, as <c>OS.GetCmdlineUserArgs()</c> returns them.</param>
@@ -173,6 +179,7 @@ internal sealed record DebugLaunchOptions(
         bool toolGamepad = false;
         bool cartOverlay = false;
         int lifeWalkers = 0;
+        bool focusWalk = false;
 
         foreach (string arg in userArgs)
         {
@@ -271,8 +278,12 @@ internal sealed record DebugLaunchOptions(
                     ? parsed
                     : throw new FormatException($"--life-walkers needs a non-negative whole number, not '{text}'.");
             }
+            else if (arg == FocusWalkFlag)
+            {
+                focusWalk = true;
+            }
         }
 
-        return new DebugLaunchOptions(loadSave, demoNotifications, demoFeed, benchFrames, cameraView, staticCamera, showGrid, checkPick, demoDirty, demoBuildings, demoExplain, toolBuild, toolRoad, toolDemolish, toolTile, toolAnchor, toolSpot, toolInvalid, toolGamepad, cartOverlay, lifeWalkers);
+        return new DebugLaunchOptions(loadSave, demoNotifications, demoFeed, benchFrames, cameraView, staticCamera, showGrid, checkPick, demoDirty, demoBuildings, demoExplain, toolBuild, toolRoad, toolDemolish, toolTile, toolAnchor, toolSpot, toolInvalid, toolGamepad, cartOverlay, lifeWalkers, focusWalk);
     }
 }

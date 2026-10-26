@@ -27,6 +27,7 @@ public sealed partial class TreeView : Control
 
     private float _zoom = 1f;
     private Label? _zoomLabel;
+    private Button? _zoomOut;
     private ScrollContainer? _scroll;
     private Control? _canvas;
     private bool _chrome;
@@ -180,6 +181,7 @@ public sealed partial class TreeView : Control
 
         var zoomOut = new Button { Text = "−", FocusMode = Control.FocusModeEnum.All };
         zoomOut.Pressed += () => ZoomBy(0.8f);
+        _zoomOut = zoomOut;
         tools.AddChild(zoomOut);
 
         var zoomLabel = new Label
@@ -340,6 +342,7 @@ public sealed partial class TreeView : Control
             }
 
             Button main = view.MainButton;
+            Button queue = view.QueueButton;
 
             if (BestNeighbour(i, _inputs[i].Requires, static (atX, atY, candX, candY) => candX < atX, true) is { } left
                 && _views.TryGetValue(_nodes[left].Index, out TreeNodeView? leftView))
@@ -354,16 +357,53 @@ public sealed partial class TreeView : Control
                 main.FocusNeighborRight = rightView.MainButton.GetPath();
             }
 
+            // The queue button sits at the bottom of its card, so the vertical chain runs through it when it is
+            // shown (hidden for done and targeted nodes): up lands on the above card's queue, down on the node's
+            // own queue first (M2-26 focus walk).
             if (BestNeighbour(i, SameLayer(i, above: true), static (atX, atY, candX, candY) => true, false) is { } up
                 && _views.TryGetValue(_nodes[up].Index, out TreeNodeView? upView))
             {
-                main.FocusNeighborTop = upView.MainButton.GetPath();
+                Button upBottom = upView.QueueButton.Visible ? upView.QueueButton : upView.MainButton;
+                main.FocusNeighborTop = upBottom.GetPath();
             }
 
-            if (BestNeighbour(i, SameLayer(i, above: false), static (atX, atY, candX, candY) => true, false) is { } down
-                && _views.TryGetValue(_nodes[down].Index, out TreeNodeView? downView))
+            if (queue.Visible)
             {
-                main.FocusNeighborBottom = downView.MainButton.GetPath();
+                main.FocusNeighborBottom = queue.GetPath();
+                queue.FocusNeighborTop = main.GetPath();
+
+                if (BestNeighbour(i, SameLayer(i, above: false), static (atX, atY, candX, candY) => true, false) is { } down
+                    && _views.TryGetValue(_nodes[down].Index, out TreeNodeView? downView))
+                {
+                    queue.FocusNeighborBottom = downView.MainButton.GetPath();
+                }
+            }
+            else if (BestNeighbour(i, SameLayer(i, above: false), static (atX, atY, candX, candY) => true, false) is { } own
+                && _views.TryGetValue(_nodes[own].Index, out TreeNodeView? ownView))
+            {
+                main.FocusNeighborBottom = ownView.MainButton.GetPath();
+            }
+        }
+
+        // The zoom row sits above the canvas: without an explicit link the topmost node's up-neighbours stay
+        // inside the graph and the zoom buttons are unreachable by ui_* navigation (M2-26 focus walk). Link the
+        // topmost node both ways; the zoom buttons reach each other automatically as HBox neighbours.
+        if (_zoomOut is not null && _layout is not null)
+        {
+            int top = -1;
+            for (int j = 0; j < _nodes.Count; j++)
+            {
+                if (top < 0 || _layout.Positions[j].Y < _layout.Positions[top].Y)
+                {
+                    top = j;
+                }
+            }
+
+            if (top >= 0 && _views.TryGetValue(_nodes[top].Index, out TreeNodeView? topView))
+            {
+                Button topMain = topView.MainButton;
+                topMain.FocusNeighborTop = _zoomOut.GetPath();
+                _zoomOut.FocusNeighborBottom = topMain.GetPath();
             }
         }
 

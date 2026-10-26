@@ -498,12 +498,41 @@ public sealed partial class BuildMenu : PanelContainer
             {
                 box.MoveChild(_rows[entries[i].Key].Root, i);
             }
+
+            WireEntryNeighbours(entries);
         }
 
         Retitle();
         for (int i = 0; i < _tabButtons.Length; i++)
         {
             _tabButtons[i].SetPressedNoSignal(i == _tab);
+        }
+    }
+
+    /// <summary>
+    /// Links each tab's entry cards left and right in display order (M2-26 focus walk): the engine's automatic
+    /// neighbour search does not chain every card, so gamepad users could never reach the far entries by
+    /// <c>ui_*</c> navigation. Rewired on every refresh, so rebuilt rows never keep stale paths.
+    /// </summary>
+    /// <param name="entries">The tab's entries in display order.</param>
+    private void WireEntryNeighbours(ImmutableArray<BuildMenuViewModel.BuildEntry> entries)
+    {
+        for (int i = 0; i < entries.Length; i++)
+        {
+            if (!_rows.TryGetValue(entries[i].Key, out EntryRow? row))
+            {
+                continue;
+            }
+
+            if (i > 0 && _rows.TryGetValue(entries[i - 1].Key, out EntryRow? prev))
+            {
+                row.Overlay.FocusNeighborLeft = prev.Overlay.GetPath();
+            }
+
+            if (i + 1 < entries.Length && _rows.TryGetValue(entries[i + 1].Key, out EntryRow? next))
+            {
+                row.Overlay.FocusNeighborRight = next.Overlay.GetPath();
+            }
         }
     }
 

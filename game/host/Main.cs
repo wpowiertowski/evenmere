@@ -2,6 +2,7 @@ using Evenmere.Game.Controls;
 using Evenmere.Game.Host.Debug;
 using Evenmere.Game.Host.Persistence;
 using Evenmere.Game.Host.Smoke;
+using Evenmere.Game.Ui.Debug;
 using Evenmere.Sim.Persistence;
 using Evenmere.Game.Rendering.Camera;
 using Evenmere.Game.Rendering.Terrain;
@@ -47,6 +48,11 @@ public sealed partial class Main : Node3D
         SimHost host = GetNode<SimHost>("SimHost");
         PauseMenu? pause = GetNodeOrNull<PauseMenu>("PauseMenu/Root");
         string[] args = OS.GetCmdlineUserArgs();
+
+        // Debug and tooling runs must never touch the player's saves: they autosave into a separate root (M2-26).
+        string saveRoot = SaveSlots.RootFor(args);
+        SaveSlots.SetRootOverride(saveRoot);
+        GD.Print($"[Evenmere] saves: root is {saveRoot}.");
         ApplyWindowMode(args);
 
         // Every enqueued command lands in the active slot's log with the tick it is applied on; with no active slot
@@ -64,6 +70,33 @@ public sealed partial class Main : Node3D
         if (tools is not null)
         {
             tools.Recorder = _recorder;
+        }
+
+        if (OS.IsDebugBuild())
+        {
+            // The debug overlay (F3) and the cheat console (backtick) exist only in debug builds (ADR-0012).
+            var overlay = new DebugOverlay(host);
+            AddChild(overlay);
+            AddChild(new CheatConsole(host, overlay));
+        }
+
+        if (OS.IsDebugBuild() && DebugLaunchOptions.Parse(args).FocusWalk)
+        {
+            // The automated focus walk (M2-26, --focus-walk): start the starter island and hand the scene to the
+            // walker, which opens every panel in turn and asserts ui_* reachability, then quits with the result.
+            // The debug driver runs first so its demo paths (--demo-notifications, --demo-feed) can seed the walk.
+            var walkOptions = LaunchOptions.Parse(args);
+            var debugOptions = DebugLaunchOptions.Parse(args);
+            host.StartNewGame(walkOptions.Seed, walkOptions.Map, walkOptions.Cheats);
+            var driver = new DebugDriver(debugOptions);
+            _debug = driver;
+            driver.Ready(
+                host,
+                GetNodeOrNull<CameraRig>("CameraRig"),
+                GetNodeOrNull<TerrainRenderer>("Terrain"));
+            AddChild(new FocusWalk(host));
+            pause?.SetMenuMode(false);
+            return;
         }
 
         if (LaunchOptions.RequestsSmoke(args))

@@ -55,6 +55,7 @@
   "ui.load.load.tip": "Load this save",
   "ui.load.close": "Close",
   "ui.load.close.tip": "Go back (Esc)",
+  "ui.load.cheats": "Cheats",
   "ui.load.failed": "Loading failed: {reason}",
   "ui.slot.suggest": "{island} — Day {day}, {season}, Year {year}",
   "ui.slot.autosave": "Autosave",
