@@ -6,6 +6,7 @@ using Evenmere.Game.Controls;
 using Evenmere.Game.Host;
 using Evenmere.Game.Ui.Chains;
 using Evenmere.Game.Ui.Events;
+using Evenmere.Game.Ui.Exploration;
 using Evenmere.Game.Ui.Monuments;
 using Evenmere.Game.Rendering.Camera;
 using Evenmere.Game.Ui.Common;
@@ -16,6 +17,7 @@ using Evenmere.Game.Ui.Tools;
 using Evenmere.Sim;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Construction.Commands;
+using Evenmere.Sim.Systems.Exploration;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
 using Evenmere.Sim.Systems.Workforce.Commands;
@@ -59,6 +61,7 @@ public sealed partial class InspectorPanel : PanelContainer
     private Label? _stateLabel;
     private Label? _workforceLabel;
     private Label? _moraleLabel;
+    private Label? _expeditionLabel;
     private ExplanationView? _explain;
     private Button? _closeButton;
     private Button? _pauseButton;
@@ -66,6 +69,7 @@ public sealed partial class InspectorPanel : PanelContainer
     private Button? _demolishButton;
     private Button? _upgradeButton;
     private Button? _festivalsButton;
+    private Button? _expeditionButton;
     private Button? _lockButton;
     private Button? _chainButton;
     private MonumentSection? _monumentSection;
@@ -90,6 +94,10 @@ public sealed partial class InspectorPanel : PanelContainer
     /// <summary>Gets or sets the path to the festival panel, opened for a festival ground.</summary>
     [Export]
     public NodePath FestivalPath { get; set; } = new("../FestivalPanel");
+
+    /// <summary>Gets or sets the path to the expedition picker, opened for a Scout's Lodge.</summary>
+    [Export]
+    public NodePath ExpeditionPath { get; set; } = new("../ExpeditionPanel");
 
     /// <summary>Gets or sets the path to the research panel, hidden while the inspector is open.</summary>
     [Export]
@@ -307,6 +315,9 @@ public sealed partial class InspectorPanel : PanelContainer
         _moraleLabel = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
         top.AddChild(_moraleLabel);
 
+        _expeditionLabel = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        top.AddChild(_expeditionLabel);
+
         _explain = new ExplanationView { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
         _explain.BuildingLinkActivated += OnLinkBuilding;
         top.AddChild(_explain);
@@ -343,6 +354,10 @@ public sealed partial class InspectorPanel : PanelContainer
         _festivalsButton = new Button { FocusMode = Control.FocusModeEnum.All };
         _festivalsButton.Pressed += OpenFestivals;
         second.AddChild(_festivalsButton);
+
+        _expeditionButton = new Button { FocusMode = Control.FocusModeEnum.All };
+        _expeditionButton.Pressed += OpenExpeditions;
+        second.AddChild(_expeditionButton);
 
         _lockButton = new Button { FocusMode = Control.FocusModeEnum.All };
         _lockButton.Pressed += ToggleLock;
@@ -415,7 +430,11 @@ public sealed partial class InspectorPanel : PanelContainer
             }
 
             _explain.Clear();
-            SetButtonsVisible(pause: false, priority: false, demolish: false, upgrade: false, festivals: false, lockToggle: false, chain: false);
+            SetButtonsVisible(pause: false, priority: false, demolish: false, upgrade: false, festivals: false, expedition: false, lockToggle: false, chain: false);
+            if (_expeditionLabel is not null)
+            {
+                _expeditionLabel.Visible = false;
+            }
             _monumentSection?.HideSection();
             return;
         }
@@ -624,6 +643,36 @@ public sealed partial class InspectorPanel : PanelContainer
             _festivalsButton.TooltipText = strings.Get("ui.events.inspector.festivals.tip");
         }
 
+        // Scout's Lodges open the expedition picker by category tag, never by content ID: any finished
+        // building the tags mark as a lodge qualifies, whatever the trees add later.
+        bool isLodge = !isSite && ExpeditionPanel.IsLodge(content, building);
+        if (_expeditionButton is not null)
+        {
+            _expeditionButton.Visible = isLodge;
+            _expeditionButton.Text = strings.Get("ui.exploration.inspector.expedition");
+            _expeditionButton.TooltipText = strings.Get("ui.exploration.inspector.expedition.tip");
+        }
+
+        if (_expeditionLabel is not null)
+        {
+            ExpeditionView? underway = host.Query.Exploration.ExpeditionForLodge(_target);
+            if (isLodge && underway is { } active)
+            {
+                _expeditionLabel.Visible = true;
+                string days = active.DaysLeft == 1
+                    ? strings.Get("ui.exploration.expedition.days.one")
+                    : strings.Format("ui.exploration.expedition.days.other", ("count", NumberFormat.Count(active.DaysLeft)));
+                _expeditionLabel.Text = strings.Format(
+                    "ui.exploration.inspector.expedition.underway",
+                    ("region", RegionNames.Resolve(strings.Get, RegionNames.ForMap(host), active.TargetRegion)),
+                    ("days", days));
+            }
+            else
+            {
+                _expeditionLabel.Visible = false;
+            }
+        }
+
         // Monument sites and finished monuments show the stage section; anything else hides it.
         // A monument's explanation has nothing to say (no production, no house), so its view collapses
         // and the section takes the expanding slot instead: the section follows the building's information
@@ -657,7 +706,7 @@ public sealed partial class InspectorPanel : PanelContainer
         }
     }
 
-    private void SetButtonsVisible(bool pause, bool priority, bool demolish, bool upgrade, bool festivals, bool lockToggle, bool chain)
+    private void SetButtonsVisible(bool pause, bool priority, bool demolish, bool upgrade, bool festivals, bool expedition, bool lockToggle, bool chain)
     {
         if (_pauseButton is not null)
         {
@@ -682,6 +731,11 @@ public sealed partial class InspectorPanel : PanelContainer
         if (_festivalsButton is not null)
         {
             _festivalsButton.Visible = festivals;
+        }
+
+        if (_expeditionButton is not null)
+        {
+            _expeditionButton.Visible = expedition;
         }
 
         if (_lockButton is not null)
@@ -802,6 +856,21 @@ public sealed partial class InspectorPanel : PanelContainer
         {
             festivals.Open(_target);
             GD.Print($"[Evenmere] Inspector: opened festivals on ground {_target.Value}.");
+        }
+    }
+
+    /// <summary>Opens the expedition picker on the inspected lodge (the handler behind the expedition button).</summary>
+    private void OpenExpeditions()
+    {
+        if (!_hasTarget)
+        {
+            return;
+        }
+
+        if (GetNodeOrNull<ExpeditionPanel>(ExpeditionPath) is { } expeditions)
+        {
+            expeditions.Open(_target);
+            GD.Print($"[Evenmere] Inspector: opened expeditions on lodge {_target.Value}.");
         }
     }
 
