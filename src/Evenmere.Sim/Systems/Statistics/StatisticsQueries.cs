@@ -41,4 +41,40 @@ internal sealed class StatisticsQueries(StatisticsState state) : IStatisticsQuer
 
         return count;
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The newest seasons that fit are copied oldest first. When fewer seasons were sampled than the span holds, only
+    /// those are written; when more seasons were sampled than the 8-season ring holds, only the newest 8 can be
+    /// returned. The total seasons sampled rides along so callers can label each sample with its season and year.
+    /// </remarks>
+    public (int Written, long Seasons) SeasonalSeries(StatKey key, Span<long> destination)
+    {
+        int goodCount = state.GoodCount;
+        int tierCount = state.TierCount;
+        int series = StatisticsState.SeriesIndex(key.Kind, key.Subject, goodCount, tierCount);
+        long sampled = state.SeasonsSampled;
+        if (series < 0 || state.Seasonal.Length != state.SeriesCount * StatisticsState.SeasonalCapacity)
+        {
+            return (0, sampled);
+        }
+
+        long keep = Math.Min(sampled, StatisticsState.SeasonalCapacity);
+        int count = (int)Math.Min(destination.Length, keep);
+        if (count <= 0)
+        {
+            return (0, sampled);
+        }
+
+        long firstSeason = sampled - count;
+        int offset = series * StatisticsState.SeasonalCapacity;
+        for (int i = 0; i < count; i++)
+        {
+            long season = firstSeason + i;
+            int slot = (int)(season % StatisticsState.SeasonalCapacity);
+            destination[i] = state.Seasonal[offset + slot];
+        }
+
+        return (count, sampled);
+    }
 }

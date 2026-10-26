@@ -127,7 +127,7 @@ The simulation is a deterministic, fixed-tick state machine: the same save, seed
 - Speeds are pause, 1×, 2× and 4×; debug builds add 16×. Higher speeds run more ticks per frame, capped by a per-frame tick budget.
 - Rendering interpolates between ticks, so animation stays smooth at any speed.
 - Seasons change crop yields and visuals but never punish: winter yields dip, and autumn and summer compensate.
-- **Cadences:** construction, production and logistics run every tick. Needs, population and the coin economy are **daily but bucketed**: each tick processes the entities whose `id % 120 == tick % 120`. Research and culture accrue once per day. Statistics sample daily and keep rolling one-year windows.
+- **Cadences:** construction, production and logistics run every tick. Needs, population and the coin economy are **daily but bucketed**: each tick processes the entities whose `id % 120 == tick % 120`. Research and culture accrue once per day. Statistics sample daily and keep a rolling 40-day ring plus an 8-season (two-year) ring of per-day averages.
 
 ### Determinism rules
 

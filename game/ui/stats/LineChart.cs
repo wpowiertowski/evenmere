@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Godot;
 
 namespace Evenmere.Game.Ui.Stats;
@@ -37,8 +39,8 @@ public sealed partial class LineChart : Control
     private IReadOnlyList<ChartLine> _lines = [];
     private long _min;
     private long _max = 1;
-    private int _startDay;
-    private int _dayStep = 1;
+    private string _firstAxisText = string.Empty;
+    private string _lastAxisText = string.Empty;
     private int _hover = -1;
     private string _emptyText = "No data yet.";
 
@@ -68,12 +70,22 @@ public sealed partial class LineChart : Control
     /// <param name="startDay">The day number of the oldest plotted point, for axis labels.</param>
     /// <param name="dayStep">How many days one plotted point covers.</param>
     /// <param name="emptyText">What to draw when every line is empty.</param>
-    public void SetData(IReadOnlyList<ChartLine> lines, int startDay, int dayStep, string emptyText)
+    public void SetData(IReadOnlyList<ChartLine> lines, int startDay, int dayStep, string emptyText) =>
+        SetData(lines, DayText(startDay), DayText(startDay + ((PointCountOf(lines) - 1) * Math.Max(1, dayStep))), emptyText);
+
+    /// <summary>Shows a chart with explicit axis labels (the long view names seasons, not days).</summary>
+    /// <param name="lines">The lines to draw.</param>
+    /// <param name="firstLabel">The axis label of the oldest plotted point.</param>
+    /// <param name="lastLabel">The axis label of the newest plotted point.</param>
+    /// <param name="emptyText">What to draw when every line is empty.</param>
+    public void SetData(IReadOnlyList<ChartLine> lines, string firstLabel, string lastLabel, string emptyText)
     {
         ArgumentNullException.ThrowIfNull(lines);
+        ArgumentNullException.ThrowIfNull(firstLabel);
+        ArgumentNullException.ThrowIfNull(lastLabel);
         _lines = lines;
-        _startDay = startDay;
-        _dayStep = Math.Max(1, dayStep);
+        _firstAxisText = firstLabel;
+        _lastAxisText = lastLabel;
         _emptyText = emptyText;
 
         int total = 0;
@@ -174,7 +186,7 @@ public sealed partial class LineChart : Control
         int count = PointCount;
         if (count == 0)
         {
-            DrawString(font, new Vector2(PadLeft, PadTop + (fontSize * 1.5f)), _emptyText, fontSize: fontSize, modulate: _textColour);
+            DrawEmptyText(font, fontSize, plotWidth);
             return;
         }
 
@@ -245,8 +257,8 @@ public sealed partial class LineChart : Control
             DrawString(font, new Vector2(2f, lineY + (fontSize / 2f) - 1f), texts[i], fontSize: fontSize, modulate: _textColour);
         }
 
-        string first = DayText(_startDay);
-        string last = DayText(_startDay + ((count - 1) * _dayStep));
+        string first = _firstAxisText;
+        string last = _lastAxisText;
         float baseY = plotTop + plotHeight + fontSize + 4f;
         DrawString(font, new Vector2(PadLeft, baseY), first, fontSize: fontSize, modulate: _textColour);
         Vector2 lastSize = font.GetStringSize(last, fontSize: fontSize);
@@ -307,6 +319,56 @@ public sealed partial class LineChart : Control
         }
     }
 
+    private void DrawEmptyText(Font font, int fontSize, float plotWidth)
+    {
+        // The empty note wraps inside the plot, so longer calm messages never clip at narrow widths.
+        float y = PadTop + (fontSize * 1.5f);
+        foreach (string line in WrapEmptyText(_emptyText, plotWidth, word => font.GetStringSize(word, fontSize: fontSize).X))
+        {
+            DrawString(font, new Vector2(PadLeft, y), line, fontSize: fontSize, modulate: _textColour);
+            y += fontSize + 2f;
+        }
+    }
+
+    /// <summary>Wraps an empty-chart note to lines that fit the plot width, breaking at spaces.</summary>
+    /// <param name="text">The note.</param>
+    /// <param name="maxWidth">The plot width in pixels.</param>
+    /// <param name="measure">Measures a string's width in pixels.</param>
+    /// <returns>The lines, joined with single spaces they reproduce <paramref name="text"/>.</returns>
+    internal static List<string> WrapEmptyText(string text, float maxWidth, Func<string, float> measure)
+    {
+        var lines = new List<string>();
+        int start = 0;
+        while (start < text.Length)
+        {
+            int end = text.Length;
+            while (end > start && measure(text[start..end]) > maxWidth)
+            {
+                int space = text.LastIndexOf(' ', end - 1, end - start);
+                if (space <= start)
+                {
+                    break;
+                }
+
+                end = space;
+            }
+
+            if (end == start)
+            {
+                end = text.Length;
+            }
+
+            lines.Add(text[start..end].TrimEnd());
+            start = end;
+            while (start < text.Length && text[start] == ' ')
+            {
+                start++;
+            }
+        }
+
+        return lines;
+    }
+
     private string AxisText(long raw)
     {
         if (_lines.Count == 0)
@@ -318,4 +380,15 @@ public sealed partial class LineChart : Control
     }
 
     private static string DayText(long day) => $"Day {day}";
+
+    private static int PointCountOf(IReadOnlyList<ChartLine> lines)
+    {
+        int n = 0;
+        foreach (ChartLine line in lines)
+        {
+            n = Math.Max(n, line.Values.Length);
+        }
+
+        return n;
+    }
 }

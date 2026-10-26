@@ -144,6 +144,119 @@ public sealed class StatisticsTests
     }
 
     [Fact]
+    public void SeasonalRollup_AveragesEveryKindOverSeason()
+    {
+        FakeSim sim = CreateSim();
+        var system = new StatisticsSystem(sim.World.Statistics, sim.Content);
+        GoodId fish = sim.Content.IdOf<GoodId>("fish");
+        TierId settlers = sim.Content.IdOf<TierId>("settlers");
+
+        for (int day = 0; day < 10; day++)
+        {
+            sim.Queries.Storage.Set(fish, Amount.FromMilli((day + 1) * 1000L));
+            sim.Queries.Production.SetProducedYesterday(fish, Amount.FromMilli(2000));
+            sim.Queries.Needs.SetDemandYesterday(fish, Amount.FromMilli(500));
+            sim.Queries.Progression.SetCounter(CounterKey.Consumed(fish), (day + 1) * 300L);
+            sim.Queries.Population.SetResidents(settlers, 4);
+            sim.Queries.Research.PointsPerDay = Amount.FromMilli(700);
+            sim.Queries.Culture.PointsPerDay = Amount.FromMilli(110);
+            system.Run(sim.Context);
+        }
+
+        sim.World.Statistics.SeasonsSampled.ShouldBe(1);
+
+        long[] seasonal = sim.World.Statistics.Seasonal;
+        int goodCount = sim.World.Statistics.GoodCount;
+        int tierCount = sim.World.Statistics.TierCount;
+
+        // Every kind averages its ten days: stock of 1..10 units is 5.5 units, residents stay at 4.
+        int stock = StatisticsState.SeriesIndex(StatKind.Stock, fish.Value, goodCount, tierCount);
+        seasonal[(stock * StatisticsState.SeasonalCapacity) + 0].ShouldBe(5500);
+        int residents = StatisticsState.SeriesIndex(StatKind.Residents, settlers.Value, goodCount, tierCount);
+        seasonal[(residents * StatisticsState.SeasonalCapacity) + 0].ShouldBe(4);
+
+        // Flows average like levels: 2 units produced, 0.3 consumed, 0.5 demanded, 0.7 knowledge, 0.11 culture.
+        int produced = StatisticsState.SeriesIndex(StatKind.Produced, fish.Value, goodCount, tierCount);
+        seasonal[(produced * StatisticsState.SeasonalCapacity) + 0].ShouldBe(2000);
+        int consumed = StatisticsState.SeriesIndex(StatKind.Consumed, fish.Value, goodCount, tierCount);
+        seasonal[(consumed * StatisticsState.SeasonalCapacity) + 0].ShouldBe(300);
+        int demand = StatisticsState.SeriesIndex(StatKind.Demand, fish.Value, goodCount, tierCount);
+        seasonal[(demand * StatisticsState.SeasonalCapacity) + 0].ShouldBe(500);
+        int knowledge = StatisticsState.SeriesIndex(StatKind.KnowledgePerDay, 0, goodCount, tierCount);
+        seasonal[(knowledge * StatisticsState.SeasonalCapacity) + 0].ShouldBe(700);
+        int culture = StatisticsState.SeriesIndex(StatKind.CulturePerDay, 0, goodCount, tierCount);
+        seasonal[(culture * StatisticsState.SeasonalCapacity) + 0].ShouldBe(110);
+    }
+
+    [Fact]
+    public void SeasonalSeries_ReturnsOldestFirstWithSeasonAverage()
+    {
+        FakeSim sim = CreateSim();
+        var system = new StatisticsSystem(sim.World.Statistics, sim.Content);
+        GoodId fish = sim.Content.IdOf<GoodId>("fish");
+
+        for (int day = 0; day < 30; day++)
+        {
+            sim.Queries.Production.SetProducedYesterday(fish, Amount.FromMilli((day + 1) * 100L));
+            system.Run(sim.Context);
+        }
+
+        Span<long> series = stackalloc long[8];
+        (int written, long seasons) = system.Queries.SeasonalSeries(StatKey.Produced(fish), series);
+        written.ShouldBe(3);
+        seasons.ShouldBe(3);
+
+        // Each season averages its ten days: days 1..10 average 0.55 units, then 1.55 and 2.55.
+        series[..written].ToArray().ShouldBe([550L, 1550L, 2550L]);
+
+        Span<long> shortSpan = stackalloc long[2];
+        (int shortWritten, long shortSeasons) = system.Queries.SeasonalSeries(StatKey.Produced(fish), shortSpan);
+        shortWritten.ShouldBe(2);
+        shortSeasons.ShouldBe(3);
+        shortSpan[..shortWritten].ToArray().ShouldBe([1550L, 2550L]);
+    }
+
+    [Fact]
+    public void SeasonalSeries_WrapsAtEightSeasons()
+    {
+        FakeSim sim = CreateSim();
+        var system = new StatisticsSystem(sim.World.Statistics, sim.Content);
+        GoodId fish = sim.Content.IdOf<GoodId>("fish");
+
+        for (int day = 0; day < 100; day++)
+        {
+            sim.Queries.Storage.Set(fish, Amount.FromMilli((day + 1) * 1000L));
+            system.Run(sim.Context);
+        }
+
+        Span<long> series = stackalloc long[8];
+        (int written, long seasons) = system.Queries.SeasonalSeries(StatKey.Stock(fish), series);
+        written.ShouldBe(8);
+        seasons.ShouldBe(10);
+
+        // Ten seasons sampled, so the ring keeps the newest eight: seasons 2..9, each averaging its ten days.
+        series[..written].ToArray().ShouldBe([25500L, 35500L, 45500L, 55500L, 65500L, 75500L, 85500L, 95500L]);
+    }
+
+    [Fact]
+    public void SeasonalSeries_EmptyBeforeFirstSeason()
+    {
+        FakeSim sim = CreateSim();
+        var system = new StatisticsSystem(sim.World.Statistics, sim.Content);
+        GoodId fish = sim.Content.IdOf<GoodId>("fish");
+
+        for (int day = 0; day < 4; day++)
+        {
+            system.Run(sim.Context);
+        }
+
+        Span<long> series = stackalloc long[8];
+        (int written, long seasons) = system.Queries.SeasonalSeries(StatKey.Stock(fish), series);
+        written.ShouldBe(0);
+        seasons.ShouldBe(0);
+    }
+
+    [Fact]
     public void Sampling_IsDeterministic()
     {
         FakeSim first = CreateSim();
@@ -177,9 +290,10 @@ public sealed class StatisticsTests
         var system = new StatisticsSystem(sim.World.Statistics, sim.Content);
         GoodId fish = sim.Content.IdOf<GoodId>("fish");
 
-        for (int day = 0; day < 12; day++)
+        for (int day = 0; day < 25; day++)
         {
             sim.Queries.Storage.Set(fish, Amount.FromMilli(day * 1000L));
+            sim.Queries.Production.SetProducedYesterday(fish, Amount.FromMilli(2000));
             system.Run(sim.Context);
         }
 
@@ -196,5 +310,14 @@ public sealed class StatisticsTests
         after[..afterCount].ToArray().ShouldBe(before[..beforeCount].ToArray());
         restored.Statistics.DaysSampled.ShouldBe(sim.World.Statistics.DaysSampled);
         restored.Statistics.SeasonsSampled.ShouldBe(sim.World.Statistics.SeasonsSampled);
+
+        Span<long> seasonalBefore = stackalloc long[8];
+        Span<long> seasonalAfter = stackalloc long[8];
+        (int writtenBefore, long seasonsBefore) = system.Queries.SeasonalSeries(StatKey.Produced(fish), seasonalBefore);
+        (int writtenAfter, long seasonsAfter) = restoredQueries.SeasonalSeries(StatKey.Produced(fish), seasonalAfter);
+        writtenBefore.ShouldBe(2);
+        writtenAfter.ShouldBe(writtenBefore);
+        seasonsAfter.ShouldBe(seasonsBefore);
+        seasonalAfter[..writtenAfter].ToArray().ShouldBe(seasonalBefore[..writtenBefore].ToArray());
     }
 }
