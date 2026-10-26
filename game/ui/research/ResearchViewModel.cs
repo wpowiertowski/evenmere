@@ -1,6 +1,7 @@
 using Evenmere.Content;
 using Evenmere.Content.Conditions;
 using Evenmere.Content.Definitions;
+using Evenmere.Content.Effects;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Game.Ui.Common;
@@ -19,6 +20,7 @@ public sealed class ResearchViewModel : TreeViewModel<TechId>
 {
     private readonly IResearchQueries _research;
     private readonly IProgressionQueries _progression;
+    private List<TechId> _graphIds = new();
 
     /// <summary>Initializes a new instance of the <see cref="ResearchViewModel"/> class.</summary>
     /// <param name="content">The content database.</param>
@@ -101,6 +103,196 @@ public sealed class ResearchViewModel : TreeViewModel<TechId>
     /// <inheritdoc />
     protected override bool OwnsCommand(Command command) =>
         command is SetResearchTarget or SetResearchQueue;
+
+    /// <summary>
+    /// Builds the cards the <see cref="TreeView"/> shows: one per visible tech in content order, plus the
+    /// layout inputs in the same order. States, costs, inspiration text and unlocks come from the snapshot rows,
+    /// so the graph agrees with the list; prerequisites address cards by their position in the returned lists.
+    /// Content order keeps cards in place when the target or queue changes; they only move when a new era begins.
+    /// </summary>
+    /// <param name="iconFor">The placeholder glyph for a content building ID, or <see langword="null"/> when it has none.</param>
+    /// <returns>The cards and their layout inputs.</returns>
+    public TreeGraph BuildGraph(Func<string, string?> iconFor)
+    {
+        ArgumentNullException.ThrowIfNull(iconFor);
+        TreeSnapshot<TechId> snapshot = Snapshot;
+
+        // Content order, not group order: cards keep their places when the target or queue changes,
+        // and only move when a new era begins. Rows for later eras are absent from the snapshot.
+        var rowById = new Dictionary<TechId, NodeRow<TechId>>(snapshot.Rows.Count);
+        foreach (NodeRow<TechId> row in snapshot.Rows)
+        {
+            rowById[row.Id] = row;
+        }
+
+        var ids = new List<TechId>(snapshot.Rows.Count);
+        for (int i = 0; i < Content.Techs.Count; i++)
+        {
+            var id = TechId.From(checked((ushort)i));
+            if (rowById.ContainsKey(id))
+            {
+                ids.Add(id);
+            }
+        }
+
+        var indexById = new Dictionary<TechId, int>(ids.Count);
+        for (int i = 0; i < ids.Count; i++)
+        {
+            indexById[ids[i]] = i;
+        }
+
+        var nodes = new List<GraphNode>(ids.Count);
+        var layout = new List<LayoutNode>(ids.Count);
+        for (int i = 0; i < ids.Count; i++)
+        {
+            NodeRow<TechId> row = rowById[ids[i]];
+            TechDef def = Content.Get(row.Id);
+
+            var requires = new List<int>(def.Requires.Length);
+            foreach (TechId require in def.Requires)
+            {
+                if (indexById.TryGetValue(require, out int requireIndex))
+                {
+                    requires.Add(requireIndex);
+                }
+            }
+
+            GraphNodeState state = row.Group switch
+            {
+                ProgressGroup.Researched => GraphNodeState.Done,
+                ProgressGroup.Target => GraphNodeState.Target,
+                ProgressGroup.Queue => GraphNodeState.Queued,
+                ProgressGroup.Available => GraphNodeState.Available,
+                _ => GraphNodeState.Locked,
+            };
+
+            nodes.Add(new GraphNode(
+                i,
+                def.Gateway ? $"\u2605 {row.Name}" : row.Name,
+                row.EraName,
+                def.Gateway,
+                state,
+                row.QueueIndex,
+                StateText(row),
+                $"{row.ProgressText} \u00b7 {row.EtaText}",
+                row.Fraction,
+                row.InspirationText,
+                row.Inspired,
+                row.Inspired ? Strings.Get("ui.tree.row.inspired") : string.Empty,
+                row.MissingText,
+                UnlocksOf(def, iconFor),
+                TooltipOf(row)));
+            layout.Add(new LayoutNode(def.Era, row.EraName, requires, def.Gateway));
+        }
+
+        _graphIds = ids;
+        return new TreeGraph(nodes, layout);
+    }
+
+    /// <summary>Gets the tech behind a graph card.</summary>
+    /// <param name="index">The card's index in the last <see cref="BuildGraph"/> answer.</param>
+    /// <returns>The tech.</returns>
+    public TechId GraphId(int index) => _graphIds[index];
+
+    /// <summary>Gets how many cards the last <see cref="BuildGraph"/> answer held.</summary>
+    public int GraphCount => _graphIds.Count;
+
+    private string StateText(NodeRow<TechId> row) => row.Group switch
+    {
+        ProgressGroup.Target => Strings.Get("ui.tree.group.target"),
+        ProgressGroup.Queue => Strings.Format(
+            "ui.tree.row.queue_position",
+            ("position", NumberFormat.Count(row.QueueIndex + 1))),
+        ProgressGroup.Researched => Strings.Get("ui.tree.group.researched"),
+        ProgressGroup.Available => Strings.Get("ui.tree.group.available"),
+        _ => row.MissingText.Length > 0 ? row.MissingText : Strings.Get("ui.tree.group.locked"),
+    };
+
+    private string TooltipOf(NodeRow<TechId> row)
+    {
+        string tip = Strings.Get(row.Group == ProgressGroup.Queue ? "ui.tree.row.tip.queued" : "ui.tree.row.tip");
+        return row.MissingText.Length > 0 ? row.MissingText + "\n" + tip : tip;
+    }
+
+    private List<GraphUnlock> UnlocksOf(TechDef def, Func<string, string?> iconFor)
+    {
+        var unlocks = new List<GraphUnlock>(def.Effects.Length);
+        foreach (Effect effect in def.Effects)
+        {
+            switch (effect)
+            {
+                case UnlockBuildingEffect unlocked:
+                    {
+                        string name = Content.Buildings.NameOf(unlocked.Building);
+                        unlocks.Add(new GraphUnlock(iconFor(name) ?? "\u2022", Strings.Get($"building.{name}.name")));
+                        break;
+                    }
+
+                case UnlockRecipeEffect unlocked:
+                    {
+                        string name = Content.Recipes.NameOf(unlocked.Recipe);
+                        unlocks.Add(new GraphUnlock(string.Empty, Strings.Get($"recipe.{name}.name")));
+                        break;
+                    }
+
+                case UnlockTierEffect unlocked:
+                    {
+                        string name = Content.Tiers.NameOf(unlocked.Tier);
+                        unlocks.Add(new GraphUnlock("\u25b2", Strings.TierName(name)));
+                        break;
+                    }
+
+                case UnlockTraditionEffect unlocked:
+                    {
+                        string name = Content.Traditions.NameOf(unlocked.Tradition);
+                        unlocks.Add(new GraphUnlock("\u2726", Strings.Get($"tradition.{name}.name")));
+                        break;
+                    }
+
+                case UnlockFestivalEffect unlocked:
+                    {
+                        string name = Content.Festivals.NameOf(unlocked.Festival);
+                        unlocks.Add(new GraphUnlock("\u2726", Strings.Get($"festival.{name}.name")));
+                        break;
+                    }
+
+                case ModifierEffect modifier:
+                    unlocks.Add(new GraphUnlock(
+                        string.Empty,
+                        $"+{modifier.Percent}% {ContentNames.NameOf(modifier.Stat)}"));
+                    break;
+
+                case GrantGoodsEffect granted:
+                    {
+                        var parts = new List<string>(granted.Goods.Length);
+                        foreach (GoodAmount goods in granted.Goods)
+                        {
+                            parts.Add($"+{NumberFormat.Units(goods.Amount)} {Strings.GoodName(Content.Goods.NameOf(goods.Good))}");
+                        }
+
+                        unlocks.Add(new GraphUnlock(string.Empty, string.Join(", ", parts)));
+                        break;
+                    }
+
+                case GrantPointsEffect granted:
+                    {
+                        var parts = new List<string>(granted.Points.Length);
+                        foreach (PointAmount points in granted.Points)
+                        {
+                            parts.Add($"+{NumberFormat.Units(points.Amount)} {ContentNames.NameOf(points.Kind)}");
+                        }
+
+                        unlocks.Add(new GraphUnlock(string.Empty, string.Join(", ", parts)));
+                        break;
+                    }
+
+                default:
+                    break;
+            }
+        }
+
+        return unlocks;
+    }
 
     private string EraName(int order)
     {
