@@ -1,0 +1,16 @@
+{
+  "id": "remembrance",
+  "era": 1,
+  "cost": 80,
+  "requires": ["oral_tradition"],
+  "effects": [
+    { "traditionSlot": "heritage" },
+    { "unlockBuilding": "standing_stones" },
+    { "unlockTradition": "old_ways" }
+  ],
+  "inspiration": {
+    "when": {
+      "greatWorks": { "atLeast": 1 }
+    }
+  }
+}

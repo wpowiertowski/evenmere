@@ -1,0 +1,8 @@
+{
+  "id": "many_hands",
+  "slot": "craft",
+  "effects": [
+    { "modifier": { "stat": "constructionSpeed", "percent": 25 } },
+    { "modifier": { "stat": "crew", "target": { "building": "sheep_farm" }, "percent": -25 } }
+  ]
+}

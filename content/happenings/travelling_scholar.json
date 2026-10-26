@@ -1,0 +1,17 @@
+{
+  "id": "travelling_scholar",
+  "trigger": { "population": { "tier": "settlers", "atLeast": 25 } },
+  "chancePerMille": 30,
+  "cooldownDays": 60,
+  "options": [
+    {
+      "label": "happening.travelling_scholar.option.0.label",
+      "effects": [{ "grantPoints": { "knowledge": 15 } }]
+    },
+    {
+      "label": "happening.travelling_scholar.option.1.label",
+      "effects": [{ "grantPoints": { "culture": 10 } }]
+    }
+  ],
+  "defaultOption": 0
+}

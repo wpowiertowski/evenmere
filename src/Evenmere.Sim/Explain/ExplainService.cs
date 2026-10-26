@@ -836,6 +836,10 @@ internal sealed class ExplainService(ContentDb content, Func<ISimQueries> querie
     {
         EffectSourceKind.Tech => ExplainArg.Of(source.AsTech()),
         EffectSourceKind.Civic => ExplainArg.Of(source.AsCivic()),
+        EffectSourceKind.Tradition => ExplainArg.Of(source.AsTradition()),
+        EffectSourceKind.Festival => ExplainArg.Of(source.AsFestival()),
+        EffectSourceKind.Monument => ExplainArg.Of(source.AsMonument()),
+        EffectSourceKind.Happening => ExplainArg.Of(source.AsHappening()),
         EffectSourceKind.Building => ExplainArg.Of(source.AsBuilding()),
         _ => ExplainArg.Of(source.Value),
     };

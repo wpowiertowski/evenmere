@@ -1,0 +1,11 @@
+{
+  "id": "standing_stones",
+  "category": "monument",
+  "era": 1,
+  "footprint": [3, 3],
+  "cost": {},
+  "buildDays": 2,
+  "outputs": { "culture": 4 },
+  "attractiveness": 5,
+  "unique": true
+}

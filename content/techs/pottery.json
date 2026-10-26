@@ -5,7 +5,8 @@
   "requires": ["cultivation"],
   "effects": [
     { "unlockBuilding": "clay_pit" },
-    { "unlockBuilding": "potters_kiln" }
+    { "unlockBuilding": "potters_kiln" },
+    { "modifier": { "stat": "crew", "target": { "building": "potters_kiln" }, "percent": -25 } }
   ],
   "inspiration": {
     "when": {

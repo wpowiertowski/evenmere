@@ -173,7 +173,8 @@ public sealed record MonumentDef(MonumentId Id, BuildingTypeId Building, Immutab
 /// <summary>One choice in a happening.</summary>
 /// <param name="Effects">What choosing it does; never harsh.</param>
 /// <param name="DurationDays">For modifiers, how many days they last; 0 means they are permanent.</param>
-public sealed record HappeningOption(ImmutableArray<Effect> Effects, int DurationDays);
+/// <param name="Label">The locale key of the option's button label, or <see langword="null"/> when the dialog shows only the effect preview.</param>
+public sealed record HappeningOption(ImmutableArray<Effect> Effects, int DurationDays, string? Label = null);
 
 /// <summary>A gentle world event with choices.</summary>
 /// <param name="Id">The interned ID.</param>

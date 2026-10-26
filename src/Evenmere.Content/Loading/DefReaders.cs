@@ -259,7 +259,7 @@ internal static class DefReaders
                 using ObjectView? option = o.Reader.OpenObject(element, pointer);
                 if (option is not null)
                 {
-                    options.Add(new HappeningOption(option.Effects(), option.OptInt("durationDays", 0, 0, 3650)));
+                    options.Add(new HappeningOption(option.Effects(), option.OptInt("durationDays", 0, 0, 3650), option.OptString("label")));
                 }
             });
 

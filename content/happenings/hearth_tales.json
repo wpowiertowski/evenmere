@@ -1,0 +1,17 @@
+{
+  "id": "hearth_tales",
+  "trigger": { "adopted": "oral_tradition" },
+  "chancePerMille": 30,
+  "cooldownDays": 60,
+  "options": [
+    {
+      "label": "happening.hearth_tales.option.0.label",
+      "effects": [{ "grantPoints": { "culture": 12 } }]
+    },
+    {
+      "label": "happening.hearth_tales.option.1.label",
+      "effects": []
+    }
+  ],
+  "defaultOption": 0
+}

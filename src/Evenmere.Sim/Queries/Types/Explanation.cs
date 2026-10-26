@@ -48,6 +48,18 @@ public enum ExplainArgKind : byte
 
     /// <summary>A <see cref="StallReason"/>; the view shows the reason's text.</summary>
     Stall = 12,
+
+    /// <summary>A <see cref="Core.Ids.TraditionId"/>; the view shows the tradition's name.</summary>
+    Tradition = 13,
+
+    /// <summary>A <see cref="Core.Ids.FestivalId"/>; the view shows the festival's name.</summary>
+    Festival = 14,
+
+    /// <summary>A <see cref="Core.Ids.HappeningId"/>; the view shows the happening's name.</summary>
+    Happening = 15,
+
+    /// <summary>A <see cref="Core.Ids.MonumentId"/>; the view shows the monument's name.</summary>
+    Monument = 16,
 }
 
 /// <summary>
@@ -124,6 +136,26 @@ public readonly record struct ExplainArg(ExplainArgKind Kind, long Value)
     /// <returns>The argument.</returns>
     public static ExplainArg Of(StallReason reason) => new(ExplainArgKind.Stall, (long)reason);
 
+    /// <summary>Creates a tradition argument.</summary>
+    /// <param name="tradition">The tradition.</param>
+    /// <returns>The argument.</returns>
+    public static ExplainArg Of(TraditionId tradition) => new(ExplainArgKind.Tradition, tradition.Value);
+
+    /// <summary>Creates a festival argument.</summary>
+    /// <param name="festival">The festival.</param>
+    /// <returns>The argument.</returns>
+    public static ExplainArg Of(FestivalId festival) => new(ExplainArgKind.Festival, festival.Value);
+
+    /// <summary>Creates a happening argument.</summary>
+    /// <param name="happening">The happening.</param>
+    /// <returns>The argument.</returns>
+    public static ExplainArg Of(HappeningId happening) => new(ExplainArgKind.Happening, happening.Value);
+
+    /// <summary>Creates a monument argument.</summary>
+    /// <param name="monument">The monument.</param>
+    /// <returns>The argument.</returns>
+    public static ExplainArg Of(MonumentId monument) => new(ExplainArgKind.Monument, monument.Value);
+
     /// <summary>Reads a <see cref="ExplainArgKind.Number"/> argument.</summary>
     /// <returns>The number.</returns>
     public int AsNumber() => checked((int)Value);
@@ -175,6 +207,22 @@ public readonly record struct ExplainArg(ExplainArgKind Kind, long Value)
     /// <summary>Reads a <see cref="ExplainArgKind.Stall"/> argument.</summary>
     /// <returns>The stall reason.</returns>
     public StallReason AsStall() => (StallReason)Value;
+
+    /// <summary>Reads an <see cref="ExplainArgKind.Tradition"/> argument.</summary>
+    /// <returns>The tradition.</returns>
+    public TraditionId AsTradition() => new(checked((ushort)Value));
+
+    /// <summary>Reads an <see cref="ExplainArgKind.Festival"/> argument.</summary>
+    /// <returns>The festival.</returns>
+    public FestivalId AsFestival() => new(checked((ushort)Value));
+
+    /// <summary>Reads an <see cref="ExplainArgKind.Happening"/> argument.</summary>
+    /// <returns>The happening.</returns>
+    public HappeningId AsHappening() => new(checked((ushort)Value));
+
+    /// <summary>Reads an <see cref="ExplainArgKind.Monument"/> argument.</summary>
+    /// <returns>The monument.</returns>
+    public MonumentId AsMonument() => new(checked((ushort)Value));
 }
 
 /// <summary>What a <see cref="SubjectLink"/> points at.</summary>

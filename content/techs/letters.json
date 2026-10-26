@@ -1,0 +1,14 @@
+{
+  "id": "letters",
+  "era": 1,
+  "cost": 80,
+  "requires": ["pottery"],
+  "effects": [
+    { "unlockBuilding": "scribes_hall" }
+  ],
+  "inspiration": {
+    "when": {
+      "population": { "tier": "villagers", "atLeast": 50 }
+    }
+  }
+}

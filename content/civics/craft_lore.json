@@ -1,0 +1,14 @@
+{
+  "id": "craft_lore",
+  "era": 1,
+  "cost": 70,
+  "requires": ["kinship", "oral_tradition"],
+  "effects": [
+    { "unlockTradition": "village_crafts" }
+  ],
+  "inspiration": {
+    "when": {
+      "produced": { "good": "homespun", "atLeast": 40 }
+    }
+  }
+}

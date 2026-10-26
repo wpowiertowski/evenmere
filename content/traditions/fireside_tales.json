@@ -1,0 +1,7 @@
+{
+  "id": "fireside_tales",
+  "slot": "hearth",
+  "effects": [
+    { "modifier": { "stat": "output.knowledge", "target": { "tier": "villagers" }, "percent": 25 } }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "village_crafts",
+  "slot": "craft",
+  "effects": [
+    { "modifier": { "stat": "productivity", "target": { "building": "weavers_cottage" }, "percent": 20 } },
+    { "modifier": { "stat": "productivity", "target": { "building": "potters_kiln" }, "percent": 20 } },
+    { "modifier": { "stat": "crew", "target": { "building": "weavers_cottage" }, "percent": -25 } }
+  ]
+}

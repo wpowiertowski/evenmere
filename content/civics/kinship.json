@@ -1,0 +1,15 @@
+{
+  "id": "kinship",
+  "era": 1,
+  "cost": 40,
+  "requires": ["hearth_and_shrine"],
+  "effects": [
+    { "traditionSlot": "craft" },
+    { "unlockTradition": "many_hands" }
+  ],
+  "inspiration": {
+    "when": {
+      "population": { "tier": "settlers", "atLeast": 60 }
+    }
+  }
+}

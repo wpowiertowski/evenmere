@@ -18,8 +18,13 @@
       "description": "The choices; at least one. Never harsh.",
       "type": "array",
       "items": {
+        "description": "One choice: its effects, how long its modifiers last, and the locale key of its button label.",
         "type": "object",
         "properties": {
+          "label": {
+            "description": "The locale key of the option's button label, such as happening.bountiful_catch.option.0.label; the linter (EVL007) requires it to exist in locale/en.",
+            "type": "string"
+          },
           "effects": { "$ref": "common.schema.json#/$defs/effects" },
           "durationDays": {
             "description": "For modifiers, how many days they last; 0 means they are permanent.",

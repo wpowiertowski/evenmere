@@ -1,0 +1,5 @@
+{
+  "id": "standing_stones",
+  "building": "standing_stones",
+  "stages": [{ "stone": 20 }, { "stone": 30, "timber": 10 }, { "stone": 40 }]
+}

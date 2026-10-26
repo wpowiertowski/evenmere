@@ -5,7 +5,8 @@
   "requires": ["cultivation"],
   "effects": [
     { "unlockBuilding": "orchard" },
-    { "unlockBuilding": "cider_press" }
+    { "unlockBuilding": "cider_press" },
+    { "modifier": { "stat": "crew", "target": { "building": "orchard" }, "percent": -25 } }
   ],
   "inspiration": {
     "when": {

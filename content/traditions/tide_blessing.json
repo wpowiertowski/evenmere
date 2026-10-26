@@ -1,0 +1,7 @@
+{
+  "id": "tide_blessing",
+  "slot": "craft",
+  "effects": [
+    { "modifier": { "stat": "productivity", "target": { "tag": "fishing" }, "percent": 15 } }
+  ]
+}

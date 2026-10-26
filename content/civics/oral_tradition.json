@@ -3,7 +3,10 @@
   "era": 1,
   "cost": 40,
   "requires": ["hearth_and_shrine"],
-  "effects": [],
+  "effects": [
+    { "unlockBuilding": "storytellers_circle" },
+    { "unlockTradition": "fireside_tales" }
+  ],
   "inspiration": {
     "when": {
       "count": { "building": "shrine", "atLeast": 3 }

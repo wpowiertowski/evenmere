@@ -1,0 +1,12 @@
+{
+  "id": "town_charter",
+  "era": 1,
+  "cost": 160,
+  "requires": ["milling", "weaving", "masonry", "letters"],
+  "gateway": true,
+  "inspiration": {
+    "when": {
+      "population": { "tier": "villagers", "atLeast": 150 }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "comment": "Placeholder look of every M2-13b Era I trees, culture and monument building (halls, circles, grounds and standing stones). Same shape as era1-production.json: ResearchPanel merges both files, and the factory falls back to a grey box with one warning per unmapped type.",
+  "buildings": {
+    "scribes_hall": { "colour": "#7A6AA0", "shape": "hall", "scene": null, "icon": "✎" },
+    "storytellers_circle": { "colour": "#B0724E", "shape": "shrine", "scene": null, "icon": "❝" },
+    "festival_ground": { "colour": "#7BA05B", "shape": "road", "scene": null, "icon": "⚑" },
+    "standing_stones": { "colour": "#8D8D94", "shape": "shrine", "scene": null, "icon": "⛰" }
+  }
+}

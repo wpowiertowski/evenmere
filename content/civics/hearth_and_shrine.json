@@ -4,7 +4,9 @@
   "cost": 20,
   "effects": [
     { "unlockBuilding": "shrine" },
-    { "unlockBuilding": "communal_oven" }
+    { "unlockBuilding": "communal_oven" },
+    { "traditionSlot": "hearth" },
+    { "unlockTradition": "common_hearth" }
   ],
   "inspiration": {
     "when": {

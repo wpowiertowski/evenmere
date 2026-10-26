@@ -1,0 +1,17 @@
+{
+  "id": "fair_weather",
+  "trigger": { "season": "summer" },
+  "chancePerMille": 60,
+  "cooldownDays": 30,
+  "options": [
+    {
+      "label": "happening.fair_weather.option.0.label",
+      "effects": [{ "grantGoods": { "grain": 6 } }]
+    },
+    {
+      "label": "happening.fair_weather.option.1.label",
+      "effects": []
+    }
+  ],
+  "defaultOption": 0
+}

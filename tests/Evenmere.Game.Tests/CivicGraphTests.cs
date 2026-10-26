@@ -48,9 +48,11 @@ public sealed class CivicGraphTests
         graph.Layout.Count.ShouldBe(graph.Nodes.Count);
         graph.Nodes[at].State.ShouldBe(GraphNodeState.Available);
         graph.Nodes[at].Gateway.ShouldBeFalse();
-        graph.Nodes[at].Unlocks.Count.ShouldBe(2);
+        graph.Nodes[at].Unlocks.Count.ShouldBe(4);
         graph.Nodes[at].Unlocks.ShouldContain(u => u.Text == strings.Get("building.shrine.name"));
         graph.Nodes[at].Unlocks.ShouldContain(u => u.Text == strings.Get("building.communal_oven.name"));
+        graph.Nodes[at].Unlocks.ShouldContain(u => u.Text == strings.Get("tradition.common_hearth.name"));
+        graph.Nodes[at].Unlocks.ShouldContain(u => u.Text == strings.Get("ui.traditions.slot.hearth"));
         graph.Layout[at].Requires.ShouldBeEmpty();
         model.GraphCount.ShouldBe(graph.Nodes.Count);
         model.GraphId(at).ShouldBe(civic);

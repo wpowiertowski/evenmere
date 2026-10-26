@@ -3,7 +3,8 @@
   "era": 1,
   "cost": 30,
   "effects": [
-    { "unlockBuilding": "scouts_lodge" }
+    { "unlockBuilding": "scouts_lodge" },
+    { "unlockFeature": "expeditions" }
   ],
   "inspiration": {
     "when": {

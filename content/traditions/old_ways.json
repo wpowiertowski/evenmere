@@ -1,0 +1,8 @@
+{
+  "id": "old_ways",
+  "slot": "heritage",
+  "effects": [
+    { "modifier": { "stat": "output.culture", "target": { "building": "shrine" }, "percent": 100 } },
+    { "modifier": { "stat": "output.culture", "target": { "building": "stone_shrine" }, "percent": 50 } }
+  ]
+}
