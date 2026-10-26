@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3]
+[gd_scene load_steps=30 format=3]
 
 [ext_resource type="Script" uid="uid://bub5wqwnne33" path="res://host/Main.cs" id="1_main"]
 [ext_resource type="Script" uid="uid://dcmhwhll1gsvl" path="res://host/SimHost.cs" id="2_host"]
@@ -25,6 +25,9 @@
 [ext_resource type="Script" path="res://ui/stats/StatsPanel.cs" id="21_stats"]
 [ext_resource type="Script" uid="uid://m2season24a01" path="res://rendering/seasons/SeasonRenderer.cs" id="24_season"]
 [ext_resource type="Script" uid="uid://m2smoke24b02x" path="res://rendering/effects/SmokeRenderer.cs" id="25_smoke"]
+[ext_resource type="Script" path="res://rendering/fog/FogRenderer.cs" id="26_fog"]
+[ext_resource type="Script" path="res://ui/exploration/ExpeditionPanel.cs" id="27_expedition"]
+[ext_resource type="Script" path="res://ui/exploration/DiscoveryCard.cs" id="28_discovery"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_mode = 1
@@ -111,3 +114,12 @@ script = ExtResource("24_season")
 
 [node name="Smoke" type="Node3D" parent="."]
 script = ExtResource("25_smoke")
+
+[node name="Fog" type="Node3D" parent="."]
+script = ExtResource("26_fog")
+
+[node name="ExpeditionPanel" type="PanelContainer" parent="."]
+script = ExtResource("27_expedition")
+
+[node name="DiscoveryCard" type="PanelContainer" parent="."]
+script = ExtResource("28_discovery")
