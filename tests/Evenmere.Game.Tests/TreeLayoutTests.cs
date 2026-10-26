@@ -1,3 +1,6 @@
+using Evenmere.Content;
+using Evenmere.Content.Definitions;
+using Evenmere.Core.Ids;
 using Evenmere.Game.Ui.Research;
 
 namespace Evenmere.Game.Tests;
@@ -105,6 +108,76 @@ public sealed class TreeLayoutTests
     }
 
     [Fact]
+    public void EraOneTechs_NoCardsOverlap()
+    {
+        // The full Era I tech tree (14 nodes): every card must keep its own rect.
+        List<LayoutNode> nodes = EraOneTechs();
+        nodes.Count.ShouldBe(14);
+
+        TreeLayoutResult result = TreeLayout.Compute(nodes);
+
+        NoOverlap(result, nodes.Count).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void EraOneCivics_NoCardsOverlap()
+    {
+        // The full Era I civic tree (8 nodes): every card must keep its own rect.
+        List<LayoutNode> nodes = EraOneCivics();
+        nodes.Count.ShouldBe(8);
+
+        TreeLayoutResult result = TreeLayout.Compute(nodes);
+
+        NoOverlap(result, nodes.Count).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void EraOneCivics_HasMoreEdgesThanNodes()
+    {
+        // The civics graph holds more prerequisite edges than cards (12 on 8): TreeView._Draw keeps one
+        // done-flag per edge rather than per node, because indexing a node-sized array by edge threw every frame.
+        List<LayoutNode> nodes = EraOneCivics();
+        nodes.Count.ShouldBe(8);
+
+        TreeLayoutResult result = TreeLayout.Compute(nodes);
+
+        result.Edges.Count.ShouldBeGreaterThan(result.Positions.Count);
+    }
+
+    [Fact]
+    public void EraOneGraphs_NoHiddenEdges()
+    {
+        // No edge sample may land inside a card it does not touch: with the full Era I content every
+        // long jump travels the channel below the cards, and direct edges stay inside their own gap.
+        foreach (List<LayoutNode> nodes in new[] { EraOneTechs(), EraOneCivics() })
+        {
+            TreeLayoutResult result = TreeLayout.Compute(nodes);
+
+            result.Edges.Count.ShouldBeGreaterThan(0);
+            NoPointBehindCards(result).ShouldBeTrue();
+        }
+    }
+
+    [Fact]
+    public void EraOneGraphs_NoOverlapAtAnySupportedZoom()
+    {
+        // The view used to shrink the card rect without shrinking its fixed-size content, so neighbours
+        // overlapped at 50% zoom. Zoom now scales each card as a whole, so the scaled rects stay disjoint
+        // and every edge still meets its cards' scaled borders at every supported zoom.
+        foreach (float zoom in new[] { 0.5f, 1f, 2f })
+        {
+            foreach (List<LayoutNode> nodes in new[] { EraOneTechs(), EraOneCivics() })
+            {
+                TreeLayoutResult result = TreeLayout.Compute(nodes);
+
+                ScaledNoOverlap(result, zoom).ShouldBeTrue();
+                ScaledNoPointBehindCards(result, zoom).ShouldBeTrue();
+                ScaledEdgesOnBorders(result, zoom).ShouldBeTrue();
+            }
+        }
+    }
+
+    [Fact]
     public void SameContent_SameLayout()
     {
         TreeLayoutResult first = TreeLayout.Compute(SliceNodes());
@@ -164,6 +237,170 @@ public sealed class TreeLayoutTests
             new(1, "Founding", [0], false),
             new(1, "Founding", [3], false),
         ];
+
+    // The real Era I tech tree, in content order: prerequisites address cards by their position here,
+    // exactly as the research view-model builds them.
+    private static List<LayoutNode> EraOneTechs()
+    {
+        ContentDb content = TestContent.Db;
+        var indexById = new Dictionary<TechId, int>(content.Techs.Count);
+        for (int i = 0; i < content.Techs.Count; i++)
+        {
+            indexById[TechId.From(checked((ushort)i))] = i;
+        }
+
+        var nodes = new List<LayoutNode>(content.Techs.Count);
+        for (int i = 0; i < content.Techs.Count; i++)
+        {
+            TechDef def = content.Get(TechId.From(checked((ushort)i)));
+            var requires = new List<int>(def.Requires.Length);
+            foreach (TechId require in def.Requires)
+            {
+                if (indexById.TryGetValue(require, out int at))
+                {
+                    requires.Add(at);
+                }
+            }
+
+            nodes.Add(new LayoutNode(def.Era, EraContentName(content, def.Era), requires, def.Gateway));
+        }
+
+        return nodes;
+    }
+
+    // The real Era I civic tree, in content order, parallel to the civics view-model's graph.
+    private static List<LayoutNode> EraOneCivics()
+    {
+        ContentDb content = TestContent.Db;
+        var indexById = new Dictionary<CivicId, int>(content.Civics.Count);
+        for (int i = 0; i < content.Civics.Count; i++)
+        {
+            indexById[CivicId.From(checked((ushort)i))] = i;
+        }
+
+        var nodes = new List<LayoutNode>(content.Civics.Count);
+        for (int i = 0; i < content.Civics.Count; i++)
+        {
+            CivicDef def = content.Get(CivicId.From(checked((ushort)i)));
+            var requires = new List<int>(def.Requires.Length);
+            foreach (CivicId require in def.Requires)
+            {
+                if (indexById.TryGetValue(require, out int at))
+                {
+                    requires.Add(at);
+                }
+            }
+
+            nodes.Add(new LayoutNode(def.Era, EraContentName(content, def.Era), requires, def.Gateway));
+        }
+
+        return nodes;
+    }
+
+    // The layout only draws this in the era headers, so the content name (not the display text) is enough.
+    private static string EraContentName(ContentDb content, int order)
+    {
+        foreach (EraId era in content.ErasByOrder)
+        {
+            if (content.Get(era).Order == order)
+            {
+                return content.Eras.NameOf(era);
+            }
+        }
+
+        return $"era-{order}";
+    }
+
+    private static (float X, float Y, float Width, float Height) ScaledCard(TreeLayoutResult result, int index, float zoom)
+    {
+        LayoutPoint at = result.Positions[index];
+        return (at.X * zoom, at.Y * zoom, TreeLayout.NodeWidth * zoom, TreeLayout.NodeHeight * zoom);
+    }
+
+    private static bool ScaledNoOverlap(TreeLayoutResult result, float zoom)
+    {
+        const float slack = 0.01f;
+        for (int i = 0; i < result.Positions.Count; i++)
+        {
+            (float X, float Y, float Width, float Height) left = ScaledCard(result, i, zoom);
+            for (int j = i + 1; j < result.Positions.Count; j++)
+            {
+                (float X, float Y, float Width, float Height) right = ScaledCard(result, j, zoom);
+                bool separated = left.X + left.Width <= right.X + slack
+                    || right.X + right.Width <= left.X + slack
+                    || left.Y + left.Height <= right.Y + slack
+                    || right.Y + right.Height <= left.Y + slack;
+                if (!separated)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static bool ScaledNoPointBehindCards(TreeLayoutResult result, float zoom)
+    {
+        for (int e = 0; e < result.Edges.Count; e++)
+        {
+            LayoutEdge edge = result.Edges[e];
+            for (int n = 0; n < result.Positions.Count; n++)
+            {
+                if (n == edge.From || n == edge.To)
+                {
+                    continue;
+                }
+
+                (float X, float Y, float Width, float Height) card = ScaledCard(result, n, zoom);
+                foreach (LayoutPoint point in edge.Points)
+                {
+                    float x = point.X * zoom;
+                    float y = point.Y * zoom;
+                    bool inside = x > card.X && x < card.X + card.Width
+                        && y > card.Y && y < card.Y + card.Height;
+                    if (inside)
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static bool ScaledEdgesOnBorders(TreeLayoutResult result, float zoom)
+    {
+        float tolerance = Tolerance * zoom + 0.01f;
+        foreach (LayoutEdge edge in result.Edges)
+        {
+            LayoutPoint start = edge.Points[0];
+            LayoutPoint end = edge.Points[^1];
+            if (!ScaledOnBorder(start.X * zoom, start.Y * zoom, ScaledCard(result, edge.From, zoom), tolerance))
+            {
+                return false;
+            }
+
+            if (!ScaledOnBorder(end.X * zoom, end.Y * zoom, ScaledCard(result, edge.To, zoom), tolerance))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool ScaledOnBorder(float x, float y, (float X, float Y, float Width, float Height) card, float tolerance)
+    {
+        bool nearLeft = Math.Abs(x - card.X) <= tolerance;
+        bool nearRight = Math.Abs(x - (card.X + card.Width)) <= tolerance;
+        bool nearTop = Math.Abs(y - card.Y) <= tolerance;
+        bool nearBottom = Math.Abs(y - (card.Y + card.Height)) <= tolerance;
+        bool withinX = x >= card.X - tolerance && x <= card.X + card.Width + tolerance;
+        bool withinY = y >= card.Y - tolerance && y <= card.Y + card.Height + tolerance;
+        return ((nearLeft || nearRight) && withinY) || ((nearTop || nearBottom) && withinX);
+    }
 
     private static (float X, float Y, float Width, float Height) CardOf(TreeLayoutResult result, int index)
     {

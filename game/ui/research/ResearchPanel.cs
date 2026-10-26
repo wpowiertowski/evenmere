@@ -6,6 +6,7 @@ using Evenmere.Game.Host;
 using Evenmere.Game.Ui.Common;
 using Evenmere.Game.Ui.Progress;
 using Evenmere.Sim;
+using Evenmere.Sim.Queries;
 using Evenmere.Sim.Systems.Research.Commands;
 using Godot;
 
@@ -32,6 +33,7 @@ public sealed partial class ResearchPanel : PanelContainer
 
     private SimHost? _host;
     private ContentDb? _builtFor;
+    private ISimQueries? _builtForQueries;
     private ResearchViewModel? _model;
     private UiStrings? _strings;
     private Dictionary<string, string>? _glyphs;
@@ -41,6 +43,7 @@ public sealed partial class ResearchPanel : PanelContainer
     private Label? _note;
     private Label? _teaser;
     private TreeView? _tree;
+    private DebugScript? _debug;
 
     /// <summary>Gets or sets the path to the <see cref="SimHost"/> node, relative to this node.</summary>
     [Export]
@@ -63,6 +66,7 @@ public sealed partial class ResearchPanel : PanelContainer
 
         BuildChrome();
         _host.EventsDrained += OnEvents;
+        _debug = DebugScript.Parse();
         Visible = false;
     }
 
@@ -90,12 +94,13 @@ public sealed partial class ResearchPanel : PanelContainer
 
         SyncToToggles();
 
-        if (_model is null || !ReferenceEquals(_builtFor, host.Content))
+        if (_model is null || NeedsRebuild(host))
         {
             RebuildModel(host);
         }
 
         _model?.Advance(delta);
+        _debug?.Tick(this);
     }
 
     /// <inheritdoc />
@@ -173,6 +178,7 @@ public sealed partial class ResearchPanel : PanelContainer
 
         _strings = new UiStrings(host.Locale);
         _builtFor = host.Content;
+        _builtForQueries = host.Query;
         _glyphs = LoadGlyphs(host.Content);
         _model = new ResearchViewModel(
             host.Content,
@@ -183,6 +189,12 @@ public sealed partial class ResearchPanel : PanelContainer
         _model.MarkDirty();
         Retitle();
     }
+
+    // The content object outlives a save load (the host loads it once and reuses it), so the content
+    // identity alone never notices a new world: the queries object is tracked too, and the simulation
+    // creates it fresh with every game. Without this a loaded save keeps showing the old world's answers.
+    private bool NeedsRebuild(SimHost host) =>
+        !ReferenceEquals(_builtFor, host.Content) || !ReferenceEquals(_builtForQueries, host.Query);
 
     private void OnEvents(IReadOnlyList<SimEvent> events)
     {
@@ -374,5 +386,104 @@ public sealed partial class ResearchPanel : PanelContainer
         }
 
         return glyphs;
+    }
+
+    // Staged screenshots (debug builds only): --research=show opens the panel once the world is running,
+    // --research-zoom=<factor> multiplies the graph zoom once (0.5 for the Era I overview still), and
+    // --research-focus=<index> moves keyboard focus to one card (scrolling it into view, for the bottom
+    // of the Era I tree), the same pattern as the build menu's own debug script.
+    private sealed class DebugScript
+    {
+        private readonly bool _show;
+        private readonly float _zoom;
+        private readonly int? _focus;
+        private bool _zoomed;
+        private bool _done;
+
+        private DebugScript(bool show, float zoom, int? focus)
+        {
+            _show = show;
+            _zoom = zoom;
+            _focus = focus;
+        }
+
+        public static DebugScript? Parse()
+        {
+            if (!OS.IsDebugBuild())
+            {
+                return null;
+            }
+
+            bool show = false;
+            float zoom = 1f;
+            int? focus = null;
+            bool seen = false;
+            foreach (string arg in OS.GetCmdlineUserArgs())
+            {
+                if (arg == "--research=show")
+                {
+                    show = true;
+                    seen = true;
+                }
+                else if (arg.StartsWith("--research-focus=", StringComparison.Ordinal)
+                    && int.TryParse(
+                        arg["--research-focus=".Length..],
+                        System.Globalization.NumberStyles.None,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out int focused))
+                {
+                    focus = focused;
+                    seen = true;
+                }
+                else if (arg.StartsWith("--research-zoom=", StringComparison.Ordinal)
+                    && float.TryParse(
+                        arg["--research-zoom=".Length..],
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out float parsed)
+                    && parsed > 0f)
+                {
+                    zoom = parsed;
+                    seen = true;
+                }
+            }
+
+            return seen ? new DebugScript(show, zoom, focus) : null;
+        }
+
+        public void Tick(ResearchPanel panel)
+        {
+            if (panel._model is null || panel._host is not { IsRunning: true })
+            {
+                return;
+            }
+
+            if (_show && !panel.Visible)
+            {
+                panel.Toggle();
+            }
+
+            if (!_zoomed)
+            {
+                if (_zoom != 1f)
+                {
+                    panel._tree?.ZoomBy(_zoom);
+                }
+
+                _zoomed = true;
+            }
+
+            if (_focus.HasValue)
+            {
+                // Pinned every frame, not once: on the first frames the scroll container has no layout yet,
+                // so the scroll clamps to zero; the capture quits the process, so there is no last frame to
+                // miss. Without a focus flag this runs once like the other one-shots.
+                panel._tree?.FocusCard(_focus.Value);
+            }
+            else if (!_done)
+            {
+                _done = true;
+            }
+        }
     }
 }

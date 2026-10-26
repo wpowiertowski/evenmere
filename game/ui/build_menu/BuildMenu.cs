@@ -339,23 +339,45 @@ public sealed partial class BuildMenu : PanelContainer
         UpdateAll();
     }
 
+    private static readonly string[] _visualFiles =
+    [
+        "res://data/visuals/era1-slice.json",
+        "res://data/visuals/era1-production.json",
+        "res://data/visuals/era1-trees.json",
+    ];
+
     private static Dictionary<string, BuildMenuViewModel.BuildingVisualRef> LoadVisuals(ContentDb content)
     {
+        // Buildings live across the visuals files (the slice, production and trees), so every mapping is
+        // merged the way the research panel and the road renderer merge them: the first file naming a
+        // building wins, and a building named nowhere falls back to the grey swatch with one warning.
         var visuals = new Dictionary<string, BuildMenuViewModel.BuildingVisualRef>(StringComparer.Ordinal);
-        string json = Godot.FileAccess.GetFileAsString("res://data/visuals/era1-slice.json");
-        if (string.IsNullOrEmpty(json))
+        foreach (string file in _visualFiles)
         {
-            GD.PushWarning("[Evenmere] build menu: no placeholder mapping; entries fall back to grey swatches.");
-            return visuals;
+            if (!Godot.FileAccess.FileExists(file))
+            {
+                continue;
+            }
+
+            string json = Godot.FileAccess.GetFileAsString(file);
+            if (string.IsNullOrEmpty(json))
+            {
+                continue;
+            }
+
+            var map = BuildingVisualMap.Load(json, static text => GD.PushWarning($"[Evenmere] build menu: {text}"));
+            foreach (string name in content.Buildings.Names)
+            {
+                if (!visuals.ContainsKey(name) && map.TryGet(name, out BuildingVisual visual))
+                {
+                    visuals[name] = new BuildMenuViewModel.BuildingVisualRef(visual.Icon, visual.Shape.ToString(), visual.Colour);
+                }
+            }
         }
 
-        var map = BuildingVisualMap.Load(json, static text => GD.PushWarning($"[Evenmere] build menu: {text}"));
-        foreach (string name in content.Buildings.Names)
+        if (visuals.Count == 0)
         {
-            if (map.TryGet(name, out BuildingVisual visual))
-            {
-                visuals[name] = new BuildMenuViewModel.BuildingVisualRef(visual.Icon, visual.Shape.ToString(), visual.Colour);
-            }
+            GD.PushWarning("[Evenmere] build menu: no placeholder mapping; entries fall back to grey swatches.");
         }
 
         return visuals;

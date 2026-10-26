@@ -9,6 +9,8 @@ namespace Evenmere.Game.Ui.Research;
 /// Cards are keyed by node index across refreshes, so keyboard and gamepad focus survive a target or queue
 /// swap. Focus neighbours follow the tree's edges (prerequisites on the left, dependents on the right,
 /// siblings above and below) through the existing <c>ui_*</c> focus actions; no new input actions are added.
+/// Zoom scales the whole card (position, size and content together), so cards never overlap and no edge passes
+/// behind a card at any supported zoom: the layout math stays zoom-independent.
 /// </summary>
 public sealed partial class TreeView : Control
 {
@@ -40,7 +42,7 @@ public sealed partial class TreeView : Control
     private IReadOnlyList<LayoutNode> _inputs = [];
     private TreeLayoutResult? _layout;
     private Vector2[][] _edgeLines = [];
-    private bool[] _fromDone = [];
+    private bool[] _edgeFromDone = [];
     private readonly Dictionary<int, TreeNodeView> _views = new();
     private readonly Dictionary<int, Label> _eraHeaders = new();
 
@@ -64,12 +66,14 @@ public sealed partial class TreeView : Control
         for (int i = 1; i < _layout.Eras.Count; i++)
         {
             float divider = (_layout.Eras[i - 1].MaxX + _layout.Eras[i].MinX) * 0.5f * _zoom;
-            DrawLine(new Vector2(divider, 0f), new Vector2(divider, _layout.Size.Y * _zoom), _divider, 2f);
+            DrawLine(new Vector2(divider, 0f), new Vector2(divider, _layout.Size.Y * _zoom), _divider, 2f * _zoom);
         }
 
         for (int i = 0; i < _edgeLines.Length; i++)
         {
-            DrawPolyline(_edgeLines[i], _fromDone[i] ? _edgeDone : _edge, 3f, true);
+            // One flag per edge, not per node: a tree holds more edges than nodes (Era I civics: 12 edges
+            // on 8 nodes), so indexing a node-sized array by edge threw in _Draw every frame.
+            DrawPolyline(_edgeLines[i], _edgeFromDone[i] ? _edgeDone : _edge, 3f * _zoom, true);
         }
 
         DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
@@ -139,6 +143,27 @@ public sealed partial class TreeView : Control
         WireNeighbours();
         CacheEdges();
         QueueRedraw();
+    }
+
+    /// <summary>
+    /// Moves keyboard and gamepad focus to one card's name button, scrolling it into view; the debug
+    /// scripts use it to frame the Era I overview stills. It returns <see langword="false"/> when the card
+    /// is not on the graph (for example before the first refresh built it).
+    /// </summary>
+    /// <param name="index">The card's node index.</param>
+    /// <returns><see langword="true"/> when the card took focus.</returns>
+    public bool FocusCard(int index)
+    {
+        if (_views.TryGetValue(index, out TreeNodeView? view) && _scroll is not null && _layout is not null)
+        {
+            view.MainButton.GrabFocus();
+            // FollowFocus would scroll here on its own, but scripted captures need the scroll settled in
+            // the same frame, so pin the card's top into view directly (the setter clamps to the bar).
+            _scroll.ScrollVertical = (int)(_layout.Positions[index].Y * _zoom);
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>Multiplies the zoom, clamped to the allowed range.</summary>
@@ -233,9 +258,15 @@ public sealed partial class TreeView : Control
             GraphNode node = _nodes[i];
             if (_views.TryGetValue(node.Index, out TreeNodeView? view))
             {
+                // The card keeps its full layout size and is scaled as a whole: shrinking the Size instead
+                // would leave the fixed-size content (fonts, buttons, bars) spilling past the card bounds and
+                // over its neighbours, which is how Era I overlapped at 50% zoom. Scaling keeps every card
+                // exactly on its layout rect at every zoom.
                 LayoutPoint at = _layout.Positions[i];
                 view.Position = new Vector2(at.X * _zoom, at.Y * _zoom);
-                view.Size = new Vector2(TreeLayout.NodeWidth * _zoom, TreeLayout.NodeHeight * _zoom);
+                view.Size = new Vector2(TreeLayout.NodeWidth, TreeLayout.NodeHeight);
+                view.PivotOffset = Vector2.Zero;
+                view.Scale = new Vector2(_zoom, _zoom);
             }
         }
 
@@ -257,7 +288,9 @@ public sealed partial class TreeView : Control
 
             header.Text = era.Name;
             header.Position = new Vector2(era.MinX * _zoom, (TreeLayout.Margin - 4f) * _zoom);
-            header.Size = new Vector2((era.MaxX - era.MinX) * _zoom, TreeLayout.HeaderHeight * _zoom);
+            header.Size = new Vector2(era.MaxX - era.MinX, TreeLayout.HeaderHeight);
+            header.PivotOffset = Vector2.Zero;
+            header.Scale = new Vector2(_zoom, _zoom);
         }
 
         var gone = new List<int>();
@@ -281,20 +314,22 @@ public sealed partial class TreeView : Control
         if (_layout is null)
         {
             _edgeLines = [];
-            _fromDone = [];
+            _edgeFromDone = [];
             return;
         }
 
-        var lines = new Vector2[_layout.Edges.Count][];
-        _fromDone = new bool[_nodes.Count];
+        bool[] nodeDone = new bool[_nodes.Count];
         for (int i = 0; i < _nodes.Count; i++)
         {
-            _fromDone[i] = _nodes[i].State == GraphNodeState.Done;
+            nodeDone[i] = _nodes[i].State == GraphNodeState.Done;
         }
 
+        var lines = new Vector2[_layout.Edges.Count][];
+        bool[] fromDone = new bool[_layout.Edges.Count];
         for (int i = 0; i < _layout.Edges.Count; i++)
         {
             LayoutEdge edge = _layout.Edges[i];
+            fromDone[i] = edge.From >= 0 && edge.From < nodeDone.Length && nodeDone[edge.From];
             var line = new Vector2[edge.Points.Count];
             for (int s = 0; s < line.Length; s++)
             {
@@ -305,6 +340,7 @@ public sealed partial class TreeView : Control
         }
 
         _edgeLines = lines;
+        _edgeFromDone = fromDone;
     }
 
     private void WireNeighbours()

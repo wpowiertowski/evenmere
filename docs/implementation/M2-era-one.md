@@ -102,6 +102,7 @@ file per card as listed; never edit another card's file.
 | M2-33 | Long statistics history: a seasonal series | sim + game | M2-22 | done |
 | M2-34 | Advisors at scale | sim | M2-16 | done |
 | M2-35 | Polish pass from review | game + sim + tools | — | done |
+| M2-36 | Tree and build-menu fixes found with full Era I content | game | M2-13b | done |
 
 ---
 
@@ -1160,6 +1161,29 @@ file per card as listed; never edit another card's file.
 **Acceptance:** each item with evidence (a screenshot for 1, 2 and 5; tests for 3, 4, 6 and 7); `REQUIRE_GODOT=1 scripts/verify.sh` passes; golden hashes unchanged, unless item 6 moves one, in which case state why.
 
 **Out of scope:** moving `AfterLookPriority` into `LookPost` (after M2-23 lands); anything not listed.
+
+---
+
+### M2-36 · Tree and build-menu fixes found with full Era I content
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| game | M2-13b | `game/ui/research/**`, `game/ui/culture/CulturePanel.cs` and `CultureViewModel.cs`, `game/ui/build_menu/BuildMenu.cs` (visuals-mapping load lines), tests beside them in `tests/Evenmere.Game.Tests/` |
+
+**Goal:** the research and civics graphs and the build menu stay correct with the full Era I content and across save loads.
+
+**Found in M2-13b's review:**
+
+1. **Stale trees after a load.** `ResearchPanel` and `CulturePanel` capture `host.Query.*` in `RebuildModel` and never rebuild when the host loads a save or starts a new game. Load a save where 14 techs and 8 civics are done, and both panels still show 0. Rebuild, or re-bind, whenever the host's simulation changes. The traditions board is unaffected, since it reads the host late.
+2. **Overlapping cards.** With all 14 Era I techs and 8 civics, neighbouring cards overlap at 50% zoom, and edges pass behind cards. Fix `TreeLayout`'s layer and row spacing, or zoom scaling, so no two cards overlap and no edge passes behind a card at any supported zoom. Extend `TreeLayoutTests` with the real Era I content.
+3. **Grey build-menu swatches.** `BuildMenu` loads only `era1-slice.json`, so buildings from `era1-production.json` and `era1-trees.json` show grey. Merge every visuals mapping the way M2-35 fixed `RoadRenderer`.
+
+**Acceptance:**
+
+- A test or scripted check that the panels show the loaded save's state after `LoadGame`.
+- `TreeLayoutTests` with Era I content: no overlaps and no hidden edges.
+- Screenshots at 1280 × 800 of the research and civics graphs at 50% and 100% zoom, and of the build menu with production and culture buildings.
+- `REQUIRE_GODOT=1 scripts/verify.sh` passes.
 
 ---
 
