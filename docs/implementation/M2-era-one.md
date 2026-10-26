@@ -91,7 +91,7 @@ file per card as listed; never edit another card's file.
 | M2-22 | Statistics graphs | game | M2-00 | done |
 | M2-23 | Fog, regions and expedition UI | game | M2-06 | todo |
 | M2-24 | Seasons, weather and smoke visuals | game | M2-05 | done |
-| M2-25 | New-game setup: seed, size, starter island | game | M2-02b | todo |
+| M2-25 | New-game setup: seed, size, starter island | game | M2-02b | done |
 | M2-26 | Debug overlay and cheat console | game + sim | M2-00 | done |
 | M2-27 | Festivals, monuments and happenings UI | game | M2-08, M2-10, M2-12 | done |
 | M2-28 | Era I playtest and gate review | human | all M2 tasks | todo |
