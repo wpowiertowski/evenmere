@@ -49,3 +49,41 @@ jobs:
         with:
           name: balance-reports
           path: balance-reports
+
+  # M2-16: nightly perf runs of both reference saves. The nightly records the raw numbers for the
+  # trend (CI runners differ from the dev Mac); the M2 gate binds on the dev-Mac measurement.
+  perf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Build
+        run: dotnet build Evenmere.sln -c Release --nologo
+
+      - name: Run perf (perf-2k and perf-20k)
+        run: |
+          mkdir -p perf-reports
+          dotnet run --project src/Evenmere.Tools -c Release --no-build -- perf --save tests/fixtures/saves/perf-2k.evsave --ticks 2000 > "perf-reports/perf-2k.json" 2> "perf-reports/perf-2k.txt"
+          dotnet run --project src/Evenmere.Tools -c Release --no-build -- perf --save tests/fixtures/saves/perf-20k.evsave --ticks 2000 > "perf-reports/perf-20k.json" 2> "perf-reports/perf-20k.txt"
+
+      - name: Upload perf reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-reports
+          path: perf-reports
