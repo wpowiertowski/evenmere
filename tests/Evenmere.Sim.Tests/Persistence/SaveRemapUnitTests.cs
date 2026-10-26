@@ -30,8 +30,9 @@ public sealed class SaveRemapUnitTests
     public void Remap_ExtraGoodFirst_StockLandsOnRightGoods()
     {
         (SaveTables tables, WorldState world) = ShiftedGoodsWorld();
+        int oldBread = Array.IndexOf(tables.OldGoods, "bread");
         world.Storage.Stock[0] = Amount.FromMilli(999_000);
-        world.Storage.Stock[1] = Amount.FromMilli(1_000);
+        world.Storage.Stock[oldBread] = Amount.FromMilli(1_000);
 
         var report = new SaveReport();
         RemapPass.Apply(world, tables, report);
@@ -249,13 +250,14 @@ public sealed class SaveRemapUnitTests
         world.Statistics.Seasonal = new long[oldSeries * StatisticsState.SeasonalCapacity];
         world.Statistics.LastConsumed = new long[oldGoods];
 
-        // Old bread is raw 1; its stock series is series 1. Mark every slot and its consumed delta.
+        // Old bread by name in the shifted table; old raw 0 is the gone aardvark.
+        int oldBread = Array.IndexOf(tables.OldGoods, "bread");
         for (int s = 0; s < StatisticsState.DailyCapacity; s++)
         {
-            world.Statistics.Daily[(1 * StatisticsState.DailyCapacity) + s] = 1000 + s;
+            world.Statistics.Daily[(oldBread * StatisticsState.DailyCapacity) + s] = 1000 + s;
         }
 
-        world.Statistics.LastConsumed[1] = 4242;
+        world.Statistics.LastConsumed[oldBread] = 4242;
 
         var report = new SaveReport();
         RemapPass.Apply(world, tables, report);
@@ -310,8 +312,8 @@ public sealed class SaveRemapUnitTests
         (SaveTables tables, WorldState world) = ShiftedGoodsWorld();
         ContentDb content = Content;
 
-        // Old bread is raw 1 in the shifted table; old raw 0 is the gone aardvark.
-        var oldBread = GoodId.From(1);
+        // Old bread by name in the shifted table; old raw 0 is the gone aardvark.
+        var oldBread = GoodId.From((ushort)Array.IndexOf(tables.OldGoods, "bread"));
         world.Advisors.Records =
         [
             new AdviceRecord { Id = 2, Kind = AdviceKind.GoodShortage, Subject = SubjectLink.ForGood(GoodId.From(0)), FirstSeenTick = 1, LastSeenTick = 2, Showing = true },

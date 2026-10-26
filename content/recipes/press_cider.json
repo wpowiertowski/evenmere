@@ -1,0 +1,6 @@
+{
+  "id": "press_cider",
+  "inputs": { "apples": 1 },
+  "outputs": { "cider": 1 },
+  "cycleSeconds": 40
+}

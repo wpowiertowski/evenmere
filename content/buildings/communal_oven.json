@@ -1,0 +1,12 @@
+{
+  "id": "communal_oven",
+  "category": "production",
+  "era": 1,
+  "footprint": [2, 2],
+  "cost": { "timber": 4 },
+  "buildDays": 2,
+  "workforce": { "tier": "villagers", "count": 3 },
+  "recipe": "bake_bread",
+  "upgradeOf": "bakery",
+  "tags": ["processing", "food"]
+}

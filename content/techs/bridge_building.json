@@ -1,0 +1,15 @@
+{
+  "id": "bridge_building",
+  "era": 1,
+  "cost": 70,
+  "requires": ["pathfinding"],
+  "effects": [
+    { "unlockBuilding": "timber_bridge" },
+    { "unlockTerrainAccess": "narrow_rivers" }
+  ],
+  "inspiration": {
+    "when": {
+      "expeditions": { "atLeast": 1 }
+    }
+  }
+}

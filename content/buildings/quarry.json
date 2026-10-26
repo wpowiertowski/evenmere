@@ -1,0 +1,15 @@
+{
+  "id": "quarry",
+  "category": "production",
+  "era": 1,
+  "footprint": [3, 3],
+  "placement": {
+    "terrain": ["hills"],
+    "deposit": "stone"
+  },
+  "cost": { "timber": 6 },
+  "buildDays": 2,
+  "workforce": { "tier": "settlers", "count": 5 },
+  "recipe": "quarry_stone",
+  "tags": ["gatherer", "stone"]
+}

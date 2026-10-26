@@ -1,0 +1,14 @@
+{
+  "id": "clay_pit",
+  "category": "production",
+  "era": 1,
+  "footprint": [3, 3],
+  "placement": {
+    "deposit": "clay"
+  },
+  "cost": { "timber": 4 },
+  "buildDays": 2,
+  "workforce": { "tier": "settlers", "count": 4 },
+  "recipe": "dig_clay",
+  "tags": ["gatherer", "clay"]
+}

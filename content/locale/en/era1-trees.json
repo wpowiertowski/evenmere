@@ -1,0 +1,20 @@
+{
+  "tech.stonecutting.name": "Stonecutting",
+  "tech.stonecutting.desc": "Breaking hillside rock into blocks opens the quarry and the cobbled road.",
+  "tech.pathfinding.name": "Pathfinding",
+  "tech.pathfinding.desc": "Beaten paths lead scouts out to the unknown parts of the island.",
+  "tech.pottery.name": "Pottery",
+  "tech.pottery.desc": "Riverbank clay, shaped and fired, becomes pots that keep for years.",
+  "tech.orcharding.name": "Orcharding",
+  "tech.orcharding.desc": "Grafted trees in tended rows bear apples for eating and pressing.",
+  "tech.crop_rotation.name": "Crop Rotation",
+  "tech.crop_rotation.desc": "Resting each field in turn keeps the soil kind, so fewer hands grow the same grain.",
+  "tech.bridge_building.name": "Bridge-building",
+  "tech.bridge_building.desc": "Timber spans carry roads across narrow rivers.",
+  "tech.masonry.name": "Masonry",
+  "tech.masonry.desc": "Dressed stone raises storehouses, shrines and plazas that outlast their builders.",
+  "civic.oral_tradition.name": "Oral Tradition",
+  "civic.oral_tradition.desc": "Stories told and retold bind the village to its past.",
+  "civic.sea_lore.name": "Sea Lore",
+  "civic.sea_lore.desc": "Reading tides and gull-flight fills the weirs as the nets once did."
+}

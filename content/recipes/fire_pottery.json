@@ -1,0 +1,6 @@
+{
+  "id": "fire_pottery",
+  "inputs": { "clay": 1, "wood": 1 },
+  "outputs": { "pottery": 1 },
+  "cycleSeconds": 40
+}

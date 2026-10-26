@@ -1,0 +1,9 @@
+{
+  "id": "scouts_lodge",
+  "category": "infrastructure",
+  "era": 1,
+  "footprint": [2, 2],
+  "cost": { "timber": 6 },
+  "buildDays": 2,
+  "workforce": { "tier": "settlers", "count": 2 }
+}

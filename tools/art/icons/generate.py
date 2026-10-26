@@ -421,7 +421,7 @@ def g_pottery(d: ImageDraw.ImageDraw) -> None:
     detail(d, [(104, 150), (152, 150)])
 
 
-# --- Buildings (28) -----------------------------------------------------------
+# --- Buildings (32) -----------------------------------------------------------
 
 
 def b_woodcutters_hut(d: ImageDraw.ImageDraw) -> None:
@@ -596,6 +596,49 @@ def b_stone_storehouse(d: ImageDraw.ImageDraw) -> None:
     box(d, 108, 150, 148, 200, WOOD_BEAM, WD)
     detail(d, [(108, 168), (148, 168)])
     window_sq(d, 172, 160, 22)
+
+
+def b_stone_shrine(d: ImageDraw.ImageDraw) -> None:
+    wall(d, 96, 160, 128, 196, STONE_L)
+    detail(d, [(100, 150), (156, 150)])
+    detail(d, [(100, 172), (156, 172)])
+    shape(d, [(88, 128), (168, 128), (128, 88)], ROOF_STONE)
+    stones_row(d, 128, 208, 76)
+    flame(d, 128, 190, 52)
+
+
+def b_fish_weir(d: ImageDraw.ImageDraw) -> None:
+    wall(d, 56, 148, 120, 200, WOOD_PLANK)
+    gable(d, 56, 148, 120, 66)
+    door(d, 94, 200)
+    for x in (172, 190, 208):
+        box(d, x - 4, 92, x + 4, 184, WOOD_BEAM, WD)
+    stroke(d, [(164, 120), (216, 120)], WD)
+    band(d, [(164, 150), (216, 150)], 12, PROP_NET, WD)
+
+
+def b_rotation_farm(d: ImageDraw.ImageDraw) -> None:
+    shape(d, [(48, 208), (208, 208), (184, 130), (72, 130)], FIELD_SOIL)
+    detail(d, [(70, 184), (186, 184)])
+    detail(d, [(74, 162), (182, 162)])
+    stroke(d, [(128, 208), (128, 130)], WD)
+    for x in (88, 108):
+        _wheat_ear(d, x, 196, 56)
+    for y in (150, 168, 186):
+        for x in (146, 164, 182):
+            ink_ell(d, x - 3, y - 3, x + 3, y + 3)
+
+
+def b_communal_oven(d: ImageDraw.ImageDraw) -> None:
+    wall(d, 52, 168, 122, 200, WALL_WATTLE)
+    gable(d, 52, 168, 122, 64)
+    chimney(d, 148, 84)
+    shape(d, [(88, 200), (88, 160), (108, 146), (128, 160), (128, 200)],
+          BRICK)
+    shape(d, [(168, 200), (168, 164), (186, 152), (204, 164), (204, 200)],
+          BRICK)
+    door(d, 148, 200, 26, 48)
+    detail(d, [(186, 164), (186, 200)])
 
 
 def b_market(d: ImageDraw.ImageDraw) -> None:
@@ -796,6 +839,10 @@ ICONS: dict[tuple[str, str], object] = {
     ("buildings", "cobbled_road"): b_cobbled_road,
     ("buildings", "storehouse"): b_storehouse,
     ("buildings", "stone_storehouse"): b_stone_storehouse,
+    ("buildings", "stone_shrine"): b_stone_shrine,
+    ("buildings", "fish_weir"): b_fish_weir,
+    ("buildings", "rotation_farm"): b_rotation_farm,
+    ("buildings", "communal_oven"): b_communal_oven,
     ("buildings", "market"): b_market,
     ("buildings", "shrine"): b_shrine,
     ("buildings", "scouts_lodge"): b_scouts_lodge,

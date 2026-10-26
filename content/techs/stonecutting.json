@@ -1,0 +1,14 @@
+{
+  "id": "stonecutting",
+  "era": 1,
+  "cost": 40,
+  "effects": [
+    { "unlockBuilding": "quarry" },
+    { "unlockBuilding": "cobbled_road" }
+  ],
+  "inspiration": {
+    "when": {
+      "stock": { "good": "timber", "atLeast": 40 }
+    }
+  }
+}

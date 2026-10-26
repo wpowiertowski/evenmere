@@ -77,7 +77,7 @@ file per card as listed; never edit another card's file.
 | M2-10 | Monuments: multi-stage construction | sim | M2-00 | done |
 | M2-11 | Era advancement and gateways | sim | M2-09 | done |
 | M2-12 | Happenings | sim | M2-09 | done |
-| M2-13a | Era I production content | content | M2-04, M2-05, M2-14, M2-30 | todo |
+| M2-13a | Era I production content | content | M2-04, M2-05, M2-14, M2-30 | done |
 | M2-13b | Era I trees, monuments, happenings and era content | content | M2-06, M2-07, M2-08, M2-10, M2-11, M2-12, M2-13a, M2-14 | todo |
 | M2-14 | Lint rule EVL010: lower-tier staffing | content-infra | M2-00 | done |
 | M2-15 | Save versioning, migrations and autosave rotation | sim | M2-00 | done |
@@ -512,6 +512,8 @@ file per card as listed; never edit another card's file.
 4. **Visuals:** a mapping for every new building in `game/data/visuals/era1-production.json`.
 5. **Locale:** `content/locale/en/era1-production.json` with `<type>.<id>.name` and `.desc` for every item.
 
+**Moved here in review (2026-10-26):** lint's EVL005 needs an unlock source for every building, and M2-13b waits on exploration, so M2-13a also created the tree nodes that unlock its buildings: the techs `stonecutting`, `pathfinding`, `pottery`, `orcharding`, `crop_rotation`, `bridge_building` and `masonry`; the civics `oral_tradition` and `sea_lore`; and the `communal_oven` unlock on `hearth_and_shrine`. It also drew the four upgrade icons. Effects that need content or systems not yet built are listed under M2-13b.
+
 **Added by M2-30 (developer-approved upgrade table, 2026-10-25):** implement the Era I ★ upgrade rows from progression.md §Upgrade lines that this card's goods and buildings enable: `stone_storehouse` and `stone_shrine` (4 stone each), `rotation_farm`, `fish_weir` and `communal_oven`. Each is a building with `upgradeOf`, its staffing, cost and locale, plus its kit spec from ART-03's pattern. The unlock effects land with M2-13b's tree files. Old saves must load losslessly (`SaveReport.IsLossless`) when building IDs shift.
 
 **Acceptance:**
@@ -544,6 +546,13 @@ file per card as listed; never edit another card's file.
 5. **Era II definition:** `content/eras/township.json` with the gateway requirements.
 6. **Happenings:** 8–10 Era I happenings (travelling scholar, bountiful catch, Harvest Fair request, shipwreck salvage, lost lamb, storyteller's visit, fair-weather season, stone find), each with at least one option and a default, all passing EVL012.
 7. **Visuals + names:** mappings for every new building; `names.json` with deterministic discovery-name tables.
+
+**Changed in review (2026-10-26):** M2-13a created `stonecutting`, `pathfinding`, `pottery`, `orcharding`, `crop_rotation`, `bridge_building`, `masonry`, `oral_tradition` and `sea_lore`, and every ★ `unlockBuilding` below. M2-13b owns those files from here and appends the effects M2-13a left out:
+- `pathfinding`: the expeditions feature (M2-06).
+- `oral_tradition`: Storyteller's Circle, Folk Epics and the `fireside_tales` tradition (its effects are empty until then).
+- `sea_lore`: the `tide_blessing` tradition.
+- `hearth_and_shrine`: the hearth slot and the `common_hearth` tradition.
+- `bridge_building`'s inspiration (1 expedition) can't fire until M2-06 fills the expeditions counter.
 
 **Added by M2-30 (developer-approved upgrade table, 2026-10-25):**
 - Add a ninth tech file, `techs/crop_rotation.json` (Era I, cost 55, requires Cultivation, `unlockBuilding: rotation_farm`).

@@ -118,13 +118,9 @@ public sealed class AdvisorsIdleTests
         ContentDb content = ContentLoader.Load(Path.Combine(WorldBuilder.RepoRoot, "content")).GetDbOrThrow();
         var sim = Simulation.CreateNew(content, new NewGameOptions { Seed = 1 });
 
-        // Research every slice tech in dependency order, then adopt the slice civic.
-        foreach (string tech in new[] { "animal_husbandry", "cultivation", "weaving", "milling", "net_weaving" })
-        {
-            CompleteTech(sim, content.IdOf<TechId>(tech));
-        }
-
-        CompleteCivic(sim, content.IdOf<CivicId>("hearth_and_shrine"));
+        // Complete the whole tree in dependency order, so the idle notes have nothing to fire on.
+        CompleteAllTechs(sim, content);
+        CompleteAllCivics(sim, content);
         sim.DrainEvents();
 
         // Points keep accruing with nothing left to choose, for two full seasons.
@@ -143,6 +139,74 @@ public sealed class AdvisorsIdleTests
         (sim.Query.Research.PointsPerDay > Amount.Zero).ShouldBeTrue();
         (sim.Query.Culture.PointsPerDay > Amount.Zero).ShouldBeTrue();
         sim.Query.Advisors.Active().ToArray().ShouldNotContain(static a => a.Kind == AdviceKind.ResearchIdle || a.Kind == AdviceKind.CivicIdle);
+    }
+
+    private static void CompleteAllTechs(Simulation sim, ContentDb content)
+    {
+        var done = new HashSet<TechId>();
+        while (done.Count < content.Techs.Count)
+        {
+            int before = done.Count;
+            foreach (TechDef def in content.Techs.Items)
+            {
+                if (done.Contains(def.Id))
+                {
+                    continue;
+                }
+
+                bool ready = true;
+                foreach (TechId required in def.Requires)
+                {
+                    if (!done.Contains(required))
+                    {
+                        ready = false;
+                        break;
+                    }
+                }
+
+                if (ready)
+                {
+                    CompleteTech(sim, def.Id);
+                    done.Add(def.Id);
+                }
+            }
+
+            Assert.True(done.Count > before, "Tech tree has a cycle or an unknown requirement.");
+        }
+    }
+
+    private static void CompleteAllCivics(Simulation sim, ContentDb content)
+    {
+        var done = new HashSet<CivicId>();
+        while (done.Count < content.Civics.Count)
+        {
+            int before = done.Count;
+            foreach (CivicDef def in content.Civics.Items)
+            {
+                if (done.Contains(def.Id))
+                {
+                    continue;
+                }
+
+                bool ready = true;
+                foreach (CivicId required in def.Requires)
+                {
+                    if (!done.Contains(required))
+                    {
+                        ready = false;
+                        break;
+                    }
+                }
+
+                if (ready)
+                {
+                    CompleteCivic(sim, def.Id);
+                    done.Add(def.Id);
+                }
+            }
+
+            Assert.True(done.Count > before, "Civic tree has a cycle or an unknown requirement.");
+        }
     }
 
     private static void CompleteTech(Simulation sim, TechId tech)

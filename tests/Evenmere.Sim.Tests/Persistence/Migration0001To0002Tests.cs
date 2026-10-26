@@ -108,18 +108,24 @@ public sealed class Migration0001To0002Tests
     }
 
     [Fact]
-    public void V1Slice_MigratesAndContinues_ToSameHashAsUninterrupted()
+    public void V1Slice_MigratesAndContinues_DeterministicallyTo40000()
     {
+        // The M1 behaviour pin this replaces compared the migrated-then-continued save against an uninterrupted
+        // fresh run, which stopped matching once M2-13a gave Villagers comfort needs. What still holds, and what
+        // this now pins, is that the migrated save continues deterministically: two loads continued to the same
+        // tick reach the same state, with a lived-in island at the end.
         ContentDb content = SiteFinder.Content;
-        (ISimulation resumed, _) = ReadFixture(content);
-        resumed.CurrentTick.ShouldBe(20_000);
-        for (long tick = resumed.CurrentTick + 1; tick <= 40_000; tick++)
+        (ISimulation first, _) = ReadFixture(content);
+        (ISimulation second, _) = ReadFixture(content);
+
+        for (long tick = 20_001; tick <= 40_000; tick++)
         {
-            resumed.Tick();
+            first.Tick();
+            second.Tick();
         }
 
-        Simulation direct = SliceHarness.RunTo(40_000);
-        resumed.ComputeStateHash().ShouldBe(direct.ComputeStateHash());
+        first.ComputeStateHash().ShouldBe(second.ComputeStateHash());
+        first.Query.Population.TotalResidents.ShouldBeGreaterThan(0);
     }
 
     private static (ISimulation Simulation, SaveReport Report) ReadFixture(ContentDb content)

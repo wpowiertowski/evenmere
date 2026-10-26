@@ -1,0 +1,14 @@
+{
+  "id": "sea_lore",
+  "era": 1,
+  "cost": 50,
+  "requires": ["oral_tradition"],
+  "effects": [
+    { "unlockBuilding": "fish_weir" }
+  ],
+  "inspiration": {
+    "when": {
+      "count": { "building": "fishing_hut", "atLeast": 4 }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "id": "potters_kiln",
+  "category": "production",
+  "era": 1,
+  "footprint": [2, 2],
+  "cost": { "timber": 4, "stone": 4 },
+  "buildDays": 2,
+  "workforce": { "tier": "settlers", "count": 4 },
+  "recipe": "fire_pottery",
+  "tags": ["processing"]
+}

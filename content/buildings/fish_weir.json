@@ -1,0 +1,16 @@
+{
+  "id": "fish_weir",
+  "category": "production",
+  "era": 1,
+  "footprint": [2, 2],
+  "placement": {
+    "coastline": true,
+    "areaYield": { "kind": "radius", "terrain": ["sea"], "radius": 5, "fullAt": 30, "exclusive": true }
+  },
+  "cost": { "timber": 4 },
+  "buildDays": 1,
+  "workforce": { "tier": "villagers", "count": 2 },
+  "recipe": "catch_fish",
+  "upgradeOf": "fishing_hut",
+  "tags": ["fishing", "gatherer"]
+}

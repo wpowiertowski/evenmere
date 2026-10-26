@@ -1,0 +1,15 @@
+{
+  "id": "orcharding",
+  "era": 1,
+  "cost": 60,
+  "requires": ["cultivation"],
+  "effects": [
+    { "unlockBuilding": "orchard" },
+    { "unlockBuilding": "cider_press" }
+  ],
+  "inspiration": {
+    "when": {
+      "count": { "building": "grain_farm", "atLeast": 4 }
+    }
+  }
+}
