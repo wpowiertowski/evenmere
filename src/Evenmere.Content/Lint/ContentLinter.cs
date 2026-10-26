@@ -18,7 +18,7 @@ namespace Evenmere.Content.Lint;
 /// <item><term>EVL006</term><description>Every tier's basic needs can be met with items of its era or earlier.</description></item>
 /// <item><term>EVL007</term><description>Every item has a display name (error) and description (warning) in <c>locale/en</c>.</description></item>
 /// <item><term>EVL008</term><description>Era gateways exist, and no node requires a node of a later era.</description></item>
-/// <item><term>EVL010</term><description>A tier's basic goods and services are made and staffed only by lower tiers.</description></item>
+/// <item><term>EVL010</term><description>Every tier's basic good and service keeps a lower-tier-staffed, available fallback chain or provider; upgrades may be staffed by any tier.</description></item>
 /// <item><term>EVL011</term><description>A tier with an advanceFrom tier needs strictly more basic goods per resident than that tier.</description></item>
 /// </list>
 /// The rules EVL003 to EVL008, EVL010 and EVL011 read the typed <see cref="ContentDb"/>, so they run only when loading produced one. Shape

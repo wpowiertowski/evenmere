@@ -8,31 +8,42 @@ using Evenmere.Core.Ids;
 namespace Evenmere.Content.Lint.Rules;
 
 /// <summary>
-/// EVL010 (ADR-0010, progression.md "Design rule"): a tier's basic goods and services are made and staffed by lower
-/// tiers, so a tier's workers are never required to make its own basic needs, which would deadlock a fresh tier.
+/// EVL010 (ADR-0010, progression.md "Design rule" as revised by M2-30): for every tier's basic good and service, at
+/// least one production chain or provider staffed entirely by lower tiers stays available, so a struggling town can
+/// always fall back on it.
 /// <list type="bullet">
+/// <item><description>Upgrades may be staffed by any tier, including the tier whose basic need they serve: a
+/// Villager-staffed rotation farm feeding Villagers' bread is allowed, as long as a lower-tier fallback stays.</description></item>
 /// <item><description>For each tier with an <c>advanceFrom</c> tier (the first tier is exempt: nothing is lower than it),
-/// every building that produces one of its basic goods, transitively through recipe inputs, and every building that
-/// provides one of its basic services must declare a workforce tier lower than it.</description></item>
-/// <item><description>Only basic goods and services are checked. Comfort goods, such as the villagers' cider, may be made
-/// and staffed by their own tier.</description></item>
+/// every basic good needs a fallback chain: a producer, and transitively every recipe input, made by buildings that
+/// need no workers or need a lower tier, and that are available (their own <c>start</c> or an unlock source).</description></item>
+/// <item><description>Every basic service needs a fallback provider with the same staffing and availability.</description></item>
+/// <item><description>Only basic goods and services are checked. Comfort goods, such as the villagers' cider, are exempt.</description></item>
 /// <item><description>Crew reductions (ADR-0015) change the headcount, never the tier, so they cannot break the rule; the
 /// reported worker count is the crew-reduced effective crew, computed with the same rounding the sim uses.</description></item>
-/// <item><description>A building with no workforce needs nobody and passes; a dangling workforce tier is left to EVL002.</description></item>
+/// <item><description>A building with no workforce needs nobody and passes; a dangling workforce tier is left to EVL002.
+/// A good with no producer at all is left to EVL004.</description></item>
 /// </list>
 /// </summary>
 public static class TierStaffingRule
 {
     private const string CrewStatName = "crew";
-    private const string ScopeNote = "EVL010 covers a tier's basic goods and services only; comfort goods are exempt.";
+    private const string ScopeNote = "EVL010 needs one fallback per basic good and service: a chain or provider staffed entirely by lower tiers that stays available (start or unlocked). Upgrades may be staffed by any tier, and comfort goods are exempt.";
 
     /// <summary>
-    /// Runs the lower-tier staffing check.
+    /// Runs the lower-tier fallback check.
     /// </summary>
     /// <param name="context">The lint context.</param>
     internal static void Run(LintContext context)
     {
         ContentDb db = context.Db;
+        var unlocks = UnlockIndex.Build(context);
+        bool[] available = new bool[db.Buildings.Count];
+        for (ushort b = 0; b < db.Buildings.Count; b++)
+        {
+            available[b] = unlocks.Of(BuildingTypeId.From(b)).Count > 0;
+        }
+
         int[] crews = EffectiveCrews(db);
 
         for (ushort t = 0; t < db.Tiers.Count; t++)
@@ -46,25 +57,21 @@ public static class TierStaffingRule
 
             string tierName = db.Tiers.Names[t];
             string tierFile = context.FileOf(ContentType.Tiers, tierName);
-            bool[] checkedBuildings = new bool[db.Buildings.Count];
-            bool[] visitedGoods = new bool[db.Goods.Count];
 
             foreach (GoodAmount need in tier.BasicGoods)
             {
-                string needName = db.Goods.NameOf(need.Good);
-                var hops = new List<string>();
-                ExpandGood(db, context, tier, tierName, tierFile, needName, need.Good, hops, visitedGoods, checkedBuildings, crews);
+                CheckGoodFallback(db, context, available, crews, tier, tierName, tierFile, need.Good);
             }
 
             foreach (ServiceKind service in tier.BasicServices)
             {
-                CheckService(db, context, tier, tierName, tierFile, service, crews);
+                CheckServiceFallback(db, context, available, crews, tier, tierName, tierFile, service);
             }
         }
     }
 
     /// <summary>
-    /// The workers a building with content crew <paramref name="count"/> needs after its summed <c>crew</c> modifier
+    /// The workers a building with content <paramref name="count"/> needs after its summed <c>crew</c> modifier
     /// percent <paramref name="crewPercent"/>, in ADR-0015 integer maths: half up, floored at 1. A large penalty that
     /// would wipe the crew out still leaves one worker. Public so tests pin the rounding the sim (M2-30) must match.
     /// </summary>
@@ -88,18 +95,125 @@ public static class TierStaffingRule
         return scaled > int.MaxValue ? int.MaxValue : (int)scaled;
     }
 
-    private static void ExpandGood(
+    private static void CheckGoodFallback(
         ContentDb db,
         LintContext context,
+        bool[] available,
+        int[] crews,
         TierDef tier,
         string tierName,
         string tierFile,
-        string needName,
+        GoodId need)
+    {
+        string needName = db.Goods.NameOf(need);
+        if (!HasProducer(db, need))
+        {
+            // No producer at all: EVL004 reports that, and there is no staffing to judge.
+            return;
+        }
+
+        int goodCount = db.Goods.Count;
+        bool[] done = new bool[goodCount];
+        bool[] ok = new bool[goodCount];
+        bool[] busy = new bool[goodCount];
+        if (HasFallbackGood(db, available, tier, need, done, ok, busy))
+        {
+            return;
+        }
+
+        var hops = new List<string>();
+        bool[] visited = new bool[goodCount];
+        CollectHops(db, available, crews, tier, need, hops, visited);
+        context.Error(
+            LintCodes.Evl010,
+            tierFile,
+            LintContext.Pointer("basicNeeds", "goods", needName),
+            $"tier '{tierName}' has no lower-tier fallback for basic good '{needName}': every chain making it is staffed at or above '{tierName}', or is not available. Production chain:\n{string.Join("\n", hops)}\n{ScopeNote}");
+    }
+
+    private static bool HasProducer(ContentDb db, GoodId good)
+    {
+        for (ushort b = 0; b < db.Buildings.Count; b++)
+        {
+            BuildingDef building = db.Buildings.Items[b];
+            if (building.Recipe is { } recipeId && Makes(db.Get(recipeId), good))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Whether some chain makes the good with lower-tier (or workerless) staffing all the way down, through available
+    // buildings only. Memoised per good; a recipe cycle answers false for the goods inside it.
+    private static bool HasFallbackGood(
+        ContentDb db,
+        bool[] available,
+        TierDef tier,
+        GoodId good,
+        bool[] done,
+        bool[] ok,
+        bool[] busy)
+    {
+        if (done[good.Value])
+        {
+            return ok[good.Value];
+        }
+
+        if (busy[good.Value])
+        {
+            return false;
+        }
+
+        busy[good.Value] = true;
+        bool found = false;
+        for (ushort b = 0; b < db.Buildings.Count; b++)
+        {
+            BuildingDef building = db.Buildings.Items[b];
+            if (building.Recipe is not { } recipeId || !Makes(db.Get(recipeId), good))
+            {
+                continue;
+            }
+
+            if (!available[b] || !IsLowerOrNone(db, tier, building))
+            {
+                continue;
+            }
+
+            bool inputsOk = true;
+            foreach (GoodAmount input in db.Get(recipeId).Inputs)
+            {
+                if (!HasFallbackGood(db, available, tier, input.Good, done, ok, busy))
+                {
+                    inputsOk = false;
+                    break;
+                }
+            }
+
+            if (inputsOk)
+            {
+                found = true;
+                break;
+            }
+        }
+
+        busy[good.Value] = false;
+        done[good.Value] = true;
+        ok[good.Value] = found;
+        return found;
+    }
+
+    // Every reachable hop for the diagnostic, in building ID order: "good → recipe → building", annotated with the
+    // staffing and availability that disqualify it. Mirrors the old chain naming, one line per hop.
+    private static void CollectHops(
+        ContentDb db,
+        bool[] available,
+        int[] crews,
+        TierDef tier,
         GoodId good,
         List<string> hops,
-        bool[] visited,
-        bool[] checkedBuildings,
-        int[] crews)
+        bool[] visited)
     {
         if (visited[good.Value])
         {
@@ -115,20 +229,89 @@ public static class TierStaffingRule
                 continue;
             }
 
-            hops.Add($"{db.Goods.NameOf(good)} → {db.Recipes.NameOf(recipeId)} → {db.Buildings.Names[b]}");
-            if (!checkedBuildings[b])
-            {
-                checkedBuildings[b] = true;
-                CheckGoodsStaffing(db, context, tier, tierName, tierFile, b, crews[b], hops, needName);
-            }
-
+            hops.Add($"{db.Goods.NameOf(good)} → {db.Recipes.NameOf(recipeId)} → {db.Buildings.Names[b]} ({StaffText(db, b, crews[b])}, {(available[b] ? AvailabilityText(db, b) : "unavailable")})");
             foreach (GoodAmount input in db.Get(recipeId).Inputs)
             {
-                ExpandGood(db, context, tier, tierName, tierFile, needName, input.Good, hops, visited, checkedBuildings, crews);
+                CollectHops(db, available, crews, tier, input.Good, hops, visited);
+            }
+        }
+    }
+
+    private static void CheckServiceFallback(
+        ContentDb db,
+        LintContext context,
+        bool[] available,
+        int[] crews,
+        TierDef tier,
+        string tierName,
+        string tierFile,
+        ServiceKind service)
+    {
+        var providers = new List<string>();
+        bool fallback = false;
+        for (ushort b = 0; b < db.Buildings.Count; b++)
+        {
+            BuildingDef building = db.Buildings.Items[b];
+            if (building.Service is not { } provided || provided.Kind != service)
+            {
+                continue;
             }
 
-            hops.RemoveAt(hops.Count - 1);
+            providers.Add($"'{db.Buildings.Names[b]}' providing it is {ProviderStaffText(db, b, crews[b])} ({(available[b] ? AvailabilityText(db, b) : "unavailable")})");
+            if (available[b] && IsLowerOrNone(db, tier, building))
+            {
+                fallback = true;
+            }
         }
+
+        if (fallback)
+        {
+            return;
+        }
+
+        context.Error(
+            LintCodes.Evl010,
+            tierFile,
+            ServicePointer(context, tierName, service),
+            $"tier '{tierName}' has no lower-tier fallback for the '{ContentNames.NameOf(service)}' service as a basic need: every provider is staffed at or above '{tierName}', or is not available. Providers:\n{string.Join("\n", providers)}\n{ScopeNote}");
+    }
+
+    // A building keeps a fallback chain alive when it needs nobody, names a dangling tier (EVL002's problem), or needs
+    // a lower tier. Crew reductions change the headcount, never the tier, so they cannot break this.
+    private static bool IsLowerOrNone(ContentDb db, TierDef tier, BuildingDef building)
+    {
+        return building.Workforce is not { } workforce
+            || workforce.Tier.Value >= db.Tiers.Count
+            || db.Get(workforce.Tier).Order < tier.Order;
+    }
+
+    private static string AvailabilityText(ContentDb db, ushort building)
+    {
+        return db.Buildings.Items[building].Start ? "start" : "unlocked";
+    }
+
+    private static string StaffText(ContentDb db, ushort building, int crew)
+    {
+        BuildingDef def = db.Buildings.Items[building];
+        if (def.Workforce is not { } workforce)
+        {
+            return "no workforce";
+        }
+
+        string worker = workforce.Tier.Value < db.Tiers.Count ? db.Tiers.NameOf(workforce.Tier) : "unknown tier";
+        return $"staffed by '{worker}' ({CrewText(crew)})";
+    }
+
+    private static string ProviderStaffText(ContentDb db, ushort building, int crew)
+    {
+        BuildingDef def = db.Buildings.Items[building];
+        if (def.Workforce is not { } workforce)
+        {
+            return "needs no workers";
+        }
+
+        string worker = workforce.Tier.Value < db.Tiers.Count ? db.Tiers.NameOf(workforce.Tier) : "unknown tier";
+        return $"staffed by '{worker}' ({CrewText(crew)})";
     }
 
     private static bool Makes(RecipeDef recipe, GoodId good)
@@ -144,92 +327,13 @@ public static class TierStaffingRule
         return false;
     }
 
-    private static void CheckService(
-        ContentDb db,
-        LintContext context,
-        TierDef tier,
-        string tierName,
-        string tierFile,
-        ServiceKind service,
-        int[] crews)
-    {
-        for (ushort b = 0; b < db.Buildings.Count; b++)
-        {
-            if (db.Buildings.Items[b].Service is not { } provided || provided.Kind != service)
-            {
-                continue;
-            }
-
-            // A service provider is checked even when its goods chain already cleared it: it answers another need.
-            CheckServiceStaffing(db, context, tier, tierName, tierFile, b, crews[b]);
-        }
-    }
-
-    private static void CheckGoodsStaffing(
-        ContentDb db,
-        LintContext context,
-        TierDef tier,
-        string tierName,
-        string tierFile,
-        ushort building,
-        int crew,
-        List<string> hops,
-        string needName)
-    {
-        if (db.Buildings.Items[building].Workforce is not { } workforce
-            || workforce.Tier.Value >= db.Tiers.Count
-            || db.Get(workforce.Tier).Order < tier.Order)
-        {
-            // No workforce needs nobody; a dangling tier is EVL002's; a lower tier is fine.
-            return;
-        }
-
-        string buildingName = db.Buildings.Names[building];
-        string workerName = db.Tiers.NameOf(workforce.Tier);
-        context.Error(
-            LintCodes.Evl010,
-            tierFile,
-            LintContext.Pointer("basicNeeds", "goods", needName),
-            $"tier '{tierName}' needs '{needName}' as a basic good, but '{buildingName}' is staffed by '{workerName}' ({CrewText(crew)}), which is not lower than '{tierName}'. Production chain:\n{string.Join("\n", hops)}\n{ScopeNote}");
-    }
-
-    private static void CheckServiceStaffing(
-        ContentDb db,
-        LintContext context,
-        TierDef tier,
-        string tierName,
-        string tierFile,
-        ushort building,
-        int crew)
-    {
-        BuildingDef def = db.Buildings.Items[building];
-        if (def.Workforce is not { } workforce
-            || def.Service is not { } provided
-            || workforce.Tier.Value >= db.Tiers.Count
-            || db.Get(workforce.Tier).Order < tier.Order)
-        {
-            // As above: no workforce, dangling tier or lower tier needs no report. The service is
-            // always present here since the caller only passes providers, but the guard keeps it total.
-            return;
-        }
-
-        string buildingName = db.Buildings.Names[building];
-        string workerName = db.Tiers.NameOf(workforce.Tier);
-        string service = ContentNames.NameOf(provided.Kind);
-        context.Error(
-            LintCodes.Evl010,
-            tierFile,
-            ServicePointer(context, tierName, service),
-            $"tier '{tierName}' needs the '{service}' service as a basic need, but '{buildingName}' providing it is staffed by '{workerName}' ({CrewText(crew)}), which is not lower than '{tierName}'. {ScopeNote}");
-    }
-
     private static string CrewText(int crew) => crew == 1 ? "1 worker" : $"{crew} workers";
 
     /// <summary>
     /// Points at a service inside the tier's <c>basicNeeds.services</c> array, the same way EVL006 does: the definition
     /// sorts the services, so the position is looked up in the file as written.
     /// </summary>
-    private static string ServicePointer(LintContext context, string tierId, string service)
+    private static string ServicePointer(LintContext context, string tierId, ServiceKind service)
     {
         if (context.JsonOf(ContentType.Tiers, tierId) is { } json
             && json.TryGetProperty("basicNeeds", out JsonElement basic)
@@ -240,7 +344,7 @@ public static class TierStaffingRule
             int position = 0;
             foreach (JsonElement item in array.EnumerateArray())
             {
-                if (item.ValueKind == JsonValueKind.String && item.GetString() == service)
+                if (item.ValueKind == JsonValueKind.String && item.GetString() == ContentNames.NameOf(service))
                 {
                     return LintContext.Pointer("basicNeeds", "services", position.ToString(CultureInfo.InvariantCulture));
                 }
@@ -255,8 +359,7 @@ public static class TierStaffingRule
     /// <summary>
     /// The effective crew of every building: its content count reduced by the summed percent of every unconditional
     /// <c>crew</c> modifier whose target selects it. Conditional modifiers are left out: the staffing must hold on an
-    /// ordinary day. The stat is matched by its content name, so M2-30's <c>Stat.Crew</c> flows in with no change here;
-    /// until then nothing matches and the count is the content count.
+    /// ordinary day. The stat is matched by its content name, so M2-30's <c>Stat.Crew</c> flows in with no change here.
     /// </summary>
     private static int[] EffectiveCrews(ContentDb db)
     {

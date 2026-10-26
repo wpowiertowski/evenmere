@@ -139,6 +139,7 @@ public sealed class AdvisorsPipelineTests
         AdviceKind.NoWorkforce => "no_workforce",
         AdviceKind.ResearchIdle => "research_idle",
         AdviceKind.CivicIdle => "civic_idle",
+        AdviceKind.NoLowerTierFallback => "no_lower_tier_fallback",
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 }

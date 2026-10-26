@@ -253,6 +253,10 @@ public enum Stat
     /// <summary>How quickly new settlers arrive.</summary>
     [ContentName("settlerArrival")]
     SettlerArrival,
+
+    /// <summary>How many workers a building needs: negative reduces the crew (ADR-0015). Appended last so existing serialised values keep their order.</summary>
+    [ContentName("crew")]
+    Crew,
 }
 
 /// <summary>A kind of point that can be granted.</summary>

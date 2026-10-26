@@ -32,6 +32,22 @@ internal static class ContentOverlays
         return overlay;
     }
 
+    /// <summary>
+    /// Loads the base content plus one extra building that sorts before every slice building, so every building ID
+    /// shifts by one. The addition is inert (nothing builds it): the frozen v1 save must remap by name, losing nothing.
+    /// </summary>
+    /// <param name="content">The loaded content, with one more building.</param>
+    /// <returns>The overlay directory, for debugging; it is recreated on every call.</returns>
+    public static string ExtraBuildingFirst(out ContentDb content)
+    {
+        string overlay = PrepareDirectory("extra-building-first");
+        Write(overlay, "buildings/aaa_first_shed.json",
+            """{ "id": "aaa_first_shed", "category": "infrastructure", "era": 1, "footprint": [1, 1], "placement": { "roadAccess": false }, "cost": { "timber": 1 }, "buildDays": 1, "start": true }""");
+
+        content = ContentLoader.Load([BaseContentDirectory, overlay]).GetDbOrThrow();
+        return overlay;
+    }
+
     /// <summary>Loads a full copy of the content with the windmill building deleted and its references repaired.</summary>
     /// <param name="content">The loaded content, without the windmill.</param>
     /// <param name="map">The starter island on that content.</param>

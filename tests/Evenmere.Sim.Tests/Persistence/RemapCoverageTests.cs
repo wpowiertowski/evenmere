@@ -73,9 +73,47 @@ public sealed class RemapCoverageTests
         failures.ShouldBeEmpty();
     }
 
-    private static WorldState LoadFixtureWorld(ContentDb content)
+    /// <summary>
+    /// The M2-30 content-growth proof: the frozen v1 fixture loads against content with one extra building that sorts
+    /// first, so every building ID shifts. The load must remap (not clean) yet lose nothing (lossless), and continuing
+    /// from the remapped load must be deterministic.
+    /// </summary>
+    [Fact]
+    public void Remap_ExtraBuildingFirst_FrozenFixtureLoadsLosslesslyAndContinuesDeterministically()
+    {
+        ContentOverlays.ExtraBuildingFirst(out ContentDb content);
+
+        (ISimulation first, SaveReport firstReport) = ReadFrozen(content);
+        (ISimulation second, SaveReport secondReport) = ReadFrozen(content);
+
+        firstReport.IsLossless.ShouldBeTrue();
+        secondReport.IsLossless.ShouldBeTrue();
+        firstReport.IsClean.ShouldBeFalse("the extra building shifts every building ID");
+        firstReport.Remapped.ShouldContain(
+            static line => line.Contains("building types", StringComparison.Ordinal));
+
+        const long Ticks = 2_000;
+        long end = first.CurrentTick + Ticks;
+        for (long tick = first.CurrentTick + 1; tick <= end; tick++)
+        {
+            first.Tick();
+            second.Tick();
+        }
+
+        first.ComputeStateHash().ShouldBe(second.ComputeStateHash());
+    }
+
+    private static (ISimulation Simulation, SaveReport Report) ReadFrozen(ContentDb content)
     {
         using FileStream stream = File.OpenRead(SaveFixtureTests.FixturePath);
+        return SaveGame.Read(stream, content);
+    }
+
+    private static WorldState LoadFixtureWorld(ContentDb content)
+    {
+        // The before-world is the current-version golden, which the golden updater regenerates whenever content
+        // changes, so the baseline load is clean; the frozen v1 save cannot promise that under grown content.
+        using FileStream stream = File.OpenRead(SaveFixtureTests.CurrentFixturePath);
         (ISimulation simulation, SaveReport report) = SaveGame.Read(stream, content);
         report.IsClean.ShouldBeTrue();
         return ((Simulation)simulation).World;
@@ -83,7 +121,7 @@ public sealed class RemapCoverageTests
 
     private static (WorldState World, SaveReport Report) LoadFixtureRemapped(ContentDb content)
     {
-        using FileStream stream = File.OpenRead(SaveFixtureTests.FixturePath);
+        using FileStream stream = File.OpenRead(SaveFixtureTests.CurrentFixturePath);
         (ISimulation simulation, SaveReport report) = SaveGame.Read(stream, content);
         return (((Simulation)simulation).World, report);
     }

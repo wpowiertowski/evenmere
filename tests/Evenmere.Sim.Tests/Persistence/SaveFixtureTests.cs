@@ -42,14 +42,14 @@ public sealed class SaveFixtureTests
     }
 
     [Fact]
-    public void V1Slice_LoadsThroughMigrationCleanly_AtTick20000()
+    public void V1Slice_LoadsThroughMigrationLosslessly_AtTick20000()
     {
         ContentDb content = SiteFinder.Content;
         using FileStream stream = File.OpenRead(RequireFixture(FixturePath));
         (ISimulation simulation, SaveReport report) = SaveGame.Read(stream, content);
 
         simulation.CurrentTick.ShouldBe(20_000);
-        report.IsClean.ShouldBeTrue();
+        report.IsLossless.ShouldBeTrue();
         _output.WriteLine($"fixture tick={simulation.CurrentTick} hash={simulation.ComputeStateHash():x16}");
     }
 

@@ -1,6 +1,6 @@
 # 0015. Crew stat: modifiers that reduce a building's required workers
 
-Status: Proposed · Date: 2026-10-25
+Status: Accepted · Date: 2026-10-25
 
 ## Context
 

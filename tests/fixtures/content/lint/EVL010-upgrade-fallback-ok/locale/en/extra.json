@@ -1,0 +1,16 @@
+{
+  "good.bread.name": "Bread",
+  "good.bread.desc": "A loaf for every table.",
+  "good.flour.name": "Flour",
+  "good.flour.desc": "Milled grain.",
+  "recipe.bake_bread.name": "Bake bread",
+  "recipe.bake_bread.desc": "Turn flour into loaves.",
+  "recipe.grind_flour.name": "Grind flour",
+  "recipe.grind_flour.desc": "Turn wood into flour.",
+  "building.bakery.name": "Bakery",
+  "building.bakery.desc": "Bakes bread.",
+  "building.windmill.name": "Windmill",
+  "building.windmill.desc": "Grinds flour.",
+  "building.bulk_bakery.name": "Bulk bakery",
+  "building.bulk_bakery.desc": "A villagers-staffed upgrade that still leaves the settler bakery standing."
+}

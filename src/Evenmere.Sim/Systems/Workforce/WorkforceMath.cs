@@ -1,9 +1,10 @@
 namespace Evenmere.Sim.Systems.Workforce;
 
 /// <summary>
-/// The pure arithmetic of workforce allocation: scaling the published supply by the <c>workforce</c> modifiers, and the
-/// equal per-mille share the unprioritised workplaces split. Kept apart from the system so the rounding is testable on
-/// its own. All divisions floor toward negative infinity, so allocation is deterministic.
+/// The pure arithmetic of workforce allocation: scaling the published supply by the <c>workforce</c> modifiers,
+/// the equal per-mille share the unprioritised workplaces split, and the reduced crew the <c>crew</c> modifiers
+/// leave a workplace needing (ADR-0015). Kept apart from the system so the rounding is testable on its own.
+/// All divisions floor toward negative infinity, so allocation is deterministic.
 /// </summary>
 internal static class WorkforceMath
 {
@@ -22,6 +23,26 @@ internal static class WorkforceMath
         if (scaled <= 0)
         {
             return 0;
+        }
+
+        return scaled > int.MaxValue ? int.MaxValue : (int)scaled;
+    }
+
+    /// <summary>Scales a workplace's content crew by its summed <c>crew</c> modifier percent (ADR-0015).</summary>
+    /// <param name="count">The content workforce count, at least 1.</param>
+    /// <param name="bonusPercent">The summed modifier percent for the workplace, as <c>BonusPercent</c> reports it; negative reduces.</param>
+    /// <returns>
+    /// The workers the workplace asks for: <c>max(1, (count × (1000 + 10 × P) + 500) / 1000)</c> in integer maths,
+    /// half up and floored at 1, so a large penalty still leaves one worker. The conversion goes through
+    /// <see cref="Core.Numerics.Ratio.FromBonusPercent"/>, never by subtracting from 1000.
+    /// </returns>
+    internal static int EffectiveCrew(int count, int bonusPercent)
+    {
+        int perMille = Core.Numerics.Ratio.FromBonusPercent(bonusPercent).PerMille;
+        long scaled = ((long)count * perMille + 500L) / 1000L;
+        if (scaled < 1)
+        {
+            scaled = 1;
         }
 
         return scaled > int.MaxValue ? int.MaxValue : (int)scaled;

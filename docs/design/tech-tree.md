@@ -28,6 +28,7 @@ flowchart LR
     classDef gate fill:#f6e7c1,stroke:#b08a2e,stroke-width:2px,color:#222
     animal_husbandry[Animal Husbandry] --> weaving[Weaving] --> net_weaving[Net-weaving]
     cultivation[Cultivation] --> milling[Milling]
+    cultivation --> crop_rotation[Crop Rotation]
     cultivation --> pottery[Pottery] --> letters[Letters]
     cultivation --> orcharding[Orcharding]
     stonecutting[Stonecutting] --> masonry[Masonry]
@@ -42,6 +43,7 @@ flowchart LR
 | --- | --- | --- | --- | --- | --- |
 | Animal Husbandry | `animal_husbandry` | 30 | — | Sheep Farm | Have 40 Settlers |
 | Cultivation | `cultivation` | 30 | — | Grain Farm; fertility overlay | Have 8 houses |
+| Crop Rotation | `crop_rotation` | 55 | Cultivation | Rotation Farm (upgrade) | Have 6 Grain Farms |
 | Stonecutting | `stonecutting` | 40 | — | Quarry; Cobbled Road | Stockpile 40 timber |
 | Pathfinding | `pathfinding` | 30 | — | Scout's Lodge; expeditions | Lay 40 road tiles |
 | Weaving | `weaving` | 50 | Animal Husbandry | Weaver's Cottage | Produce 20 wool |
@@ -51,7 +53,7 @@ flowchart LR
 | Net-weaving | `net_weaving` | 50 | Weaving | Fishing Huts +25% productivity | Have 5 Fishing Huts |
 | Bridge-building | `bridge_building` | 70 | Pathfinding | Timber Bridge; access to narrow rivers | Complete 1 expedition |
 | Letters | `letters` | 80 | Pottery | Scribe's Hall | Have 50 Villagers |
-| Masonry | `masonry` | 90 | Stonecutting | Stone Storehouse; Plaza | Quarry 40 stone |
+| Masonry | `masonry` | 90 | Stonecutting | Stone Storehouse; Stone Shrine (upgrade); Plaza | Quarry 40 stone |
 | **Town Charter ★** | `town_charter` | 160 | Milling, Weaving, Masonry, Letters | **Townsfolk tier**; Town Hall (upgrade of Founders' Hall); tech gateway to Era II | Have 150 Villagers |
 
 ## Era II — Township

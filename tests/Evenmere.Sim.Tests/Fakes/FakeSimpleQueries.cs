@@ -139,6 +139,7 @@ internal sealed class FakePopulationQueries : IPopulationQueries
 internal sealed class FakeConstructionQueries : IConstructionQueries
 {
     private readonly Dictionary<EntityId, SiteInfo> _sites = [];
+    private readonly Dictionary<EntityId, BuildingTypeId> _upgradeTargets = [];
 
     /// <summary>Sets what a site reports.</summary>
     /// <param name="site">The site's progress; its building ID is the key.</param>
@@ -149,8 +150,31 @@ internal sealed class FakeConstructionQueries : IConstructionQueries
         return this;
     }
 
+    /// <summary>Sets the type an in-place upgrade site is building toward.</summary>
+    /// <param name="building">The building being upgraded.</param>
+    /// <param name="target">The type the building becomes.</param>
+    /// <returns>This fake.</returns>
+    public FakeConstructionQueries SetUpgradeTarget(EntityId building, BuildingTypeId target)
+    {
+        _upgradeTargets[building] = target;
+        return this;
+    }
+
+    /// <summary>Clears the upgrade target of a building, as if its upgrade completed or was cancelled.</summary>
+    /// <param name="building">The building.</param>
+    /// <returns>This fake.</returns>
+    public FakeConstructionQueries ClearUpgradeTarget(EntityId building)
+    {
+        _upgradeTargets.Remove(building);
+        return this;
+    }
+
     /// <inheritdoc />
     public bool TryGetSite(EntityId building, out SiteInfo site) => _sites.TryGetValue(building, out site);
+
+    /// <inheritdoc />
+    public bool TryGetUpgradeTarget(EntityId building, out BuildingTypeId target) =>
+        _upgradeTargets.TryGetValue(building, out target);
 }
 
 /// <summary>A settable stand-in for <see cref="IStatisticsQueries"/>.</summary>

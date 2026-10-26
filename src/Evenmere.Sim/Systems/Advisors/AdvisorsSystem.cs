@@ -90,6 +90,7 @@ internal sealed class AdvisorsSystem : ISimSystem
         EvaluateGoods(ctx);
         EvaluateHouses(ctx);
         EvaluateTiers(ctx);
+        EvaluateFallbacks(ctx);
         EvaluateIdle(ctx);
         SweepStale(ctx);
         RefillShowing(ctx);
@@ -268,6 +269,129 @@ internal sealed class AdvisorsSystem : ISimSystem
                 Confirm(ctx, AdviceKind.NoWorkforce, SubjectLink.ForTier(tier));
             }
         }
+    }
+
+    // A tier whose every active maker of a basic need is staffed by the tier itself has upgraded away its fallback
+    // (M2-30): one note per tier, so the player keeps a lower-tier fallback standing. Needs with no active maker at
+    // all are not warnings: nothing was upgraded away, and the shortage rules cover missing production. Structural like
+    // the road rules, so it shows on the first day without a streak.
+    private void EvaluateFallbacks(SimContext ctx)
+    {
+        int tiers = _content.Tiers.Count;
+        for (int t = 0; t < tiers; t++)
+        {
+            TierDef def = _content.Tiers.Items[t];
+            if (def.AdvanceFrom is null)
+            {
+                // The first tier has nothing lower than it, so it can lose no fallback.
+                continue;
+            }
+
+            var tier = TierId.From(checked((ushort)t));
+            if (FallbackLost(ctx, tier, def))
+            {
+                Confirm(ctx, AdviceKind.NoLowerTierFallback, SubjectLink.ForTier(tier));
+            }
+        }
+    }
+
+    // Whether some basic need of the tier has an active maker but no lower-tier one: a good whose active producers are
+    // all staffed by the tier itself, or a service whose active providers are. Workerless makers need nobody, so they
+    // always count as a fallback.
+    private bool FallbackLost(SimContext ctx, TierId tier, TierDef def)
+    {
+        foreach (GoodAmount need in def.BasicGoods)
+        {
+            bool any = false;
+            bool lower = false;
+            foreach (BuildingInfo building in ctx.Queries.Map.ActiveBuildings)
+            {
+                if (building.State != BuildingState.Active)
+                {
+                    continue;
+                }
+
+                BuildingDef bdef = _content.Get(building.Type);
+                if (bdef.Recipe is not { } recipe || !Produces(recipe, need.Good))
+                {
+                    continue;
+                }
+
+                any = true;
+                if (IsLowerOrNone(def, bdef))
+                {
+                    lower = true;
+                    break;
+                }
+            }
+
+            if (any && !lower)
+            {
+                return true;
+            }
+        }
+
+        foreach (ServiceKind service in def.BasicServices)
+        {
+            bool any = false;
+            bool lower = false;
+            foreach (BuildingInfo building in ctx.Queries.Map.ActiveBuildings)
+            {
+                if (building.State != BuildingState.Active)
+                {
+                    continue;
+                }
+
+                BuildingDef bdef = _content.Get(building.Type);
+                if (bdef.Service is not { } provided || provided.Kind != service)
+                {
+                    continue;
+                }
+
+                any = true;
+                if (IsLowerOrNone(def, bdef))
+                {
+                    lower = true;
+                    break;
+                }
+            }
+
+            if (any && !lower)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsLowerOrNone(TierDef tier, BuildingDef building)
+    {
+        if (building.Workforce is not { } spec)
+        {
+            return true;
+        }
+
+        if (spec.Tier.Value >= _content.Tiers.Count)
+        {
+            // A dangling tier is the reference linter's problem, not this rule's.
+            return true;
+        }
+
+        return _content.Get(spec.Tier).Order < tier.Order;
+    }
+
+    private bool Produces(RecipeId recipe, GoodId good)
+    {
+        foreach (GoodAmount output in _content.Get(recipe).Outputs)
+        {
+            if (output.Good == good)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Knowledge or culture is accruing with nothing left to choose. No streak: idleness shows on the first day.
