@@ -144,5 +144,7 @@ public sealed class BuildMenuWorkforceTests
         bool IProgressionQueries.IsFestivalUnlocked(FestivalId festival) => true;
 
         int IProgressionQueries.TraditionSlotCount(TraditionSlotType slot) => 1;
+
+        GatewayStatus IProgressionQueries.GatewayStatus(EraId era) => new(false, false);
     }
 }

@@ -1,3 +1,4 @@
+using Evenmere.Content;
 using Evenmere.Content.Conditions;
 using Evenmere.Content.Definitions;
 using Evenmere.Core.Ids;
@@ -10,7 +11,8 @@ namespace Evenmere.Sim.Systems.Progression;
 /// <summary>
 /// Implements <see cref="IProgressionQueries"/> over the progression state, the modifier index, the milestone counters and
 /// the condition evaluator. It also answers a few questions the interface does not carry yet (tradition and festival
-/// unlocks, tradition slots, the coastline flag), which the culture and exploration systems read in M2.
+/// unlocks, tradition slots, the coastline flag), which the culture and exploration systems read in M2. The era
+/// gateway status reads the content's era definitions.
 /// </summary>
 internal sealed class ProgressionQueries : IProgressionQueries
 {
@@ -18,23 +20,27 @@ internal sealed class ProgressionQueries : IProgressionQueries
     private readonly ModifierIndex _modifiers;
     private readonly MilestoneCounters _counters;
     private readonly ConditionEvaluator _evaluator;
+    private readonly ContentDb _content;
 
     /// <summary>Initializes a new instance of the <see cref="ProgressionQueries"/> class.</summary>
     /// <param name="state">The progression state, already fitted to the content.</param>
     /// <param name="modifiers">The modifier index that answers the stat queries.</param>
     /// <param name="counters">The milestone counters.</param>
     /// <param name="evaluator">The condition evaluator.</param>
-    public ProgressionQueries(ProgressionState state, ModifierIndex modifiers, MilestoneCounters counters, ConditionEvaluator evaluator)
+    /// <param name="content">The loaded content, which carries the era definitions for the gateway status.</param>
+    public ProgressionQueries(ProgressionState state, ModifierIndex modifiers, MilestoneCounters counters, ConditionEvaluator evaluator, ContentDb content)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(modifiers);
         ArgumentNullException.ThrowIfNull(counters);
         ArgumentNullException.ThrowIfNull(evaluator);
+        ArgumentNullException.ThrowIfNull(content);
 
         _state = state;
         _modifiers = modifiers;
         _counters = counters;
         _evaluator = evaluator;
+        _content = content;
     }
 
     /// <inheritdoc />
@@ -76,6 +82,49 @@ internal sealed class ProgressionQueries : IProgressionQueries
 
     /// <inheritdoc />
     int IProgressionQueries.TraditionSlotCount(TraditionSlotType slot) => TraditionSlots(slot);
+
+    /// <inheritdoc />
+    GatewayStatus IProgressionQueries.GatewayStatus(EraId era)
+    {
+        if ((uint)era.Value >= (uint)_content.Eras.Count)
+        {
+            return new GatewayStatus(false, false);
+        }
+
+        EraDef def = _content.Get(era);
+        bool techDone = def.RequiresTech is { } tech && IsSourceApplied(EffectSource.ForTech(tech));
+        bool civicDone = def.RequiresCivic is { } civic && IsSourceApplied(EffectSource.ForCivic(civic));
+        return new GatewayStatus(techDone, civicDone);
+    }
+
+    // A gateway's source is recorded exactly once, when research or culture completes the node, and tech and civic
+    // sources are never removed, so membership in the sorted applied sources means the gateway is complete.
+    private bool IsSourceApplied(EffectSource source)
+    {
+        EffectSource[] applied = _state.AppliedSources;
+        int low = 0;
+        int high = applied.Length - 1;
+        while (low <= high)
+        {
+            int middle = low + ((high - low) >> 1);
+            int order = ProgressionState.Compare(applied[middle], source);
+            if (order == 0)
+            {
+                return true;
+            }
+
+            if (order < 0)
+            {
+                low = middle + 1;
+            }
+            else
+            {
+                high = middle - 1;
+            }
+        }
+
+        return false;
+    }
 
     /// <inheritdoc />
     public bool HasAccess(TerrainAccess access) => ((int)access is >= 0 and < 64) && (_state.TerrainAccessFlags & (1UL << (int)access)) != 0;

@@ -1,0 +1,23 @@
+{
+  "description": "Era gateways on the minimal pack: completing only the tech gateway (town_charter) leaves the island in the founding era; completing the civic gateway (village_moot) later advances to township the same tick with EraBegan. Points are granted because content without a map has no point income.",
+  "content": "tests/fixtures/content/minimal",
+  "map": null,
+  "seed": 7,
+  "ticks": 480,
+  "commands": [
+    { "tick": 1, "type": "SetResearchTarget", "args": { "tech": "net_weaving" } },
+    { "tick": 1, "type": "SetCivicTarget", "args": { "civic": "village_moot" } },
+    { "tick": 1, "type": "GrantPoints", "args": { "kind": "knowledge", "amount": 1000 } },
+    { "tick": 121, "type": "SetResearchTarget", "args": { "tech": "town_charter" } },
+    { "tick": 241, "type": "GrantPoints", "args": { "kind": "culture", "amount": 1000 } }
+  ],
+  "expect": {
+    "hash": "9fa44b7cd74ca05a",
+    "events": [
+      { "type": "TechResearched", "exactly": 2 },
+      { "type": "CivicAdopted", "exactly": 1 },
+      { "type": "EraBegan", "exactly": 1 },
+      { "type": "PointsGranted", "exactly": 2 }
+    ]
+  }
+}
