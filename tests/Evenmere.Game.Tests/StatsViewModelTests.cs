@@ -204,6 +204,19 @@ public sealed class StatsViewModelTests
     }
 
     [Fact]
+    public void PointLabel_Daily_UsesLocaleDayLabel()
+    {
+        // Two daily samples ending on day 2 (tick 240): the hover label reads the locale's day line.
+        var data = new FakeStatsData(
+            new Dictionary<StatKey, long[]> { [StatKey.Stock(_bread)] = [1000, 1100] },
+            tick: 240);
+
+        StatsViewModel model = Refresh(data);
+        model.PointLabel(0).ShouldBe("Day 1");
+        model.PointLabel(1).ShouldBe("Day 2");
+    }
+
+    [Fact]
     public void SeasonLabel_NamesSeasonsAndYears()
     {
         var data = new FakeStatsData(new Dictionary<StatKey, long[]>(), tick: 0);

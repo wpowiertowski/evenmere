@@ -13,6 +13,7 @@ using Evenmere.Sim.State;
 using Evenmere.Sim.Systems.Logistics;
 using Evenmere.Sim.Systems.Map;
 using Evenmere.Sim.Systems.Modifiers;
+using Evenmere.Sim.Systems.Needs;
 using Evenmere.Sim.Systems.Production;
 using Evenmere.Sim.Systems.Roads;
 using Evenmere.Sim.Systems.Statistics;
@@ -432,7 +433,7 @@ public sealed class RemapCoverageTests
                         failures.Add($"{path}[{now}] ('{name}'): value changed by the remap");
                     }
                 }
-                else if (!IsDefault(postValue))
+                else if (!Equals(postValue, NewItemValue(elementType)))
                 {
                     failures.Add($"{path}[{now}] ('{name}'): a new item holds a non-default value");
                 }
@@ -1037,8 +1038,13 @@ public sealed class RemapCoverageTests
             && type != typeof(ActiveModifier) && !type.IsArray
             && !(type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IdTable<>));
 
-        private static bool IsDefault(object? value) =>
-            value is null || (value.GetType().IsValueType && Equals(value, Activator.CreateInstance(value.GetType())));
+        // The documented fresh-item value, usually the zero default: FairShares fulfilment is the exception
+        // (M2-35), because the shares document 1000 per-mille for a good nobody needs, and a good the save
+        // never knew is exactly that.
+        private object? NewItemValue(Type elementType) =>
+            _declaringType == typeof(FairShares) && string.Equals(_member?.Name, nameof(FairShares.Fulfilment), StringComparison.Ordinal)
+                ? Ratio.One
+                : DefaultOf(elementType);
 
         private static object? DefaultOf(Type type) =>
             type.IsValueType ? Activator.CreateInstance(type) : null;

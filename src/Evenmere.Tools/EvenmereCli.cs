@@ -295,6 +295,12 @@ internal static class EvenmereCli
             HelpName = "id",
         };
 
+        var cheats = new Option<bool>("--cheats")
+        {
+            Description = "Enable cheat commands for the new game, so replays of logs that contain cheat commands match.",
+            DefaultValueFactory = _ => false,
+        };
+
         var run = new Command(
             "run",
             "Create a new game and tick it. stdout: optional 'tick=<t> hash=<x16>' lines, then 'hash=<x16>'. stderr: a per-step timing table (step, calls, total ms, mean us per call).")
@@ -303,6 +309,7 @@ internal static class EvenmereCli
             seed,
             hashEvery,
             map,
+            cheats,
         };
         run.SetAction(parsed =>
             WithContentRoots(parsed, content, environment, roots =>
@@ -312,6 +319,7 @@ internal static class EvenmereCli
                     parsed.GetValue(seed),
                     parsed.GetValue(hashEvery),
                     parsed.GetValue(map),
+                    parsed.GetValue(cheats),
                     environment.Output,
                     environment.Error)));
         return run;

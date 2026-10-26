@@ -38,6 +38,7 @@ public sealed partial class NotificationFeed : Control
     private const int MaxToasts = 3;
     private const int MaxHistory = 200;
     private const float ToastWidth = 520f;
+    private const float ToastMargin = 16f;
 
     private readonly List<NotificationEntry> _entries = new();
     private readonly Dictionary<string, int> _batches = new();
@@ -60,6 +61,7 @@ public sealed partial class NotificationFeed : Control
     private double _secondsSinceRefresh;
 
     private VBoxContainer? _toastBox;
+    private float _toastWidth = ToastWidth;
     private Button? _feedButton;
     private PanelContainer? _advicePanel;
     private bool _menuForced;
@@ -104,6 +106,14 @@ public sealed partial class NotificationFeed : Control
     /// <summary>Gets or sets the path to the civics panel, relative to this node.</summary>
     [Export]
     public NodePath CulturePath { get; set; } = new("../CulturePanel");
+
+    /// <summary>Gets or sets the path to the statistics panel, which the toasts yield to while it is open.</summary>
+    [Export]
+    public NodePath StatsPath { get; set; } = new("../StatsPanel");
+
+    /// <summary>Gets or sets the path to the overlay picker, which the toasts yield to while it is open.</summary>
+    [Export]
+    public NodePath OverlayPath { get; set; } = new("../OverlayPanel");
 
     /// <summary>Gets or sets the path to the build menu, which the feed yields to while it is open.</summary>
     [Export]
@@ -170,6 +180,7 @@ public sealed partial class NotificationFeed : Control
 
         TickToasts(delta);
         LayoutLeftColumn();
+        LayoutToasts();
 
         if (_host is not { IsRunning: true } host)
         {
@@ -885,12 +896,12 @@ public sealed partial class NotificationFeed : Control
             MouseFilter = MouseFilterEnum.Ignore,
             Alignment = BoxContainer.AlignmentMode.End,
         };
-        box.AnchorLeft = 0.5f;
-        box.AnchorRight = 0.5f;
+        box.AnchorLeft = 0f;
+        box.AnchorRight = 0f;
         box.AnchorTop = 1f;
         box.AnchorBottom = 1f;
-        box.OffsetLeft = -ToastWidth / 2f;
-        box.OffsetRight = ToastWidth / 2f;
+        box.OffsetLeft = ToastMargin;
+        box.OffsetRight = ToastMargin + ToastWidth;
         box.OffsetTop = -200f;
         box.OffsetBottom = -80f;
         box.AddThemeConstantOverride("separation", 8);
@@ -1016,6 +1027,57 @@ public sealed partial class NotificationFeed : Control
                 _advicePanel.OffsetBottom = panelTop + height;
             }
         }
+    }
+
+    // Centres the toasts in the space left of whichever right-docked panel is open (research, civics,
+    // statistics, overlays, inspector), shrinking them to fit when the free space is narrower than a full
+    // toast: the buttons wrap their text, so nothing is hidden and nothing slides under a panel. With no
+    // panel open the free space is the whole viewport, which keeps the old bottom-centre look.
+    private void LayoutToasts()
+    {
+        if (_toastBox is null)
+        {
+            return;
+        }
+
+        float right = GetViewportRect().Size.X;
+        right = Math.Min(right, DockedLeftEdge(ResearchPath, right));
+        right = Math.Min(right, DockedLeftEdge(CulturePath, right));
+        right = Math.Min(right, DockedLeftEdge(StatsPath, right));
+        right = Math.Min(right, DockedLeftEdge(OverlayPath, right));
+        right = Math.Min(right, DockedLeftEdge(InspectorPath, right));
+
+        _toastWidth = Math.Min(ToastWidth, Math.Max(0f, right - (ToastMargin * 2f)));
+        float left = Math.Max(ToastMargin, (right - _toastWidth) * 0.5f);
+        if (left + _toastWidth > right - ToastMargin)
+        {
+            left = Math.Max(ToastMargin, right - ToastMargin - _toastWidth);
+        }
+
+        if (Math.Abs(_toastBox.OffsetLeft - left) > 0.5f || Math.Abs(_toastBox.OffsetRight - (left + _toastWidth)) > 0.5f)
+        {
+            _toastBox.OffsetLeft = left;
+            _toastBox.OffsetRight = left + _toastWidth;
+        }
+
+        foreach (ToastView toast in _toasts)
+        {
+            Vector2 min = toast.Button.CustomMinimumSize;
+            if (Math.Abs(min.X - _toastWidth) > 0.5f)
+            {
+                toast.Button.CustomMinimumSize = new Vector2(_toastWidth, min.Y);
+            }
+        }
+    }
+
+    private float DockedLeftEdge(NodePath path, float fallback)
+    {
+        if (GetNodeOrNull<Control>(path) is { Visible: true } panel)
+        {
+            return panel.GetGlobalRect().Position.X;
+        }
+
+        return fallback;
     }
 
     // Collapses the feed to its header chip while the build menu is open: the pinned-notes panel shrinks to its
@@ -1354,7 +1416,7 @@ public sealed partial class NotificationFeed : Control
             Text = entry.Title,
             TooltipText = entry.Note ?? entry.Title,
             FocusMode = Control.FocusModeEnum.All,
-            CustomMinimumSize = new Vector2(ToastWidth, 44f),
+            CustomMinimumSize = new Vector2(_toastWidth, 44f),
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
         };
         int id = entry.Id;

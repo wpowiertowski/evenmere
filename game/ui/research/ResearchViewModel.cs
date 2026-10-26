@@ -214,85 +214,8 @@ public sealed class ResearchViewModel : TreeViewModel<TechId>
         return row.MissingText.Length > 0 ? row.MissingText + "\n" + tip : tip;
     }
 
-    private List<GraphUnlock> UnlocksOf(TechDef def, Func<string, string?> iconFor)
-    {
-        var unlocks = new List<GraphUnlock>(def.Effects.Length);
-        foreach (Effect effect in def.Effects)
-        {
-            switch (effect)
-            {
-                case UnlockBuildingEffect unlocked:
-                    {
-                        string name = Content.Buildings.NameOf(unlocked.Building);
-                        unlocks.Add(new GraphUnlock(iconFor(name) ?? "\u2022", Strings.Get($"building.{name}.name")));
-                        break;
-                    }
-
-                case UnlockRecipeEffect unlocked:
-                    {
-                        string name = Content.Recipes.NameOf(unlocked.Recipe);
-                        unlocks.Add(new GraphUnlock(string.Empty, Strings.Get($"recipe.{name}.name")));
-                        break;
-                    }
-
-                case UnlockTierEffect unlocked:
-                    {
-                        string name = Content.Tiers.NameOf(unlocked.Tier);
-                        unlocks.Add(new GraphUnlock("\u25b2", Strings.TierName(name)));
-                        break;
-                    }
-
-                case UnlockTraditionEffect unlocked:
-                    {
-                        string name = Content.Traditions.NameOf(unlocked.Tradition);
-                        unlocks.Add(new GraphUnlock("\u2726", Strings.Get($"tradition.{name}.name")));
-                        break;
-                    }
-
-                case UnlockFestivalEffect unlocked:
-                    {
-                        string name = Content.Festivals.NameOf(unlocked.Festival);
-                        unlocks.Add(new GraphUnlock("\u2726", Strings.Get($"festival.{name}.name")));
-                        break;
-                    }
-
-                case ModifierEffect modifier:
-                    unlocks.Add(new GraphUnlock(
-                        string.Empty,
-                        $"+{modifier.Percent}% {ContentNames.NameOf(modifier.Stat)}"));
-                    break;
-
-                case GrantGoodsEffect granted:
-                    {
-                        var parts = new List<string>(granted.Goods.Length);
-                        foreach (GoodAmount goods in granted.Goods)
-                        {
-                            parts.Add($"+{NumberFormat.Units(goods.Amount)} {Strings.GoodName(Content.Goods.NameOf(goods.Good))}");
-                        }
-
-                        unlocks.Add(new GraphUnlock(string.Empty, string.Join(", ", parts)));
-                        break;
-                    }
-
-                case GrantPointsEffect granted:
-                    {
-                        var parts = new List<string>(granted.Points.Length);
-                        foreach (PointAmount points in granted.Points)
-                        {
-                            parts.Add($"+{NumberFormat.Units(points.Amount)} {ContentNames.NameOf(points.Kind)}");
-                        }
-
-                        unlocks.Add(new GraphUnlock(string.Empty, string.Join(", ", parts)));
-                        break;
-                    }
-
-                default:
-                    break;
-            }
-        }
-
-        return unlocks;
-    }
+    private List<GraphUnlock> UnlocksOf(TechDef def, Func<string, string?> iconFor) =>
+        new(EffectText.Describe(Content, Strings, def.Effects, iconFor, ContentNames.NameOf));
 
     private string EraName(int order)
     {

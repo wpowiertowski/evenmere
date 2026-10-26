@@ -584,7 +584,7 @@ internal static class RemapPass
         {
             FairShares shares = world.Needs.Shares;
             shares.Demand = Permute(shares.Demand, tables.GoodMap, tables.Content.Goods.Count, static () => Amount.Zero);
-            shares.Fulfilment = Permute(shares.Fulfilment, tables.GoodMap, tables.Content.Goods.Count, static () => Ratio.Zero);
+            shares.Fulfilment = Permute(shares.Fulfilment, tables.GoodMap, tables.Content.Goods.Count, static () => Ratio.One);
         }
 
         public void RemapProduction()
