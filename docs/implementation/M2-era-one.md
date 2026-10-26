@@ -40,7 +40,7 @@ gamepad hand check.
 
 M2-31 is done (M1 playtest polish); it is not scheduled in any wave.
 | B | M2-02a, M2-04, M2-08, M2-11, M2-12, M2-18, M2-19, M2-20, M2-21, M2-22, M2-26, M2-32 | Map terrain; bridges; festivals; eras; happenings; tree/overlay/chain/stats views; cheats (M2-26 moved here so its `SaveHeader` line never meets M2-15) |
-| C | M2-02b, M2-13a, M2-16, M2-24 | Regions/discoveries/guarantee; Era I production content; perf harness; season visuals |
+| C | M2-02b, M2-13a, M2-16, M2-24, M2-33 | Regions/discoveries/guarantee; Era I production content; perf harness; season visuals |
 | D | M2-03, M2-06, M2-25, M2-27 | Mapgen CLI; exploration; new-game UI; culture-moment UI |
 | E | M2-13b, M2-23 | Trees content; fog/expedition UI |
 | F | M2-17a | Era I bot |
@@ -88,7 +88,7 @@ file per card as listed; never edit another card's file.
 | M2-19 | Civics tree and traditions board | game | M2-07 | todo |
 | M2-20 | Overlays: coverage, reach, fertility and deposits | game | M2-00 | todo |
 | M2-21 | Production chain viewer | game | M2-00 | done |
-| M2-22 | Statistics graphs | game | M2-00 | todo |
+| M2-22 | Statistics graphs | game | M2-00 | done |
 | M2-23 | Fog, regions and expedition UI | game | M2-06 | todo |
 | M2-24 | Seasons, weather and smoke visuals | game | M2-05 | todo |
 | M2-25 | New-game setup: seed, size, starter island | game | M2-02b | todo |
@@ -99,6 +99,7 @@ file per card as listed; never edit another card's file.
 | M2-30 | Upgrade lines: design pass, crew stat and Era I upgrades | human + content | M2-00 | done |
 | M2-31 | Window and input polish from the M1 playtest | game | M1 gate | done |
 | M2-32 | Look tuning: water strokes, terrain calibration, coast and map edge | game | M2-29 | todo |
+| M2-33 | Long statistics history: a seasonal series | sim + game | M2-22 | todo |
 
 ---
 
@@ -1067,6 +1068,18 @@ file per card as listed; never edit another card's file.
 4. **Map edge:** at overview zoom the island sits in open sea with no visible square sea-plane edge.
 
 **Acceptance:** before-and-after screenshots at street, default and overview zoom; the measurements; the bench unchanged; `scripts/verify.sh` passes.
+
+---
+
+### M2-33 · Long statistics history: a seasonal series
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| sim + game | M2-22 | `src/Evenmere.Sim/Systems/Statistics/**` (a per-season series beside the 40-day ring, with its state key and remap marker), `src/Evenmere.Sim/Queries/IStatisticsQueries.cs` (one additive member), `game/ui/stats/**` (the long-view toggle), tests |
+
+**Goal:** the statistics panel's long view (cut from M2-22 because the sim keeps only a 40-day ring) shows two real years: one aggregated sample per season, eight seasons deep.
+
+**Acceptance:** the series survives a save round trip and a remap; the panel's long view plots real seasonal data; `scripts/verify.sh` passes.
 ---
 
 ### M2-28 · Era I playtest and gate review
