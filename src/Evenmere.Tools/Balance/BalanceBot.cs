@@ -1444,15 +1444,27 @@ public static class BalanceBot
             return best;
         }
 
+        // The everyday road the bot lays between buildings: the cheapest unlocked-from-start road by goods cost.
+        // Bridges are never the default: a bridge type only paves river tiles in straight runs, so laying it as the
+        // connector would refuse every land tile. M2-13a added cobbled_road (cheaper travel, but locked behind
+        // stonecutting and costing stone); minimizing travel cost picked it and the bot laid no roads at all.
         private static BuildingTypeId CheapestRoad(ContentDb content)
         {
             BuildingTypeId best = default;
-            int bestCost = int.MaxValue;
+            long bestCost = long.MaxValue;
+            BuildingTypeId bestStart = default;
+            long bestStartCost = long.MaxValue;
             foreach (BuildingDef def in content.Buildings.Items)
             {
-                if (def.RoadCost is not int cost)
+                if (def.RoadCost is null || def.BridgeSpan is not null)
                 {
                     continue;
+                }
+
+                long cost = 0;
+                foreach (GoodAmount need in def.Cost.Goods)
+                {
+                    cost += need.Amount.Milli;
                 }
 
                 if (cost < bestCost || (cost == bestCost && (best == default || def.Id.Value < best.Value)))
@@ -1460,11 +1472,17 @@ public static class BalanceBot
                     best = def.Id;
                     bestCost = cost;
                 }
+
+                if (def.Start && (cost < bestStartCost || (cost == bestStartCost && (bestStart == default || def.Id.Value < bestStart.Value))))
+                {
+                    bestStart = def.Id;
+                    bestStartCost = cost;
+                }
             }
 
-            return best == default
-                ? throw new BotScriptException("invalid content for the balance bot: no road types.")
-                : best;
+            return bestStart != default ? bestStart
+                : best != default ? best
+                : throw new BotScriptException("invalid content for the balance bot: no road types.");
         }
 
         private bool ResearchQueueMatches(ImmutableArray<string> wanted)

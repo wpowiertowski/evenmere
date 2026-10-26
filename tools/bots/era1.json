@@ -1,0 +1,218 @@
+{
+  "name": "era1",
+  "goals": [
+    {
+      "research": "cultivation",
+      "queue": [
+        "animal_husbandry",
+        "milling",
+        "weaving",
+        "pathfinding",
+        "stonecutting",
+        "pottery",
+        "masonry",
+        "letters",
+        "orcharding",
+        "crop_rotation",
+        "net_weaving",
+        "bridge_building",
+        "town_charter"
+      ]
+    },
+    {
+      "civic": "hearth_and_shrine",
+      "queue": [
+        "kinship",
+        "oral_tradition",
+        "harvest_rites",
+        "sea_lore",
+        "craft_lore",
+        "remembrance",
+        "village_moot"
+      ]
+    },
+    {
+      "build": "market",
+      "count": 1,
+      "near": "founders_hall"
+    },
+    {
+      "build": "settler_house",
+      "count": 7,
+      "near": "founders_hall"
+    },
+    {
+      "lockHouses": 7
+    },
+    {
+      "build": "fishing_hut",
+      "count": 1,
+      "near": "founders_hall"
+    },
+    {
+      "build": "woodcutters_hut",
+      "count": 2,
+      "near": "founders_hall"
+    },
+    {
+      "build": "sawpit",
+      "count": 2,
+      "near": "founders_hall"
+    },
+    {
+      "build": "settler_house",
+      "count": 8,
+      "near": "market"
+    },
+    {
+      "build": "grain_farm",
+      "count": 1,
+      "near": "market"
+    },
+    {
+      "build": "settler_house",
+      "count": 9,
+      "near": "market"
+    },
+    {
+      "build": "shrine",
+      "count": 1,
+      "near": "market"
+    },
+    {
+      "build": "settler_house",
+      "count": 10,
+      "near": "market"
+    },
+    {
+      "build": "sheep_farm",
+      "count": 1,
+      "near": "market"
+    },
+    {
+      "build": "settler_house",
+      "count": 11,
+      "near": "market"
+    },
+    {
+      "build": "settler_house",
+      "count": 12,
+      "near": "market"
+    },
+    {
+      "build": "windmill",
+      "count": 1,
+      "near": "fishing_hut"
+    },
+    {
+      "build": "settler_house",
+      "count": 13,
+      "near": "market"
+    },
+    {
+      "build": "settler_house",
+      "count": 14,
+      "near": "market"
+    },
+    {
+      "build": "bakery",
+      "count": 1,
+      "near": "fishing_hut"
+    },
+    {
+      "build": "settler_house",
+      "count": 15,
+      "near": "market"
+    },
+    {
+      "build": "settler_house",
+      "count": 16,
+      "near": "market"
+    },
+    {
+      "build": "weavers_cottage",
+      "count": 1,
+      "near": "market"
+    },
+    {
+      "build": "settler_house",
+      "count": 17,
+      "near": "market"
+    },
+    {
+      "waitUntilTick": 3600
+    },
+    {
+      "build": "settler_house",
+      "count": 19,
+      "near": "market"
+    },
+    {
+      "build": "shrine",
+      "count": 2,
+      "near": "market"
+    },
+    {
+      "housesUntil": {
+        "tier": "villagers",
+        "residents": 100
+      },
+      "timeoutMinutes": 60
+    },
+    {
+      "build": "scouts_lodge",
+      "count": 1,
+      "near": "market"
+    },
+    {
+      "build": "quarry",
+      "count": 1,
+      "near": "market",
+      "timeoutMinutes": 30
+    },
+    {
+      "build": "clay_pit",
+      "count": 1,
+      "near": "market",
+      "timeoutMinutes": 30
+    },
+    {
+      "build": "potters_kiln",
+      "count": 1,
+      "near": "market",
+      "timeoutMinutes": 10
+    },
+    {
+      "build": "orchard",
+      "count": 1,
+      "near": "market",
+      "timeoutMinutes": 30
+    },
+    {
+      "build": "cider_press",
+      "count": 1,
+      "near": "market",
+      "timeoutMinutes": 10
+    },
+    {
+      "build": "scribes_hall",
+      "count": 1,
+      "near": "market"
+    },
+    {
+      "build": "storytellers_circle",
+      "count": 1,
+      "near": "market"
+    },
+    {
+      "build": "festival_ground",
+      "count": 1,
+      "near": "market"
+    },
+    {
+      "build": "standing_stones",
+      "count": 1,
+      "near": "market"
+    }
+  ]
+}
