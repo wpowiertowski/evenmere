@@ -1,0 +1,274 @@
+{
+  "description": "The slice build order played on generated island seed 7 at size 320: the same research, civic queue and buildings as slice_villagers, with every placement resolved through the scenario runner's site-finder instead of starter-island coordinates. Each building brings its own dirt connector, and no house is locked: the island reaches Villagers on warnings alone within 15000 ticks.",
+  "content": "content",
+  "map": "generated:7:320",
+  "seed": 1,
+  "ticks": 15000,
+  "commands": [
+    {
+      "tick": 1,
+      "type": "SetResearchTarget",
+      "args": {
+        "tech": "cultivation"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "SetResearchQueue",
+      "args": {
+        "queue": [
+          "animal_husbandry",
+          "milling",
+          "weaving"
+        ]
+      }
+    },
+    {
+      "tick": 1,
+      "type": "SetCivicTarget",
+      "args": {
+        "civic": "hearth_and_shrine"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "market",
+        "site": true
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "fishing_hut",
+        "site": true
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "woodcutters_hut",
+        "site": true
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "sawpit",
+        "site": true
+      }
+    },
+    {
+      "tick": 1300,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "grain_farm",
+        "site": true
+      }
+    },
+    {
+      "tick": 2000,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "shrine",
+        "site": true
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "sheep_farm",
+        "site": true
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "settler_house",
+        "site": true
+      }
+    },
+    {
+      "tick": 3600,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "shrine",
+        "site": true
+      }
+    },
+    {
+      "tick": 6300,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "windmill",
+        "site": true
+      }
+    },
+    {
+      "tick": 6300,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "bakery",
+        "site": true
+      }
+    },
+    {
+      "tick": 8100,
+      "type": "PlaceBuilding",
+      "args": {
+        "type": "weavers_cottage",
+        "site": true
+      }
+    }
+  ],
+  "expect": {
+    "hash": "416d61d3eece28d4",
+    "residents": {
+      "villagers": ">= 100"
+    },
+    "events": [
+      {
+        "type": "TechResearched",
+        "exactly": 4
+      },
+      {
+        "type": "CivicAdopted",
+        "exactly": 1
+      },
+      {
+        "type": "HouseTierAdvanced",
+        "exactly": 12
+      },
+      {
+        "type": "ConstructionCompleted",
+        "exactly": 27
+      }
+    ]
+  }
+}
