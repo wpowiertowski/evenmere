@@ -39,6 +39,8 @@ public sealed partial class TerrainRenderer : Node3D
     private CameraRig? _rig;
     private ShaderMaterial? _material;
     private Color[] _coloursByTerrain = [];
+    private Color _seasonTint = new(1f, 1f, 1f);
+    private float _seasonSnow;
     private MeshInstance3D?[,] _chunks = new MeshInstance3D?[0, 0];
     private bool[] _queued = [];
     private bool _initialised;
@@ -115,6 +117,23 @@ public sealed partial class TerrainRenderer : Node3D
         if (_material is not null)
         {
             _material.SetShaderParameter("show_grid", visible);
+        }
+    }
+
+    /// <summary>
+    /// Sets the seasonal tint multiplier and snow cover (M2-24, one uniform block): the year's visible turn, blended
+    /// over two game days by the caller. It is a no-op in classic: the shader gates both uniforms by the look.
+    /// </summary>
+    /// <param name="tint">The per-channel terrain multiplier, around 1.0.</param>
+    /// <param name="snow">The snow cover, 0 (bare) to 1 (full winter white).</param>
+    public void SetSeasonTint(Color tint, float snow)
+    {
+        _seasonTint = tint;
+        _seasonSnow = Math.Clamp(snow, 0f, 1f);
+        if (_material is not null)
+        {
+            _material.SetShaderParameter("season_tint", _seasonTint);
+            _material.SetShaderParameter("season_snow", _seasonSnow);
         }
     }
 
@@ -250,6 +269,8 @@ public sealed partial class TerrainRenderer : Node3D
 
         _material = new ShaderMaterial { Shader = shader };
         _material.SetShaderParameter("show_grid", _gridVisible);
+        _material.SetShaderParameter("season_tint", _seasonTint);
+        _material.SetShaderParameter("season_snow", _seasonSnow);
         Color sceneAmbient = SceneAmbient();
         _material.SetShaderParameter("ambient_color", sceneAmbient);
 

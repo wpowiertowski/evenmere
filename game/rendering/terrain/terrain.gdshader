@@ -19,6 +19,13 @@ uniform sampler2D coast_tex : filter_linear, repeat_disable;
 uniform vec2 coast_map_size = vec2(128.0, 128.0);
 uniform vec3 beach_color : source_color = vec3(0.85, 0.78, 0.58);
 
+// Seasonal tint and snow (M2-24): one multiplier plus a snow cover, both no-ops in classic (gated by
+// look_amount below), so the M1 look stays pixel-identical. Snow settles only above the waterline, read from
+// the world height, so the seabed under the opaque sea never shows snow.
+uniform vec3 season_tint : source_color = vec3(1.0, 1.0, 1.0);
+uniform float season_snow = 0.0;
+uniform vec3 snow_color : source_color = vec3(1.0, 0.972549, 0.909804); // paper.highlight.
+
 // The scene ambient (Main.tscn WorldEnvironment colour x energy) lifts every band; the material setup reads
 // the live environment so the single source stays in the scene.
 uniform vec3 ambient_color : source_color = vec3(0.51, 0.53, 0.55);
@@ -49,6 +56,14 @@ float grid_line(vec2 p, float width_px) {
 void fragment() {
 	float beachBlend = texture(coast_tex, world_pos.xz / coast_map_size).r;
 	ALBEDO = mix(COLOR.rgb, beach_color, beachBlend * look_amount);
+	// The seasonal grade multiplies every lit band through ALBEDO; the snow cover then mixes toward paper white.
+	ALBEDO *= mix(vec3(1.0), season_tint, look_amount);
+	// Snow settles on open ground: the red channel of the (linear) vertex colour separates pale open tiles
+	// (plains, fields, hills) from dark forest greens, which keep their contrast, so the biome pattern reads
+	// through the cover. Ceiling 0.22: a light tint, never a whiteout. Snow stays warm paper white.
+	float openGround = smoothstep(0.08, 0.20, COLOR.rgb.r);
+	float snowMask = smoothstep(-0.05, 0.45, world_pos.y) * season_snow * openGround * look_amount;
+	ALBEDO = mix(ALBEDO, snow_color, clamp(snowMask, 0.0, 0.22));
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.0;
 

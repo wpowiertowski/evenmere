@@ -1,3 +1,5 @@
+using Evenmere.Core.Time;
+using Evenmere.Game.Rendering.Seasons;
 using Godot;
 
 namespace Evenmere.Game.Rendering.Look;
@@ -15,6 +17,19 @@ public static class LookScene
 
     /// <summary>The key energy: with the ambient below, a lit flat tile renders at about its token.</summary>
     public const float KeyEnergy = 0.8f;
+
+    /// <summary>
+    /// Gets the seasonal key-light colour (M2-24): the same warm late-afternoon sun, graded per season from spring
+    /// pink through summer warm and autumn gold to a pale winter cool. Values are sRGB, matching the uniform
+    /// convention (<see cref="LookPalette.SrgbOf"/>); the season renderer blends between neighbours over two days.
+    /// </summary>
+    /// <param name="season">The season.</param>
+    /// <returns>The key colour for that season at full strength.</returns>
+    public static Color SeasonKeyColor(Season season)
+    {
+        SeasonTint tint = SeasonPalette.Target(season);
+        return new Color(tint.LightR, tint.LightG, tint.LightB);
+    }
 
     // NOTE (calibration, 2026-10-25): the default filmic tonemap crushes mid-tones unevenly per channel, so no
     // linear light math can land on the tokens through it. The hand-drawn look uses the linear tonemap:
