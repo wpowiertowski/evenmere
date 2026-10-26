@@ -48,6 +48,12 @@ public sealed partial class HudRoot : Control
     private Label? _dateLabel;
     private HudChip? _knowledgeChip;
     private HudChip? _cultureChip;
+    private bool _debugAllGoods;
+    private int _debugMeasureFrames;
+
+    // Goods stay plain counts, sampled at slice scale ("88"): compact icon + amount chips keep their width
+    // steady as digits change. Three-digit stocks widen their chip past the sample instead of jumping the row.
+    private const string GoodsWidestSample = "88";
     private SimSpeed _resumeSpeed = SimSpeed.X1;
     private float _uiScaleFactor = UiScale.Default;
     private Vector2I _lastScaleSize = new(-1, -1);
@@ -116,6 +122,10 @@ public sealed partial class HudRoot : Control
                 {
                     _debugWorkforceTier = arg["--hud-workforce-tip=".Length..];
                 }
+                else if (string.Equals(arg, "--hud-all-goods", StringComparison.Ordinal))
+                {
+                    _debugAllGoods = true;
+                }
             }
         }
 
@@ -153,6 +163,17 @@ public sealed partial class HudRoot : Control
         }
 
         _viewModel?.Advance(delta);
+
+        // Debug measurement for the two-row proof: with --hud-all-goods, log the settled goods-row
+        // widths once, so the report can show 15 chips fitting the bar's width arithmetically.
+        if (_debugAllGoods)
+        {
+            _debugMeasureFrames++;
+            if (_debugMeasureFrames == 100)
+            {
+                LogGoodsRowWidths();
+            }
+        }
     }
 
     /// <inheritdoc />
@@ -381,12 +402,18 @@ public sealed partial class HudRoot : Control
         // The top row holds the date, the speeds and the tier chips only; Knowledge and Culture sit at the head of
         // the goods row, so the bar stays two rows tall at 1280 × 800 with two tiers unlocked.
         const string WidestResidents = "88 · 88 free / 88 jobs · 88 in lower-tier jobs";
-        // Goods stay plain counts, sampled at slice scale ("88"): the names dominate these chips, so the
-        // sample only steadies two-digit stocks; with Knowledge and Culture heading the goods row, a wider
+        // Goods stay plain counts, sampled at slice scale ("88"): the chip shows icon, amount and trend
+        // only, so thirteen goods fit one row; with Knowledge and Culture heading the goods row, a wider
         // sample would wrap the strip to a third bar row at 1280 × 800. Three-digit stocks widen their chip
         // past the sample instead of jumping the whole row.
-        const string WidestCount = "88";
+        const string WidestCount = GoodsWidestSample;
         string widestRate = strings.Format("ui.hud.per_day", ("value", "88.8"));
+
+        // ART-02 (round 3): the goods row holds Knowledge, Culture and all thirteen goods in one row at the
+        // 1600-point design width, so its gap is tightened here rather than in Hud.tscn. Chip padding already
+        // separates the contents, so a 2 px row gap reads the same. If the scene's gap changes, this override
+        // wins; remove it if the row ever gets room back.
+        goods.AddThemeConstantOverride("h_separation", 2);
 
         for (int i = 0; i < viewModel.Residents.Length; i++)
         {
@@ -395,14 +422,14 @@ public sealed partial class HudRoot : Control
             _residentChips.Add(chip);
         }
 
-        _knowledgeChip = HudChip.Create(withTrend: false, widestRate);
+        _knowledgeChip = HudChip.Create(withTrend: false, widestRate, withName: false);
         goods.AddChild(_knowledgeChip);
-        _cultureChip = HudChip.Create(withTrend: false, widestRate);
+        _cultureChip = HudChip.Create(withTrend: false, widestRate, withName: false);
         goods.AddChild(_cultureChip);
 
         for (int i = 0; i < viewModel.Goods.Length; i++)
         {
-            var chip = HudChip.Create(withTrend: true, WidestCount);
+            var chip = HudChip.Create(withTrend: true, WidestCount, withName: false);
             chip.FocusMode = FocusModeEnum.All;
             goods.AddChild(chip);
             _goodChips.Add(chip);
@@ -410,14 +437,85 @@ public sealed partial class HudRoot : Control
 
         BuildExplainPopup(host, strings);
         HookGoodChips();
+        SetChipIcons(host);
+        if (_debugAllGoods)
+        {
+            AddDebugExtraGoodChips(host, strings);
+        }
         BuildWorkforceTipPopup();
 
         OnRefreshed();
     }
 
-    private void OnRefreshed()
+    // ART-02 icons, once per world rather than per refresh: a missing texture keeps the text-only chip.
+    private void SetChipIcons(SimHost host)
     {
-        HudViewModel? viewModel = _viewModel;
+        if (_knowledgeChip is null || _cultureChip is null)
+        {
+            return;
+        }
+
+        _knowledgeChip.SetIcon(IconLibrary.LoadUi("knowledge"));
+        _cultureChip.SetIcon(IconLibrary.LoadUi("culture"));
+        for (int i = 0; i < _goodChips.Count && i < _stripGoods.Length; i++)
+        {
+            _goodChips[i].SetIcon(IconLibrary.LoadGood(host.Content.NameOf(_stripGoods[i])));
+        }
+    }
+
+    // Debug screenshots only (--hud-all-goods): pads the strip past the content's goods with icon + dash
+    // chips for the Era I goods that have icons but no content yet (M2-13a), so the two-row bar can be proved
+    // at 1280 × 800 with all thirteen. They are layout stand-ins, not live data: no trend history, no tooltip.
+    private void AddDebugExtraGoodChips(SimHost host, UiStrings strings)
+    {
+        var known = new HashSet<string>(StringComparer.Ordinal);
+        foreach (GoodId good in _stripGoods)
+        {
+            known.Add(host.Content.NameOf(good));
+        }
+
+        var extra = new List<string>();
+        foreach (string file in DirAccess.GetFilesAt(IconLibrary.ResRoot + "/goods"))
+        {
+            if (file.EndsWith(".png", StringComparison.Ordinal)
+                && !known.Contains(file[..^4]))
+            {
+                extra.Add(file[..^4]);
+            }
+        }
+
+        extra.Sort(StringComparer.Ordinal);
+        HFlowContainer goods = GetNode<HFlowContainer>("%GoodsFlow");
+        string dash = strings.Get("ui.hud.unavailable");
+        foreach (string id in extra)
+        {
+            var chip = HudChip.Create(withTrend: true, GoodsWidestSample, withName: false);
+            chip.FocusMode = FocusModeEnum.All;
+            goods.AddChild(chip);
+            chip.SetIcon(IconLibrary.LoadGood(id));
+            chip.SetValue(string.Empty, dash, id);
+            chip.SetTrend(Trend.Flat);
+        }
+    }
+
+    private void LogGoodsRowWidths()
+    {
+        HFlowContainer goods = GetNode<HFlowContainer>("%GoodsFlow");
+        float total = 0f;
+        foreach (Node child in goods.GetChildren())
+        {
+            if (child is Control control)
+            {
+                GD.Print($"[Evenmere] HUDMeasure: '{control.Name}' width={control.Size.X:F1}.");
+                total += control.Size.X;
+            }
+        }
+
+        GD.Print($"[Evenmere] HUDMeasure: row width={goods.Size.X:F1} chips={total:F1}.");
+    }
+
+    private void OnRefreshed()
+    {        HudViewModel? viewModel = _viewModel;
         if (viewModel is null || _dateLabel is null || _knowledgeChip is null || _cultureChip is null)
         {
             return;
