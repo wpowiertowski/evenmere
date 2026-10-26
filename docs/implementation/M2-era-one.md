@@ -85,7 +85,7 @@ file per card as listed; never edit another card's file.
 | M2-17a | Balance bot v2: the Era I island bot | tools | M2-04, M2-13b, M2-16 | todo |
 | M2-17b | Multi-seed balance runs and pacing sign-off | tools | M2-17a + pacing-window confirmation (human) | todo |
 | M2-18 | Tech tree graph view | game | M2-09 | done |
-| M2-19 | Civics tree and traditions board | game | M2-07 | todo |
+| M2-19 | Civics tree and traditions board | game | M2-07 | done |
 | M2-20 | Overlays: coverage, reach, fertility and deposits | game | M2-00 | done |
 | M2-21 | Production chain viewer | game | M2-00 | done |
 | M2-22 | Statistics graphs | game | M2-00 | done |

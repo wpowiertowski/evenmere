@@ -58,7 +58,10 @@ public sealed partial class TreeNodeView : PanelContainer
         _bar!.Value = node.Fraction * 1000.0;
 
         string badge = node.InspiredBadge;
-        _inspiration!.Text = badge.Length > 0 ? $"✦ {badge} · {node.InspirationText}" : node.InspirationText;
+        // Done cards keep their unlocks but drop the inspiration line: it is met (or moot) and would only
+        // restate an unmet condition next to a finished card. The research and civics trees share this view.
+        _inspiration!.Visible = node.State != GraphNodeState.Done;
+        _inspiration.Text = badge.Length > 0 ? $"✦ {badge} · {node.InspirationText}" : node.InspirationText;
         _inspiration.AddThemeColorOverride("font_color", node.Inspired ? _sea : _muted);
 
         var parts = new List<string>(node.Unlocks.Count);

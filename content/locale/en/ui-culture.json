@@ -1,0 +1,20 @@
+{
+  "ui.culture.group.adopted": "Adopted",
+  "ui.traditions.title": "Traditions",
+  "ui.traditions.slots": "Slots",
+  "ui.traditions.drawer": "Owned cards",
+  "ui.traditions.slot.hearth": "Hearth slot",
+  "ui.traditions.slot.craft": "Craft slot",
+  "ui.traditions.slot.heritage": "Heritage slot",
+  "ui.traditions.slot.wild": "Wild slot",
+  "ui.traditions.slot.empty": "Empty",
+  "ui.traditions.slots.empty": "No tradition slots yet — adopt civics that grant them.",
+  "ui.traditions.drawer.empty": "No tradition cards yet — adopt civics that unlock them.",
+  "ui.traditions.slotted": "In the {slot}",
+  "ui.traditions.clear.tip": "Clear this slot",
+  "ui.traditions.pending": "Holding {card} — press a slot to place it.",
+  "ui.traditions.style": "Style: {name}",
+  "ui.traditions.target.island": "Island-wide",
+  "ui.traditions.change.seasoned": "{target} {stat} {delta} ({season})",
+  "ui.traditions.change.plain": "{target} {stat} {delta}"
+}
