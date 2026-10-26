@@ -300,6 +300,40 @@
         "Type": "Evenmere.Core.Ids.TraditionId"
       }
     },
+    "Evenmere.Sim.Systems.Happenings.HappeningsState": {
+      "0": {
+        "Member": "property Pending",
+        "Type": "System.Nullable\u00601\u003CEvenmere.Sim.Systems.Happenings.PendingHappening\u003E"
+      },
+      "1": {
+        "Member": "property CooldownUntil",
+        "Type": "System.Int64[]"
+      },
+      "2": {
+        "Member": "property TempModifiers",
+        "Type": "Evenmere.Sim.Systems.Happenings.TempModifierRecord[]"
+      }
+    },
+    "Evenmere.Sim.Systems.Happenings.PendingHappening": {
+      "0": {
+        "Member": "property Happening",
+        "Type": "Evenmere.Core.Ids.HappeningId"
+      },
+      "1": {
+        "Member": "property RaisedTick",
+        "Type": "System.Int64"
+      }
+    },
+    "Evenmere.Sim.Systems.Happenings.TempModifierRecord": {
+      "0": {
+        "Member": "property Happening",
+        "Type": "Evenmere.Core.Ids.HappeningId"
+      },
+      "1": {
+        "Member": "property ExpiresTick",
+        "Type": "System.Int64"
+      }
+    },
     "Evenmere.Sim.Systems.Logistics.LogisticsState": {
       "0": {
         "Member": "property Jobs",

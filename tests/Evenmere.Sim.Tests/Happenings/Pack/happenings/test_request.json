@@ -1,0 +1,10 @@
+{
+  "id": "test_request",
+  "trigger": { "season": "spring" },
+  "chancePerMille": 1000,
+  "cooldownDays": 30,
+  "options": [
+    { "effects": [ { "requestFestival": { "festival": "test_festival", "discountPercent": 25 } } ] }
+  ],
+  "defaultOption": 0
+}

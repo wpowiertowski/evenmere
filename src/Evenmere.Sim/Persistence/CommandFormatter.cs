@@ -6,6 +6,7 @@ using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
 using Evenmere.Sim.Systems.Culture.Festivals.Commands;
 using Evenmere.Sim.Systems.Culture.Traditions.Commands;
+using Evenmere.Sim.Systems.Happenings.Commands;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
 using Evenmere.Sim.Systems.Research.Commands;
@@ -114,6 +115,11 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
                 writer.Write(held.Ground.Value);
                 writer.Write(held.Festival.Value);
                 break;
+            case ChooseHappeningOption choose:
+                writer.WriteArrayHeader(2);
+                writer.Write(choose.Happening.Value);
+                writer.Write(choose.OptionIndex);
+                break;
             case DismissAdvice dismiss:
                 writer.WriteArrayHeader(1);
                 writer.Write(dismiss.AdviceId);
@@ -161,6 +167,7 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
                 nameof(SetCivicQueue) => ReadSetCivicQueue(ref reader),
                 nameof(SetTradition) => ReadSetTradition(ref reader),
                 nameof(HoldFestival) => ReadHoldFestival(ref reader),
+                nameof(ChooseHappeningOption) => ReadChooseHappeningOption(ref reader),
                 nameof(DismissAdvice) => ReadDismissAdvice(ref reader),
                 _ => throw new MessagePackSerializationException($"The command log names an unknown command type '{name}'."),
             };
@@ -335,6 +342,14 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
         int ground = reader.ReadInt32();
         ushort festival = reader.ReadUInt16();
         return new HoldFestival(new EntityId(ground), FestivalId.From(festival));
+    }
+
+    private static ChooseHappeningOption ReadChooseHappeningOption(ref MessagePackReader reader)
+    {
+        ExpectFields(ref reader, 2);
+        ushort happening = reader.ReadUInt16();
+        int option = reader.ReadInt32();
+        return new ChooseHappeningOption(HappeningId.From(happening), option);
     }
 
     private static DismissAdvice ReadDismissAdvice(ref MessagePackReader reader)

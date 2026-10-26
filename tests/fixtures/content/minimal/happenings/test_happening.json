@@ -1,0 +1,10 @@
+{
+  "id": "test_happening",
+  "trigger": { "population": { "atLeast": 1000000000 } },
+  "chancePerMille": 1,
+  "cooldownDays": 3650,
+  "options": [
+    { "effects": [] }
+  ],
+  "defaultOption": 0
+}

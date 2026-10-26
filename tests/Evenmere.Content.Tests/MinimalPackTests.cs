@@ -37,7 +37,7 @@ public sealed class MinimalPackTests
         db.Festivals.Count.ShouldBe(1);
         db.GreatWorks.Count.ShouldBe(0);
         db.Monuments.Count.ShouldBe(0);
-        db.Happenings.Count.ShouldBe(0);
+        db.Happenings.Count.ShouldBe(1);
     }
 
     [Fact]
@@ -210,10 +210,11 @@ public sealed class MinimalPackTests
         Check(ContentType.Civics, db.Civics);
         Check(ContentType.Traditions, db.Traditions);
         Check(ContentType.Festivals, db.Festivals);
+        Check(ContentType.Happenings, db.Happenings);
         Check(ContentType.Eras, db.Eras);
         Check(ContentType.Terrains, db.Terrains);
 
         missing.ShouldBeEmpty();
-        locale.Count.ShouldBe(2 * (3 + 7 + 3 + 2 + 2 + 1 + 1 + 1 + 2 + 4));
+        locale.Count.ShouldBe(2 * (3 + 7 + 3 + 2 + 2 + 1 + 1 + 1 + 1 + 2 + 4));
     }
 }

@@ -1,0 +1,7 @@
+{
+  "id": "test_festival",
+  "cost": { "fish": 4 },
+  "days": 3,
+  "culturePerDay": 10,
+  "start": true
+}

@@ -269,8 +269,10 @@ public sealed class CommandLogReader
 
             default:
                 // TODO(M2-13b): add the HoldFestival remap case (map the festival, drop the command when it is
-                // gone) once festival content exists, and name a real festival in the coverage sample. Until then
-                // the sample rides this passthrough, because a mapping case would drop it under festival-free content.
+                // gone) and the ChooseHappeningOption remap case (map the happening, drop the command when it is
+                // gone) once festival and happening content exist, and name real items in the coverage samples.
+                // Until then the samples ride this passthrough, because a mapping case would drop them under
+                // festival- and happening-free content.
                 // A command from another assembly (a test harness command, for example) carries no known content
                 // IDs; it passes through unchanged.
                 return command;

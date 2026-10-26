@@ -1,0 +1,13 @@
+{
+  "id": "rough_winter",
+  "trigger": { "season": "winter" },
+  "chancePerMille": 10,
+  "cooldownDays": 30,
+  "options": [
+    {
+      "effects": [ { "modifier": { "stat": "productivity", "percent": -10 } } ],
+      "durationDays": 5
+    }
+  ],
+  "defaultOption": 0
+}

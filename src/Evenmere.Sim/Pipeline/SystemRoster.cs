@@ -83,7 +83,7 @@ internal sealed class SystemRoster
 
         var progression = new ProgressionSystem(world.Progression, content, modifiers);
 
-        var happenings = new HappeningsSystem();
+        var happenings = new HappeningsSystem(world.Happenings, content, () => world.Clock);
 
         // M1-15: the advisors system runs over the advisors state, with the content for its streak slots and building types.
         var advisors = new AdvisorsSystem(world.Advisors, content);
