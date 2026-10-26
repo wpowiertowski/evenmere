@@ -76,6 +76,11 @@ public interface IProgressionQueries
     /// <returns><see langword="true"/> if it is unlocked.</returns>
     bool IsTraditionUnlocked(TraditionId tradition);
 
+    /// <summary>Tests whether a festival has been unlocked. Read by the culture system before holding one. (M2-08.)</summary>
+    /// <param name="festival">The festival.</param>
+    /// <returns><see langword="true"/> if it is unlocked.</returns>
+    bool IsFestivalUnlocked(FestivalId festival);
+
     /// <summary>Counts the tradition slots of a type that effects have granted. (M2-07.)</summary>
     /// <param name="slot">The slot type.</param>
     /// <returns>The number of slots; zero or more.</returns>

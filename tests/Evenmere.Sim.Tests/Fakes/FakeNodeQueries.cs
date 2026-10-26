@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Systems.Culture.Festivals;
 using Evenmere.Sim.Systems.Culture.Traditions;
 
 namespace Evenmere.Sim.Tests.Fakes;
@@ -88,6 +89,15 @@ internal sealed class FakeCultureQueries : ICultureQueries
     /// <summary>Gets or sets the slotted style card, or <see langword="null"/> when none is slotted.</summary>
     public TraditionId? Style { get; set; }
 
+    /// <summary>Gets or sets whether a festival is running, as <see cref="ICultureQueries.IsFestivalRunning"/> reports it.</summary>
+    public bool FestivalRunning { get; set; }
+
+    /// <summary>Gets or sets the running festival, as <see cref="ICultureQueries.ActiveFestival"/> reports it.</summary>
+    public FestivalRun? RunningFestival { get; set; }
+
+    /// <summary>Gets or sets the last-held years by festival ID, as <see cref="ICultureQueries.FestivalsHeldInYear"/> reads them.</summary>
+    public Dictionary<FestivalId, int> LastHeldYear { get; } = [];
+
     /// <inheritdoc />
     public CivicId? Target { get; set; }
 
@@ -138,6 +148,16 @@ internal sealed class FakeCultureQueries : ICultureQueries
 
     /// <inheritdoc />
     TraditionId? ICultureQueries.ActiveStyle() => Style;
+
+    /// <inheritdoc />
+    bool ICultureQueries.IsFestivalRunning() => FestivalRunning;
+
+    /// <inheritdoc />
+    FestivalRun? ICultureQueries.ActiveFestival() => RunningFestival;
+
+    /// <inheritdoc />
+    int ICultureQueries.FestivalsHeldInYear(FestivalId festival, int year) =>
+        LastHeldYear.TryGetValue(festival, out int last) && last == year + 1 ? 1 : 0;
 
     private static void Set(HashSet<CivicId> set, CivicId civic, bool member)
     {

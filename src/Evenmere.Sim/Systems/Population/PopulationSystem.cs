@@ -306,7 +306,10 @@ internal sealed class PopulationSystem : ISimSystem, IBuildingLifecycleListener
             return;
         }
 
-        // A festival pauses the timer: it neither counts nor resets until the festival ends.
+        // A festival pauses the timer: it neither counts nor resets until the festival ends. The flag mirrors
+        // the culture system's running festival (M2-08), read live so a festival held mid-day pauses the very
+        // next bucket, and HouseInfo reports the pause from the same flag.
+        _state.FestivalActive = ctx.Queries.Culture.IsFestivalRunning();
         if (_state.FestivalActive)
         {
             return;

@@ -140,13 +140,14 @@ public sealed class PopulationDeclineTests
         h.RunDays(5);
         h.House(house).DeclineTimerDays.ShouldBe(5);
 
-        // While a festival runs the timer neither counts nor resets.
-        h.Sim.World.Population.FestivalActive = true;
+        // While a festival runs the timer neither counts nor resets. The flag is read from the culture
+        // queries, which the festivals system drives (M2-08); the test arranges it through the fake.
+        h.Sim.Queries.Culture.FestivalRunning = true;
         h.RunDays(5);
         h.House(house).Tier.ShouldBe(h.Tier("villagers"));
         h.House(house).DeclineTimerDays.ShouldBe(5);
 
-        h.Sim.World.Population.FestivalActive = false;
+        h.Sim.Queries.Culture.FestivalRunning = false;
         h.RunDays(5);
         h.House(house).Tier.ShouldBe(h.Tier("settlers"));
     }

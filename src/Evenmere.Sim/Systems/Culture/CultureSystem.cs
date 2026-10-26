@@ -8,6 +8,8 @@ using Evenmere.Sim.Queries;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Services;
 using Evenmere.Sim.Systems.Culture.Commands;
+using Evenmere.Sim.Systems.Culture.Festivals;
+using Evenmere.Sim.Systems.Culture.Festivals.Commands;
 using Evenmere.Sim.Systems.Culture.Traditions;
 using Evenmere.Sim.Systems.Progression;
 using Evenmere.Sim.Systems.Research;
@@ -45,7 +47,7 @@ internal sealed class CultureSystem : ISimSystem
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(queries);
 
-        state.EnsureSlots(content.Civics.Count);
+        state.EnsureSlots(content.Civics.Count, content.Festivals.Count);
         _state = state;
         _content = content;
         _queries = queries;
@@ -68,6 +70,9 @@ internal sealed class CultureSystem : ISimSystem
 
         // traditions (M2-07)
         router.Register(new SetTraditionHandler(_state, _content));
+
+        // festivals (M2-08)
+        router.Register(new HoldFestivalHandler(_state));
     }
 
     /// <inheritdoc />
@@ -76,9 +81,14 @@ internal sealed class CultureSystem : ISimSystem
         ArgumentNullException.ThrowIfNull(ctx);
 
         CreditBuildingOutputs(ctx);
+        TickFestival(ctx);
         CheckInspirations(ctx);
         Accrue(ctx);
     }
+
+    // Festivals (M2-08): the daily credit and countdown run before the accrual spends the day's culture,
+    // so a festival day pays for civics the same day it is credited.
+    private void TickFestival(SimContext ctx) => FestivalScheduler.Tick(_state, ctx);
 
     private void CreditBuildingOutputs(SimContext ctx)
     {

@@ -8,6 +8,7 @@ using Evenmere.Sim.State;
 using Evenmere.Sim.Systems.Advisors;
 using Evenmere.Sim.Systems.Construction;
 using Evenmere.Sim.Systems.Culture;
+using Evenmere.Sim.Systems.Culture.Festivals;
 using Evenmere.Sim.Systems.Culture.Traditions;
 using Evenmere.Sim.Systems.Logistics;
 using Evenmere.Sim.Systems.Map;
@@ -220,6 +221,25 @@ internal static class RemapPass
 
                 state.Slotted = [.. slotted];
             }
+
+            // A running festival keeps its ground (not a content ID) and remaps its festival; when the content
+            // no longer defines it, the run ends with the flag instead of pausing decline timers forever. (M2-08.)
+            if (state.Active is { } active)
+            {
+                int mapped = tables.MapFestival(active.Festival.Value);
+                if (mapped < 0)
+                {
+                    Ledger.Add("festival", tables.OldFestivalName(active.Festival.Value), "running festival ended by the remap");
+                    state.Active = null;
+                    state.FestivalRunning = false;
+                }
+                else
+                {
+                    state.Active = new FestivalRun(FestivalId.From(checked((ushort)mapped)), active.Ground, active.DaysLeft);
+                }
+            }
+
+            state.FestivalLastHeldYear = Permute(state.FestivalLastHeldYear, tables.FestivalMap, tables.Content.Festivals.Count, static () => 0);
         }
 
         public void RemapProgression()

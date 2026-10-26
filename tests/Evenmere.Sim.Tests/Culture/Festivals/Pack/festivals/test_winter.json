@@ -1,0 +1,8 @@
+{
+  "id": "test_winter",
+  "seasons": ["winter"],
+  "cost": { "fish": 4 },
+  "days": 3,
+  "culturePerDay": 10,
+  "effects": []
+}

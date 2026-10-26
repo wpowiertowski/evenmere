@@ -4,6 +4,7 @@ using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Advisors.Commands;
 using Evenmere.Sim.Systems.Construction.Commands;
 using Evenmere.Sim.Systems.Culture.Commands;
+using Evenmere.Sim.Systems.Culture.Festivals.Commands;
 using Evenmere.Sim.Systems.Culture.Traditions.Commands;
 using Evenmere.Sim.Systems.Population.Commands;
 using Evenmere.Sim.Systems.Production.Commands;
@@ -108,6 +109,11 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
                 writer.Write(tradition.Tradition.HasValue);
                 writer.Write(tradition.Tradition is { } card ? card.Value : (ushort)0);
                 break;
+            case HoldFestival held:
+                writer.WriteArrayHeader(2);
+                writer.Write(held.Ground.Value);
+                writer.Write(held.Festival.Value);
+                break;
             case DismissAdvice dismiss:
                 writer.WriteArrayHeader(1);
                 writer.Write(dismiss.AdviceId);
@@ -154,6 +160,7 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
                 nameof(SetCivicTarget) => ReadSetCivicTarget(ref reader),
                 nameof(SetCivicQueue) => ReadSetCivicQueue(ref reader),
                 nameof(SetTradition) => ReadSetTradition(ref reader),
+                nameof(HoldFestival) => ReadHoldFestival(ref reader),
                 nameof(DismissAdvice) => ReadDismissAdvice(ref reader),
                 _ => throw new MessagePackSerializationException($"The command log names an unknown command type '{name}'."),
             };
@@ -320,6 +327,14 @@ internal sealed class CommandFormatter : IMessagePackFormatter<Command?>
         }
 
         return new SetTradition(slot, index, slotted ? TraditionId.From(value) : null);
+    }
+
+    private static HoldFestival ReadHoldFestival(ref MessagePackReader reader)
+    {
+        ExpectFields(ref reader, 2);
+        int ground = reader.ReadInt32();
+        ushort festival = reader.ReadUInt16();
+        return new HoldFestival(new EntityId(ground), FestivalId.From(festival));
     }
 
     private static DismissAdvice ReadDismissAdvice(ref MessagePackReader reader)

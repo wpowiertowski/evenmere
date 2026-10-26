@@ -41,7 +41,7 @@ public sealed class Migration_0001_to_0002 : IMigration
         }
 
         state.Research.EnsureSlots(content.Techs.Count);
-        state.Culture.EnsureSlots(content.Civics.Count);
+        state.Culture.EnsureSlots(content.Civics.Count, content.Festivals.Count);
         state.Advisors.EnsureSlots(content.Goods.Count, content.Tiers.Count);
         return state;
     }

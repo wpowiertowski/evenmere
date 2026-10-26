@@ -4,6 +4,7 @@ using Evenmere.Content.Definitions;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Sim.Queries;
+using Evenmere.Sim.Systems.Culture.Festivals;
 using Evenmere.Sim.Systems.Culture.Traditions;
 
 namespace Evenmere.Sim.Systems.Culture;
@@ -103,6 +104,16 @@ internal sealed class CultureQueries : ICultureQueries
 
         return null;
     }
+
+    /// <inheritdoc />
+    bool ICultureQueries.IsFestivalRunning() => _state.FestivalRunning;
+
+    /// <inheritdoc />
+    FestivalRun? ICultureQueries.ActiveFestival() => _state.Active;
+
+    /// <inheritdoc />
+    int ICultureQueries.FestivalsHeldInYear(FestivalId festival, int year) =>
+        FestivalScheduler.HeldInYear(_state.FestivalLastHeldYear, festival, year) ? 1 : 0;
 
     private static bool HasTag(ImmutableArray<string> tags, string tag)
     {

@@ -2,6 +2,7 @@ using Evenmere.Content;
 using Evenmere.Core.Ids;
 using Evenmere.Core.Numerics;
 using Evenmere.Sim.Persistence;
+using Evenmere.Sim.Systems.Culture.Festivals;
 using Evenmere.Sim.Systems.Culture.Traditions;
 using MessagePack;
 
@@ -60,12 +61,39 @@ public sealed class CultureState
     [ContentValued(ContentKind.Tradition)]
     public SlottedTradition[] Slotted { get; set; } = [];
 
-    /// <summary>Grows the progress array and the bitsets to the loaded content's civic count, keeping any values a loaded state already holds.</summary>
+    /// <summary>
+    /// Gets or sets the running festival, if one is running. The culture system's daily step counts it down;
+    /// the running flag below is what Population reads. Rides the version-2 save with load-safe defaults
+    /// (no festival runs), so no migration class is needed. (M2-08.)
+    /// </summary>
+    [Key(8)]
+    public FestivalRun? Active { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last year each festival type was held, indexed by <see cref="FestivalId.Value"/>.
+    /// Each entry keeps the year plus one, so 0 means never held: a fresh game in year 0 and a remap that adds a
+    /// festival both read as never held. Rides the version-2 save with load-safe defaults. (M2-08.)
+    /// </summary>
+    [Key(9)]
+    [ContentIndexed(ContentKind.Festival)]
+    public int[] FestivalLastHeldYear { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a festival is running. Population mirrors this flag through its
+    /// queries and pauses every house's decline timer while it is set. Defaults false. (M2-08.)
+    /// </summary>
+    [Key(10)]
+    public bool FestivalRunning { get; set; }
+
+    /// <summary>Grows the progress and festival arrays and the bitsets to the loaded content's counts, keeping any values a loaded state already holds.</summary>
     /// <param name="civicCount">The number of civics in the content.</param>
-    internal void EnsureSlots(int civicCount)
+    /// <param name="festivalCount">The number of festivals in the content.</param>
+    internal void EnsureSlots(int civicCount, int festivalCount)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(civicCount);
+        ArgumentOutOfRangeException.ThrowIfNegative(festivalCount);
         Slotted ??= [];
+        FestivalLastHeldYear ??= [];
         if (Progress.Length < civicCount)
         {
             var grown = new Amount[civicCount];
@@ -86,6 +114,15 @@ public sealed class CultureState
             ulong[] grown = new ulong[words];
             Array.Copy(Inspired, grown, Inspired.Length);
             Inspired = grown;
+        }
+
+        // New entries keep 0, which the scheduler reads as never held (entries keep the year plus one).
+        // The remap coverage guard requires the default for added items, and here the default is the right value.
+        if (FestivalLastHeldYear.Length < festivalCount)
+        {
+            int[] grown = new int[festivalCount];
+            Array.Copy(FestivalLastHeldYear, grown, FestivalLastHeldYear.Length);
+            FestivalLastHeldYear = grown;
         }
     }
 }

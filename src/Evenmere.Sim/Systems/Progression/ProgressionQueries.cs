@@ -72,6 +72,9 @@ internal sealed class ProgressionQueries : IProgressionQueries
     bool IProgressionQueries.IsTraditionUnlocked(TraditionId tradition) => IsUnlocked(tradition);
 
     /// <inheritdoc />
+    bool IProgressionQueries.IsFestivalUnlocked(FestivalId festival) => IsUnlocked(festival);
+
+    /// <inheritdoc />
     int IProgressionQueries.TraditionSlotCount(TraditionSlotType slot) => TraditionSlots(slot);
 
     /// <inheritdoc />
