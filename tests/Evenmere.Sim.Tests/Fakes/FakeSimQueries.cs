@@ -69,6 +69,9 @@ internal sealed class FakeSimQueries(int goodCount = 16) : ISimQueries
     /// <summary>Gets the explain fake.</summary>
     public FakeExplainQueries Explain { get; } = new();
 
+    /// <summary>Gets the overlay fake.</summary>
+    public FakeOverlayQueries Overlay { get; } = new();
+
     IMapQueries ISimQueries.Map => Map;
 
     IRoadsQueries ISimQueries.Roads => Roads;
@@ -108,4 +111,6 @@ internal sealed class FakeSimQueries(int goodCount = 16) : ISimQueries
     IPlacementQueries ISimQueries.Placement => Placement;
 
     IExplainQueries ISimQueries.Explain => Explain;
+
+    IOverlayQueries ISimQueries.Overlay => Overlay;
 }

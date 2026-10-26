@@ -6,7 +6,7 @@ using Godot;
 namespace Evenmere.Game.Ui.Progress;
 
 /// <summary>
-/// The three buttons beside the HUD that open the research, civics and statistics panels. They sit at the top-left just under
+/// The four buttons beside the HUD that open the research, civics, statistics and overlay panels. They sit at the top-left just under
 /// the HUD bar, where an open panel (docked right) never covers them. Each button toggles its panel and closes the
 /// others, so at most one panel is open. The buttons take keyboard and gamepad focus like the HUD's own, so the
 /// panels stay reachable from the HUD focus chain.
@@ -19,6 +19,7 @@ public sealed partial class PanelToggles : HBoxContainer
     private Button? _researchButton;
     private Button? _cultureButton;
     private Button? _statsButton;
+    private Button? _overlaysButton;
 
     /// <summary>Gets or sets the path to the HUD bar, whose bottom edge the buttons sit under.</summary>
     [Export]
@@ -39,6 +40,10 @@ public sealed partial class PanelToggles : HBoxContainer
     /// <summary>Gets or sets the path to the statistics panel, relative to this node.</summary>
     [Export]
     public NodePath StatsPath { get; set; } = new("../StatsPanel");
+
+    /// <summary>Gets or sets the path to the overlay panel, relative to this node.</summary>
+    [Export]
+    public NodePath OverlayPath { get; set; } = new("../OverlayPanel");
 
     /// <summary>
     /// Toggles the statistics panel, closing the research and civics panels when it opens. The debug stats flag
@@ -63,6 +68,11 @@ public sealed partial class PanelToggles : HBoxContainer
             if (GetNodeOrNull<Control>(CulturePath) is { } culture)
             {
                 culture.Visible = false;
+            }
+
+            if (GetNodeOrNull<Control>(OverlayPath) is { } overlays)
+            {
+                overlays.Visible = false;
             }
         }
 
@@ -134,12 +144,14 @@ public sealed partial class PanelToggles : HBoxContainer
         Control? research = GetNodeOrNull<Control>(ResearchPath);
         Control? culture = GetNodeOrNull<Control>(CulturePath);
         Control? stats = GetNodeOrNull<Control>(StatsPath);
+        Control? overlays = GetNodeOrNull<Control>(OverlayPath);
         _researchButton = MakeButton(
             strings.Get("ui.research.open"),
             strings.Get("ui.research.open.tip"),
             research,
             culture,
-            stats);
+            stats,
+            overlays);
         AddChild(_researchButton);
 
         _cultureButton = MakeButton(
@@ -147,7 +159,8 @@ public sealed partial class PanelToggles : HBoxContainer
             strings.Get("ui.culture.open.tip"),
             culture,
             research,
-            stats);
+            stats,
+            overlays);
         AddChild(_cultureButton);
 
         _statsButton = MakeButton(
@@ -155,8 +168,18 @@ public sealed partial class PanelToggles : HBoxContainer
             strings.Get("ui.stats.open.tip"),
             stats,
             research,
-            culture);
+            culture,
+            overlays);
         AddChild(_statsButton);
+
+        _overlaysButton = MakeButton(
+            strings.Get("ui.overlays.open"),
+            strings.Get("ui.overlays.open.tip"),
+            overlays,
+            research,
+            culture,
+            stats);
+        AddChild(_overlaysButton);
     }
 
     private static Button MakeButton(string text, string tip, Control? panel, params Control?[] others)

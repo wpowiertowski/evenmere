@@ -67,4 +67,7 @@ public interface ISimQueries
 
     /// <summary>Gets the explain queries, which trace a shortage or a stall back to its cause across systems.</summary>
     IExplainQueries Explain { get; }
+
+    /// <summary>Gets the overlay queries, which produce the per-tile layers the view tints (M2-20, per ADR-0017).</summary>
+    IOverlayQueries Overlay { get; }
 }

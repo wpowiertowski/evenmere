@@ -7,6 +7,7 @@ using Evenmere.Game.Host;
 using Evenmere.Game.Host.Persistence;
 using Evenmere.Game.Rendering.Buildings;
 using Evenmere.Game.Rendering.Camera;
+using Evenmere.Game.Rendering.Overlays;
 using Evenmere.Game.Rendering.Roads;
 using Evenmere.Game.Ui.Common;
 using Evenmere.Game.Ui.Menus;
@@ -65,6 +66,9 @@ public sealed partial class ToolController : Node
     private SimHost? _host;
     private CameraRig? _rig;
     private VirtualCursor? _cursor;
+    private OverlayRenderer? _overlays;
+    private OverlaySpec? _overlayBeforeTool;
+    private bool _overlayAutoShown;
     private UiStrings? _strings;
     private ContentDb? _stringsFor;
 
@@ -173,6 +177,10 @@ public sealed partial class ToolController : Node
     [Export]
     public NodePath RigPath { get; set; } = new("../CameraRig");
 
+    /// <summary>Gets or sets the path to the overlay renderer, relative to this node.</summary>
+    [Export]
+    public NodePath OverlayPath { get; set; } = new("../Overlays");
+
     /// <summary>Gets or sets the command-log recorder the safety autosaves rebind. It is set by the scene root.</summary>
     public CommandLogRecorder? Recorder { get; set; }
 
@@ -190,6 +198,7 @@ public sealed partial class ToolController : Node
         _demoDragging = false;
         HideRoadPreview();
         HideDemolish();
+        ShowPlacementOverlay(type);
         LogTool($"build {NameOf(type)}");
         ToolChanged?.Invoke();
     }
@@ -241,6 +250,7 @@ public sealed partial class ToolController : Node
         HideGhost();
         HideRoadPreview();
         HideDemolish();
+        RestorePlacementOverlay();
         LogTool("idle");
         ToolChanged?.Invoke();
     }
@@ -294,6 +304,7 @@ public sealed partial class ToolController : Node
         _host = GetNodeOrNull<SimHost>(HostPath);
         _rig = GetNodeOrNull<CameraRig>(RigPath);
         _cursor = _rig?.GetNodeOrNull<VirtualCursor>("VirtualCursor");
+        _overlays = GetNodeOrNull<OverlayRenderer>(OverlayPath);
         if (_host is null)
         {
             GD.PushError($"[Evenmere] tools: no SimHost at '{HostPath}'; the tools stay idle.");
@@ -1352,6 +1363,57 @@ public sealed partial class ToolController : Node
         }
     }
 
+    // Shows the overlay the placement wants (fertility for a farm, coverage for a service) while the build
+    // tool is out, remembering what the player had open so cancelling restores it (usually nothing). The first
+    // BeginBuild wins the stash, so switching buildings keeps restoring the pre-tool layer. A building with no
+    // suggestion (a sawpit after a farm) falls back to that pre-tool layer instead of going stale.
+    private void ShowPlacementOverlay(BuildingTypeId type)
+    {
+        _overlayBeforeTool ??= _overlays?.Shown;
+        _overlayAutoShown = true;
+        OverlaySpec? next = OverlayViewModel.PlacementLayer(_overlays?.SuggestFor(type), _overlayBeforeTool);
+        if (_overlays is null)
+        {
+            return;
+        }
+
+        if (next is { } show)
+        {
+            _overlays.Show(show);
+        }
+        else
+        {
+            _overlays.HideLayer();
+        }
+    }
+
+    // Hides the placement overlay, restoring what the player had open before the build tool started. Other
+    // tools never auto-show, so their cancel leaves the sheet alone.
+    private void RestorePlacementOverlay()
+    {
+        if (!_overlayAutoShown)
+        {
+            return;
+        }
+
+        _overlayAutoShown = false;
+        if (_overlays is null)
+        {
+            return;
+        }
+
+        if (_overlayBeforeTool is { } previous)
+        {
+            _overlays.Show(previous);
+        }
+        else
+        {
+            _overlays.HideLayer();
+        }
+
+        _overlayBeforeTool = null;
+    }
+
     private void HideGhost()
     {
         if (_ghostRoot is not null)
@@ -1786,6 +1848,7 @@ public sealed partial class ToolController : Node
             AlbedoColor = new Color(1f, 1f, 1f, 0.55f),
             Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
             CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+            RenderPriority = OverlayRenderer.AfterLookPriority,
         };
         _demoOkMaterial = new StandardMaterial3D
         {
@@ -1793,6 +1856,7 @@ public sealed partial class ToolController : Node
             AlbedoColor = ToolColours.DemolishOk,
             Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
             CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+            RenderPriority = OverlayRenderer.AfterLookPriority,
         };
         _demoBadMaterial = new StandardMaterial3D
         {
@@ -1800,6 +1864,7 @@ public sealed partial class ToolController : Node
             AlbedoColor = ToolColours.DemolishBad,
             Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
             CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+            RenderPriority = OverlayRenderer.AfterLookPriority,
         };
     }
 
@@ -1809,6 +1874,7 @@ public sealed partial class ToolController : Node
         AlbedoColor = colour,
         Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
         CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+        RenderPriority = OverlayRenderer.AfterLookPriority,
     };
 
     private void BuildGhostNodes()
