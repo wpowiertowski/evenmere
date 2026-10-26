@@ -67,7 +67,7 @@ file per card as listed; never edit another card's file.
 | M2-01 | Island generator: heightmap, coast and biomes | sim | M2-00 | done |
 | M2-02a | Rivers, fertility and deposits | sim | M2-01 | done |
 | M2-02b | Regions, discoveries, start guarantee and generated new games | sim | M2-02a | done |
-| M2-03 | Map generation preview CLI and seed gallery | tools | M2-02b | todo |
+| M2-03 | Map generation preview CLI and seed gallery | tools | M2-02b | done |
 | M2-04 | Bridges and river crossing | sim | M2-00 | done |
 | M2-05 | Seasons | sim | M2-00 | done |
 | M2-06 | Exploration: fog, expeditions and discoveries | sim | M2-02b, M2-10 | todo |
