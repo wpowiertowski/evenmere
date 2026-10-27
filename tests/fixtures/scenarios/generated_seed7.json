@@ -248,7 +248,7 @@
     }
   ],
   "expect": {
-    "hash": "c4cefa9c454cc300",
+    "hash": "8db4cc08a57e434f",
     "residents": {
       "villagers": ">= 50"
     },
