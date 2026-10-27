@@ -84,7 +84,7 @@ file per card as listed; never edit another card's file.
 | M2-15 | Save versioning, migrations and autosave rotation | sim | M2-00 | done |
 | M2-16 | Replay and performance harness, reference saves | tools | M2-15 | done |
 | M2-17a | Balance bot v2: the Era I island bot | tools | M2-04, M2-13b, M2-16 | done |
-| M2-17b | Multi-seed balance runs and pacing sign-off | tools | M2-17a + pacing-window confirmation (human) | todo |
+| M2-17b | Multi-seed balance runs and pacing sign-off | tools | M2-17a + pacing-window confirmation (human) | done |
 | M2-18 | Tech tree graph view | game | M2-09 | done |
 | M2-19 | Civics tree and traditions board | game | M2-07 | done |
 | M2-20 | Overlays: coverage, reach, fertility and deposits | game | M2-00 | done |
@@ -1227,9 +1227,13 @@ Small issues found while reviewing M2 tasks, each with the card or lane it belon
 | --- | --- | --- |
 | M2-16 | ~~The advisors system spikes to 248 ms on some ticks on `perf-20k`.~~ Fixed by M2-34 (max 7.5 ms, average within budget). | M2-34 (done) |
 | M2-34 | Building the storehouse distance fields after a roads change still costs up to about 50 ms on `perf-20k` (953 storehouses). Logistics now pays it first (its Deck average is 0.42 against a 0.50 budget), and the tick's p99 is still about 7.9 ms Deck. Labelled per-tile costs, or incremental field updates, would remove it. Not gating. | Sim perf task before M3 |
-| M2-17a | `EraOneBot.cs` is 3,184 lines and copies v1's goal mechanics verbatim. Split it into components and share the mechanics with `BalanceBot`. Also review `SeversNetwork` for false positives on river-laced ground. | M2-17b |
+| M2-17a | ~~Split `EraOneBot`; share goal mechanics; `SeversNetwork` false positives.~~ Done in M2-17b. | M2-17b (done) |
 | M2-17a | Generated-island pacing on the two green seeds: 100 Villagers missed by Era II (seed 1 had 80 Villagers at 112 min, seed 5 had 50 at 112.5). Era II landed at 112 min. | M2-17b (pacing) |
-| M2-02c | On generated islands the fixed slice build order caps at 50–98 Villagers. Wood starves while sawpits hold 120–450 timber, so sawpits eat the wood houses need. Era I economy input. | M2-17b (economy) |
+| M2-17b | The Era I bot's "stall" is a season with no net resident growth. Once the last house is built (about minute 40), totals plateau by design while Villagers keep advancing, so the literal bar of no run over one season can't be met before Era II (minute 90 or later). Longest runs: 4–14 seasons. A progress-aware stall measure (residents, tier advances or tree points) would judge the intent. | Bot follow-up |
+| M2-17b | On the starter island the Era I bot now plateaus at 90 Villagers. Before its round-1 fixes it reached 100 at 34.6 min. The cause is bot placement strategy (Villagers covering unfilled Settler jobs freeze their houses), not content. The M1 gate still holds: the slice bot reaches 100 Villagers at 36.5 min. | Bot follow-up |
+| M2-17b | `perf-2k` stays the provisional dense-placement save. A bot-grown save near 2,000 residents needs Era II content. | M3 |
+| M2-17b | Seed 2 at 320 reaches Era II at exactly 120.0 min, with no margin. Any content slowdown will push it out of the window. | M3 balance |
+| M2-02c | ~~Sawpits starve houses of wood.~~ Tuned in M2-17b (sawpit cycle 30 s). | M2-17b (done) |
 | M2-02c | Start repair takes about 2.3 s on 256 seeds 18 and 19 (target 2 s, Steam Deck about 3× slower). Counting from the reach list would close the gap. | Sim perf, before M4 |
 | M2-19 | ~~The inspector names tradition, festival, happening and monument sources "from 0".~~ Done in M2-13b. | M2-13b (done) |
 | M2-19 | ~~Completion toasts overlap right-docked panels.~~ Done in M2-35. | M2-35 (done) |

@@ -14,7 +14,7 @@ v0.2 · 18 Oct 2026 · Companion to the [progression ladders](progression.md) an
 
 | Era | Techs | Cost range | Total | Gateway into the next era |
 | --- | --- | --- | --- | --- |
-| I Founding | 13 | 30–160 | 800 | Town Charter ★ |
+| I Founding | 13 | 30–145 | 785 | Town Charter ★ |
 | II Township | 15 | 600–1,800 | 13,300 | Natural Philosophy ★ |
 | III Enlightenment | 12 | 2,600–5,500 | 40,400 | Steam Power ★ |
 | IV Industry | 10 | 6,000–12,000 | 80,000 + repeats | — |
@@ -54,7 +54,7 @@ flowchart LR
 | Bridge-building | `bridge_building` | 70 | Pathfinding | Timber Bridge; access to narrow rivers | Complete 1 expedition |
 | Letters | `letters` | 80 | Pottery | Scribe's Hall | Have 50 Villagers |
 | Masonry | `masonry` | 90 | Stonecutting | Stone Storehouse; Stone Shrine (upgrade); Plaza | Quarry 40 stone |
-| **Town Charter ★** | `town_charter` | 160 | Milling, Weaving, Masonry, Letters | **Townsfolk tier**; Town Hall (upgrade of Founders' Hall); tech gateway to Era II | Have 150 Villagers |
+| **Town Charter ★** | `town_charter` | 145 | Milling, Weaving, Masonry, Letters | **Townsfolk tier**; Town Hall (upgrade of Founders' Hall); tech gateway to Era II | Have 150 Villagers |
 
 ## Era II — Township
 

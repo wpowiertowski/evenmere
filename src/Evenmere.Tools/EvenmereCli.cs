@@ -431,6 +431,12 @@ internal static class EvenmereCli
             DefaultValueFactory = _ => 0,
         };
 
+        var seeds = new Option<string?>("--seeds")
+        {
+            Description = "Run several seeds in sequence (for example --seeds 1..5) and print a summary table instead of one report.",
+            HelpName = "range",
+        };
+
         var balance = new Command(
             "balance",
             "Play the island with a scripted auto-player and report pacing. stdout: the JSON report; stderr: the text report.")
@@ -440,6 +446,7 @@ internal static class EvenmereCli
             seed,
             maxMinutes,
             size,
+            seeds,
         };
         balance.SetAction(parsed =>
         {
@@ -448,6 +455,37 @@ internal static class EvenmereCli
             {
                 environment.Error.WriteLine("evenmere: --bot needs a script file (for example --bot tools/bots/slice.json).");
                 return ExitCodes.Usage;
+            }
+
+            string? seedsText = parsed.GetValue(seeds);
+            if (!string.IsNullOrWhiteSpace(seedsText))
+            {
+                if (!Balance.MultiSeed.MultiSeedRunner.TryParseSeeds(seedsText, out IReadOnlyList<ulong> seedList))
+                {
+                    environment.Error.WriteLine($"evenmere: --seeds must be one seed or a range like 1..5 (got '{seedsText}').");
+                    return ExitCodes.Usage;
+                }
+
+                return WithContentRoots(parsed, content, environment, roots =>
+                {
+                    Balance.MultiSeed.MultiSeedReport? report = Balance.MultiSeed.MultiSeedRunner.RunFromCli(
+                        roots,
+                        parsed.GetValue(map) ?? "starter",
+                        botPath,
+                        seedList,
+                        parsed.GetValue(maxMinutes),
+                        environment.Error,
+                        parsed.GetValue(size));
+                    if (report is null)
+                    {
+                        return ExitCodes.ContentErrors;
+                    }
+
+                    environment.Output.Write(report.ToJson());
+                    environment.Output.Flush();
+                    environment.Error.Write(report.ToText());
+                    return ExitCodes.Success;
+                });
             }
 
             return WithContentRoots(parsed, content, environment, roots =>

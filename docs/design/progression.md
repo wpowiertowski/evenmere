@@ -231,7 +231,7 @@ flowchart LR
 | Building | id | Size | Placement | Workforce | Recipe | Cycle | Cost | Unlocked by |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Woodcutter's Hut | `woodcutters_hut` | 2×2 | land; yield from forest tiles within 4 | 3 Settlers | → Wood | 20 s | 3 timber | start |
-| Sawpit | `sawpit` | 2×2 | land | 3 Settlers | Wood → Timber | 20 s | 3 timber | start |
+| Sawpit | `sawpit` | 2×2 | land | 3 Settlers | Wood → Timber | 30 s | 3 timber | start |
 | Fishing Hut | `fishing_hut` | 2×2 | coastline; yield from unclaimed water within 5 | 3 Settlers | → Fish | 20 s | 3 timber | start |
 | Sheep Farm | `sheep_farm` | 4×4 | plains | 3 Settlers | → Wool | 30 s | 4 timber | Animal Husbandry |
 | Weaver's Cottage | `weavers_cottage` | 2×2 | land | 4 Settlers | Wool → Homespun | 30 s | 4 timber | Weaving |
@@ -244,8 +244,10 @@ flowchart LR
 | Quarry | `quarry` | 3×3 | hills over a stone outcrop | 5 Settlers | → Stone | 40 s | 6 timber | Stonecutting |
 | Clay Pit | `clay_pit` | 3×3 | clay deposit (riverbanks) | 4 Settlers | → Clay | 30 s | 4 timber | Pottery |
 | Potter's Kiln | `potters_kiln` | 2×2 | land | 4 Settlers | Clay + Wood → Pottery | 40 s | 4 timber, 4 stone | Pottery |
-| Orchard | `orchard` | 4×4 | plains; apple fertility | 3 Settlers | → Apples | 45 s, seasonal | 4 timber | Orcharding |
-| Cider Press | `cider_press` | 2×2 | land | 4 Villagers | Apples → Cider | 40 s | 4 timber, 2 stone | Orcharding |
+| Orchard | `orchard` | 4×4 | plains; apple fertility | 3 Settlers | → Apples | 32 s, seasonal | 4 timber | Orcharding |
+| Cider Press | `cider_press` | 2×2 | land | 4 Settlers | Apples → Cider | 40 s | 4 timber, 2 stone | Orcharding |
+
+Cider is a Villager comfort need, but the press is Settler-staffed on purpose: a Villager-staffed press deadlocked the chain (no cider without Villagers, no Villagers without cider) on poor maps.
 
 ### Era I — infrastructure, services, knowledge and culture
 

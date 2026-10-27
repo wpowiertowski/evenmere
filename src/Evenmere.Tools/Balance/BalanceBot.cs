@@ -89,10 +89,10 @@ public static class BalanceBot
         private readonly Dictionary<GoodId, int> _shortageStreak = [];
         private readonly Dictionary<GoodId, int> _emptyStreak = [];
         private readonly List<(string Key, long Tick)> _cooldowns = [];
-        private readonly List<PendingPlacement> _reactive = [];
+        private readonly List<BotPendingPlacement> _reactive = [];
         private readonly List<(string Type, int X, int Y, Rotation Rotation)> _banned = [];
 
-        private readonly GoalState[] _states;
+        private readonly BotGoalState[] _states;
         private int _goalIndex;
         private long? _firstTick;
         private long? _fiftyTick;
@@ -111,10 +111,10 @@ public static class BalanceBot
             _options = options;
             _simulation = Simulation.CreateNew(content, new NewGameOptions { Seed = options.Seed, Map = map });
             _roadType = CheapestRoad(content);
-            _states = new GoalState[script.Goals.Length];
+            _states = new BotGoalState[script.Goals.Length];
             for (int i = 0; i < _states.Length; i++)
             {
-                _states[i] = new GoalState();
+                _states[i] = new BotGoalState();
             }
 
             if (content.Tiers.TryGet("villagers", out TierId villagers))
@@ -187,7 +187,7 @@ public static class BalanceBot
             // in order until it holds or its timeout passes.
             for (int i = 0; i < _states.Length; i++)
             {
-                GoalState state = _states[i];
+                BotGoalState state = _states[i];
                 if (state.Status is not null)
                 {
                     continue;
@@ -206,7 +206,7 @@ public static class BalanceBot
 
             while (_goalIndex < _states.Length)
             {
-                GoalState state = _states[_goalIndex];
+                BotGoalState state = _states[_goalIndex];
                 BotGoal goal = _script.Goals[_goalIndex];
                 if (state.Status is not null)
                 {
@@ -280,7 +280,7 @@ public static class BalanceBot
             }
         }
 
-        private void RunBuild(BuildGoal goal, GoalState state)
+        private void RunBuild(BuildGoal goal, BotGoalState state)
         {
             BuildingTypeId type = _content.Buildings.IdOf(goal.Building);
             if (state.Pending is null && CountBuildings(type) >= goal.Count)
@@ -299,7 +299,7 @@ public static class BalanceBot
             RunPlacement(state, type, goal.Building, anchor, checkCoverage: IsResidence(type));
         }
 
-        private void RunHouses(HousesUntilGoal goal, GoalState state)
+        private void RunHouses(HousesUntilGoal goal, BotGoalState state)
         {
             TierId tier = _content.Tiers.IdOf(goal.Tier);
             if (_simulation.Query.Population.Residents(tier) >= goal.Residents)
@@ -347,7 +347,7 @@ public static class BalanceBot
 
         // Unlocks the newest locked houses that are already covered: unlocking a house lets it advance, and an
         // advance without shrine coverage drops its occupancy and poisons the growth baseline until bread arrives.
-        private void RunUnlock(UnlockHousesGoal goal, GoalState state)
+        private void RunUnlock(UnlockHousesGoal goal, BotGoalState state)
         {
             List<EntityId> locked = LockedHouseIds();
             if (locked.Count == 0)
@@ -411,7 +411,7 @@ public static class BalanceBot
 
         // Locks the oldest houses as they complete, beating the three-day advance streak: a house locked at
         // completion never advances early and dips the total when its new tier's needs are missing.
-        private void RunLock(LockHousesGoal goal, GoalState state)
+        private void RunLock(LockHousesGoal goal, BotGoalState state)
         {
             List<EntityId> houses = HouseIds();
             int locked = 0;
@@ -443,7 +443,7 @@ public static class BalanceBot
             }
         }
 
-        private void TrackResearch(ResearchGoal goal, int index, GoalState state)
+        private void TrackResearch(ResearchGoal goal, int index, BotGoalState state)
         {
             if (state.StartTick < 0)
             {
@@ -496,7 +496,7 @@ public static class BalanceBot
             state.Detail = goal.Tech;
         }
 
-        private void TrackCivic(CivicGoal goal, int index, GoalState state)
+        private void TrackCivic(CivicGoal goal, int index, BotGoalState state)
         {
             if (state.StartTick < 0)
             {
@@ -551,9 +551,9 @@ public static class BalanceBot
 
         // Shared place-and-connect for script and reactive builds. The anchor is a rectangle to spiral from;
         // the bot searches a spot, lays a road to the network, and places the building.
-        private void RunPlacement(GoalState state, BuildingTypeId type, string typeName, (int X, int Y, int Width, int Height) anchor, bool checkCoverage)
+        private void RunPlacement(BotGoalState state, BuildingTypeId type, string typeName, (int X, int Y, int Width, int Height) anchor, bool checkCoverage)
         {
-            if (state.Pending is PendingPlacement pending)
+            if (state.Pending is BotPendingPlacement pending)
             {
                 if (UpdatePending(pending, checkCoverage))
                 {
@@ -604,12 +604,12 @@ public static class BalanceBot
 
             var place = new PlaceBuilding(type, candidate.X, candidate.Y, candidate.Rotation);
             Send(place);
-            state.Pending = new PendingPlacement(type, typeName, candidate.X, candidate.Y, candidate.Rotation, place, _simulation.CurrentTick);
+            state.Pending = new BotPendingPlacement(type, typeName, candidate.X, candidate.Y, candidate.Rotation, place, _simulation.CurrentTick);
             state.Detail = $"{typeName} at ({candidate.X}, {candidate.Y})";
         }
 
         // Returns true when the pending placement resolved and the caller should look for the next one.
-        private bool UpdatePending(PendingPlacement pending, bool checkCoverage)
+        private bool UpdatePending(BotPendingPlacement pending, bool checkCoverage)
         {
             EntityId found = FindBuilding(pending.Type, pending.X, pending.Y);
             if (found == EntityId.None)
@@ -785,7 +785,7 @@ public static class BalanceBot
                 return;
             }
 
-            foreach (PendingPlacement active in _reactive)
+            foreach (BotPendingPlacement active in _reactive)
             {
                 if (active.CoverHouseId != EntityId.None && !active.Dead)
                 {
@@ -820,7 +820,7 @@ public static class BalanceBot
 
             var place = new PlaceBuilding(service.Value, repair.X, repair.Y, repair.Rotation);
             Send(place);
-            _reactive.Add(new PendingPlacement(service.Value, _content.Buildings.Names[service.Value.Value], repair.X, repair.Y, repair.Rotation, place, _simulation.CurrentTick)
+            _reactive.Add(new BotPendingPlacement(service.Value, _content.Buildings.Names[service.Value.Value], repair.X, repair.Y, repair.Rotation, place, _simulation.CurrentTick)
             {
                 CoverHouseId = needy,
                 CoverService = need,
@@ -1015,9 +1015,9 @@ public static class BalanceBot
                 {
                     string key = $"{rejected.Command.GetType().Name}({rejected.Code})";
                     _rejected[key] = _rejected.TryGetValue(key, out int count) ? count + 1 : 1;
-                    foreach (GoalState state in _states)
+                    foreach (BotGoalState state in _states)
                     {
-                        if (state.Pending is PendingPlacement pending && pending.SentBuilding.Equals(rejected.Command))
+                        if (state.Pending is BotPendingPlacement pending && pending.SentBuilding.Equals(rejected.Command))
                         {
                             state.Pending = null;
                             state.RetryTick = _simulation.CurrentTick + RetryDelayTicks;
@@ -1034,7 +1034,7 @@ public static class BalanceBot
                         }
                     }
 
-                    foreach (PendingPlacement reactive in _reactive)
+                    foreach (BotPendingPlacement reactive in _reactive)
                     {
                         if (reactive.SentBuilding.Equals(rejected.Command))
                         {
@@ -1255,7 +1255,7 @@ public static class BalanceBot
 
             var place = new PlaceBuilding(type, candidate.X, candidate.Y, candidate.Rotation);
             Send(place);
-            _reactive.Add(new PendingPlacement(type, typeName, candidate.X, candidate.Y, candidate.Rotation, place, _simulation.CurrentTick));
+            _reactive.Add(new BotPendingPlacement(type, typeName, candidate.X, candidate.Y, candidate.Rotation, place, _simulation.CurrentTick));
         }
 
         private (int X, int Y, int Width, int Height) AnchorFor(string typeName)
@@ -1557,37 +1557,19 @@ public static class BalanceBot
             _simulation.Enqueue(command);
         }
 
-        private void Finish(BotGoal goal, int index, GoalState state, BalanceGoalStatus status, string detail)
-        {
-            state.Status = status;
-            state.Detail = detail;
-            long start = state.StartTick < 0 ? _simulation.CurrentTick : state.StartTick;
-            _goalResults.Add(new BalanceGoalResult(index, KindOf(goal), detail, status, _simulation.CurrentTick - start));
-        }
-
-        private static string KindOf(BotGoal goal) => goal switch
-        {
-            BuildGoal => "build",
-            ResearchGoal => "research",
-            CivicGoal => "civic",
-            EnsureSupplyGoal => "ensureSupply",
-            HousesUntilGoal => "housesUntil",
-            LockHousesGoal => "lockHouses",
-            UnlockHousesGoal => "unlockHouses",
-            WaitUntilTickGoal => "wait",
-            _ => "unknown",
-        };
+        private void Finish(BotGoal goal, int index, BotGoalState state, BalanceGoalStatus status, string detail) =>
+            BotGoals.Finish(_goalResults, _simulation.CurrentTick, goal, index, state, status, detail);
 
         private BalanceReport Assemble()
         {
             while (_goalIndex < _states.Length)
             {
-                GoalState state = _states[_goalIndex];
+                BotGoalState state = _states[_goalIndex];
                 BotGoal goal = _script.Goals[_goalIndex];
                 if (state.Status is null)
                 {
                     state.Status = BalanceGoalStatus.Failed;
-                    _goalResults.Add(new BalanceGoalResult(_goalIndex, KindOf(goal), state.Detail ?? "run ended", state.Status.Value, _simulation.CurrentTick - state.StartTick));
+                    _goalResults.Add(new BalanceGoalResult(_goalIndex, BotGoals.KindOf(goal), state.Detail ?? "run ended", state.Status.Value, _simulation.CurrentTick - state.StartTick));
                 }
 
                 _goalIndex++;
@@ -1645,21 +1627,9 @@ public static class BalanceBot
                 new BalanceTimings(ticks, ticks == 0 ? 0 : (_timingTotal / frequency * 1000) / ticks, _timingPeak / frequency * 1000));
         }
 
-        private sealed class GoalState
-        {
-            public long StartTick = -1;
-            public long RetryTick;
-            public int Progress;
-            public PendingPlacement? Pending;
-            public Command? SentTarget;
-            public Command? SentQueue;
-            public BalanceGoalStatus? Status;
-            public string? Detail;
-        }
-
         // A repair that the coverage check did not confirm is removed again, and its spot is banned, so the
         // next repair tries elsewhere instead of rebuilding the same failure.
-        private bool UpdateRepair(PendingPlacement pending)
+        private bool UpdateRepair(BotPendingPlacement pending)
         {
             EntityId found = FindBuilding(pending.Type, pending.X, pending.Y);
             if (found == EntityId.None)
@@ -1698,35 +1668,6 @@ public static class BalanceBot
 
             pending.Dead = true;
             return true;
-        }
-
-        private sealed class PendingPlacement
-        {
-            public PendingPlacement(
-                BuildingTypeId type, string typeName, int x, int y,
-                Rotation rotation, Command sentBuilding, long seekTick)
-            {
-                Type = type;
-                TypeName = typeName;
-                X = x;
-                Y = y;
-                Rotation = rotation;
-                SentBuilding = sentBuilding;
-                SeekTick = seekTick;
-            }
-
-            public BuildingTypeId Type { get; }
-            public string TypeName { get; }
-            public int X { get; }
-            public int Y { get; }
-            public Rotation Rotation { get; }
-            public Command SentBuilding { get; }
-            public long SeekTick { get; }
-            public EntityId CoverHouseId { get; init; } = EntityId.None;
-            public ServiceKind? CoverService { get; init; }
-            public EntityId PlacedId { get; set; } = EntityId.None;
-            public bool CoverageChecked { get; set; }
-            public bool Dead { get; set; }
         }
     }
 }
