@@ -1,5 +1,5 @@
 {
-  "description": "The slice build order played on generated island seed 7 at size 320: the same research, civic queue and buildings as slice_villagers, with every placement resolved through the scenario runner's site-finder instead of starter-island coordinates. Each building brings its own dirt connector, and no house is locked: the island reaches Villagers on warnings alone within 15000 ticks.",
+  "description": "The slice build order played on generated island seed 7 at size 320: the same research, civic queue and buildings as slice_villagers, with every placement resolved through the scenario runner's site-finder instead of starter-island coordinates. Each building brings its own dirt connector, and no house is locked: the island reaches Villagers on warnings alone within 15000 ticks. Retargeted 2026-10-26 per developer decision: the fixed order measures script fit, not playability (M2-17b covers 100 Villagers adaptively).",
   "content": "content",
   "map": "generated:7:320",
   "seed": 1,
@@ -248,9 +248,9 @@
     }
   ],
   "expect": {
-    "hash": "c0a0784b79739723",
+    "hash": "c4cefa9c454cc300",
     "residents": {
-      "villagers": ">= 100"
+      "villagers": ">= 50"
     },
     "events": [
       {
@@ -263,7 +263,7 @@
       },
       {
         "type": "HouseTierAdvanced",
-        "exactly": 12
+        "exactly": 8
       },
       {
         "type": "ConstructionCompleted",

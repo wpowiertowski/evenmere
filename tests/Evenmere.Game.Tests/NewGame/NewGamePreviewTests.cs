@@ -46,8 +46,8 @@ public sealed class NewGamePreviewTests
     }
 
     [Theory]
-    [InlineData(1, "e38887f4914bb5fc")]
-    [InlineData(2, "d05b60f0c28ac558")]
+    [InlineData(1, "495fcb9d5b974452")]
+    [InlineData(2, "88177323dc42c269")]
     [InlineData(3, "9c46206fcb51f027")]
     public void Render_FixedSeeds_HaveFixedHashes(int seed, string expected)
     {

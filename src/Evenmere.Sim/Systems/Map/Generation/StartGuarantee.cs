@@ -1,13 +1,18 @@
+using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 using Evenmere.Content;
 using Evenmere.Content.Definitions;
 using Evenmere.Content.Maps;
 using Evenmere.Core.Ids;
+using Evenmere.Sim.Queries.Types;
 
 namespace Evenmere.Sim.Systems.Map.Generation;
 
 /// <summary>
 /// The start guarantee (architecture plan §Island and map): the start region is bounded by rivers and holds everything
-/// Era I needs before bridges — forest, grain plains, sheep pasture, coastline, hills with stone and clay riverbanks.
+/// Era I needs before bridges — forest, grain plains, sheep pasture, coastline, hills with stone, clay riverbanks and a
+/// fishing-hut site — measured over the tiles a dirt road can actually reach from the hall: 4-connected, no river or
+/// water tiles, and within the hall's storehouse reach, the same connectivity the road placement rules use.
 /// The predicate is pure over <c>(MapDef, ContentDb)</c> and shared with the tests: the generator re-seeds with a
 /// deterministic sub-seed (at most <see cref="MaxAttempts"/> attempts, recorded in <c>MapDef.SubSeed</c>) until it holds.
 /// </summary>
@@ -42,6 +47,10 @@ public static class StartGuarantee
 
     /// <summary>The river boundary's bounding box spans this far in both axes: 20 tiles, so it runs rather than dots.</summary>
     public const int MinBorderSpan = 20;
+
+    /// <summary>How far around a candidate hall site the settlement-space count looks: the Era-I settlement grows
+    /// nearest the hall, so the roomiest verified site is the one with the most settleable land near it.</summary>
+    public const int SettlementRadius = 12;
 
     /// <summary>Grain-fertile plains tiles within the start radius that a hall site needs: 75, room for three 5×5 placements.</summary>
     public const int MinGrainTiles = 75;
@@ -85,44 +94,51 @@ public static class StartGuarantee
             return failing;
         }
 
-        // Every count below is measured over the hall's road-connected bank: tiles a dirt road can reach without
-        // crossing a river, open water, peaks, marsh or locked highlands. A start whose farmland lies across the
-        // river meets no guarantee worth the name, because carts only run over road tiles.
-        bool[] bank = FloodBank(map, content, hallWidth, hallHeight);
-        int countedForest = CountForest(map, forest, hallWidth, hallHeight, bank);
+        // Every count below is measured over the tiles a dirt road can actually reach from the hall: 4-connected,
+        // no river or water tiles, and within the hall's storehouse reach. A start whose farmland lies across the
+        // river, or further than a dirt road can run inside the reach, meets no guarantee worth the name, because
+        // carts only run over road tiles inside a storehouse field.
+        bool[] reach = FloodReach(map, content, hallWidth, hallHeight);
+        int countedForest = CountForest(map, forest, reach);
         if (countedForest < MinForest)
         {
             failing.Add($"forest {countedForest}/{MinForest}");
         }
 
-        int grain = CountGrainPlacements(map, plains, hallWidth, hallHeight, bank);
+        int grain = CountGrainPlacements(map, plains, reach);
         if (grain < MinGrainPlacements)
         {
             failing.Add($"grain {grain}/{MinGrainPlacements}");
         }
 
-        int pasture = CountPlainsPlacements(map, plains, hallWidth, hallHeight, bank);
+        int pasture = CountPlainsPlacements(map, plains, reach);
         if (pasture < MinPlainsPlacements)
         {
             failing.Add($"pasture {pasture}/{MinPlainsPlacements}");
         }
 
-        int coast = CountCoast(map, content, hallWidth, hallHeight, bank);
+        int coast = CountCoast(map, content, reach);
         if (coast < MinCoast)
         {
             failing.Add($"coast {coast}/{MinCoast}");
         }
 
-        int stone = CountStone(map, hills, hallWidth, hallHeight, bank);
+        int stone = CountStone(map, hills, reach);
         if (stone < MinStone)
         {
             failing.Add($"stone {stone}/{MinStone}");
         }
 
-        int clay = CountClay(map, hallWidth, hallHeight, bank);
+        int clay = CountClay(map, reach);
         if (clay < MinClay)
         {
             failing.Add($"clay {clay}/{MinClay}");
+        }
+
+        string? hut = CheckFishingHut(map, content, reach);
+        if (hut is not null)
+        {
+            failing.Add(hut);
         }
 
         string? rivers = CheckRivers(map, content, hallWidth, hallHeight);
@@ -155,10 +171,13 @@ public static class StartGuarantee
         int[] order = RegionOrder(borders.Count);
         var sums = WindowSums.Build(map, content);
         int[] banks = ComputeBanks(map, content);
+        MapTerrainFeatures[] features = TerrainFeaturesOf(content);
+        var fallback = new FallbackTracker();
 
-        // River-bordered regions first: the first ascending footprint whose region boundary runs and whose whole
-        // start window clears every threshold on its own bank, including the exact greedy placement counts the
-        // predicate checks. A site found here satisfies the predicate by construction.
+        // River-bordered regions first, best-bordered first: the roomiest verified footprint in the first region
+        // with one. Every start-window survivor is checked against the full predicate (which also checks the road
+        // reach and the fishing-hut site), and the most settleable survivor wins, so a site returned here satisfies
+        // the predicate by construction and has room for the Era-I settlement.
         foreach (int region in order)
         {
             if (borders.Count[region] < MinBorderRivers || !borders.Spans(region))
@@ -166,26 +185,288 @@ public static class StartGuarantee
                 continue;
             }
 
-            MapStartSite? site = ScanRegion(map, content, hall, sums, banks, region);
+            MapStartSite? site = ScanRegion(map, content, hall, sums, banks, borders, features, fallback, region);
             if (site is not null)
             {
                 return site.Value;
             }
         }
 
-        // Fallbacks: the first bank-clearing footprint anywhere (only the river boundary stays for the predicate
-        // to verify), then a coastal footprint in the best region, then anything buildable.
+        // Fallbacks: the first verified footprint anywhere (only the river boundary stays for the predicate
+        // to verify), then the first repaired fallback candidate in rank order, then a coastal footprint in the
+        // best region, then anything buildable. Repair copies the layers so a failed repair never dirties the
+        // island for the next candidate. Repair runs as soon as no verified site is found on an attempt (rather
+        // than after all sub-seeds fail): both paths satisfy the predicate, and this avoids regenerating islands.
         int best = order.Length > 0 ? order[0] : 0;
-        MapStartSite? fallback = ScanIsland(map, content, hall, sums, banks)
+        MapStartSite? verified = ScanIsland(map, content, hall, sums, banks, borders, features, fallback);
+        MapStartSite? repaired = null;
+        if (verified is null)
+        {
+            repaired = TryRepairFallback(map, content, features, fallback);
+        }
+
+        MapStartSite? fallbackSite = verified
+            ?? repaired
             ?? ScanRegion(map, content, hall, best, coastRequired: true)
             ?? ScanRegion(map, content, hall, best, coastRequired: false)
             ?? ScanIsland(map, content, hall);
-        if (fallback is null)
+        if (fallbackSite is null)
         {
             throw new InvalidOperationException("The generated island has no buildable Founders' Hall footprint.");
         }
 
-        return fallback.Value;
+        return fallbackSite.Value;
+    }
+
+    // Scores a buildable site for the fallback path, or null when it cannot lead to a repairable island: a voted
+    // start region that is not river-bounded (rivers can't be repaired), or no hut-eligible coast nearby (a hut
+    // needs reachable coast). The score counts hut-eligible coast tiles within path-length reach of the hall:
+    // banked, buildable, gentle and water-adjacent, in Chebyshev 25 (path length is never shorter than Chebyshev
+    // distance, so every tile a dirt road can reach is inside). Near, buildable coast ranks first because steep
+    // cliffs and marshes never admit a hut, and far coast may lie beyond the storehouse reach.
+    internal static int? FallbackScore(GeneratedHeightmap map, ContentDb content, Footprint hall, RegionBorders borders, int[] banks, int bank, int x, int y)
+    {
+        ushort region = VoteRegion(map, hall, borders, x, y);
+        if (borders.Count[region] < MinBorderRivers || !borders.Spans(region))
+        {
+            return null;
+        }
+
+        TerrainId highlands = content.IdOf<TerrainId>("highlands");
+        TerrainId sea = content.IdOf<TerrainId>("sea");
+        TerrainId reef = content.IdOf<TerrainId>("reef");
+        TerrainId deep = content.IdOf<TerrainId>("deep_water");
+        TerrainId plains = content.IdOf<TerrainId>("plains");
+        TerrainId forest = content.IdOf<TerrainId>("forest");
+        int size = map.Size;
+        const int window = 25;
+        int x0 = Math.Max(0, x - window);
+        int y0 = Math.Max(0, y - window);
+        int x1 = Math.Min(size - 1, x + hall.Width - 1 + window);
+        int y1 = Math.Min(size - 1, y + hall.Height - 1 + window);
+        int eligible = 0;
+        int forestAdjacent = 0;
+        for (int ty = y0; ty <= y1; ty++)
+        {
+            for (int tx = x0; tx <= x1; tx++)
+            {
+                int tile = (ty * size) + tx;
+                if (banks[tile] != bank || map.RiverWidth[tile] != 0)
+                {
+                    continue;
+                }
+
+                TerrainId terrain = map.Terrain[tile];
+                if (terrain.Equals(highlands) || !content.Get(terrain).Buildable || SlopeAt(map, tx, ty) > (int)SlopeClass.Gentle)
+                {
+                    continue;
+                }
+
+                if (IsWaterTile(map, tx - 1, ty, sea, reef, deep) || IsWaterTile(map, tx + 1, ty, sea, reef, deep)
+                    || IsWaterTile(map, tx, ty - 1, sea, reef, deep) || IsWaterTile(map, tx, ty + 1, sea, reef, deep))
+                {
+                    eligible++;
+                }
+
+                if (terrain.Equals(plains) && HasForestNeighbour(map, tx, ty, forest))
+                {
+                    forestAdjacent++;
+                }
+            }
+        }
+
+        // A repairable island needs hut-suitable coast (unrepairable) and, for the forest belt, growable
+        // plains near existing forest. Sites with neither can't admit repair.
+        if (eligible == 0 && forestAdjacent == 0)
+        {
+            return null;
+        }
+
+        return eligible + forestAdjacent;
+    }
+
+    private static bool HasForestNeighbour(GeneratedHeightmap map, int x, int y, TerrainId forest)
+    {
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dy == 0)
+                {
+                    continue;
+                }
+
+                int nx = x + dx;
+                int ny = y + dy;
+                if ((uint)nx < (uint)map.Size && (uint)ny < (uint)map.Size
+                    && map.Terrain[((ny * map.Size) + nx)].Equals(forest))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsWaterTile(GeneratedHeightmap map, int x, int y, TerrainId sea, TerrainId reef, TerrainId deep) =>
+        (uint)x < (uint)map.Size && (uint)y < (uint)map.Size
+        && (map.Terrain[(y * map.Size) + x].Equals(sea)
+            || map.Terrain[(y * map.Size) + x].Equals(reef)
+            || map.Terrain[(y * map.Size) + x].Equals(deep));
+
+    // Tries this attempt's tracked candidates for the repair path, in rank order: the first whose failings are all
+    // repairable is repaired on a copy, and on success the repaired layers are copied back into the island, which
+    // then satisfies the predicate. Unrepairable failings (coast, hut, border, span, hall) disqualify: repair cannot
+    // fix them. Copying keeps a failed repair from dirtying the island for the next candidate. Deterministic: rank
+    // order, and repair itself is deterministic.
+    // Returns the repaired site, or null when no tracked candidate admits repair.
+    // Whether the candidate fails an unrepairable coast check: too little reachable coast, or no valid fishing-hut
+    // site on it. Coast and hut failings are never repaired, and profiling shows every skipped fallback candidate
+    // fails on coast, so this prefilter avoids the full predicate (all counts, placements, rivers) for doomed
+    // candidates. It reuses CountCoast and CheckFishingHut, so it matches FailingChecks exactly: a skip here is a
+    // skip there, and a pass falls through to the full check. Byte-identical outputs, much less work.
+    private static bool FailsCoastOrHut(MapDef wrapped, ContentDb content)
+    {
+        if (!TryHall(wrapped, content, out int hallWidth, out int hallHeight))
+        {
+            return true;
+        }
+
+        bool[] reach = FloodReach(wrapped, content, hallWidth, hallHeight);
+        if (CountCoast(wrapped, content, reach) < MinCoast)
+        {
+            return true;
+        }
+
+        return CheckFishingHut(wrapped, content, reach) is not null;
+    }
+
+    private static MapStartSite? TryRepairFallback(GeneratedHeightmap map, ContentDb content, MapTerrainFeatures[] features, FallbackTracker fallback)
+    {
+        foreach ((int _, int x, int y) in fallback.Ranked())
+        {
+            var candidate = new MapStartSite(x, y, 0);
+            MapDef wrapped = WrapCandidate(map, content, candidate, features);
+            if (FailsCoastOrHut(wrapped, content))
+            {
+                continue;
+            }
+
+            bool repairable = true;
+            foreach (string failing in FailingChecks(wrapped, content))
+            {
+                if (!StartRepair.IsRepairable(failing))
+                {
+                    repairable = false;
+                    break;
+                }
+            }
+
+            if (!repairable)
+            {
+                continue;
+            }
+
+            var terrain = (TerrainId[])map.Terrain.Clone();
+            byte[] deposit = (byte[])map.Deposit.Clone();
+            uint[] fertility = (uint[])map.Fertility.Clone();
+            var copy = new GeneratedHeightmap(map.Size, terrain, map.Elevation, map.RiverWidth, map.Region, deposit, fertility);
+            try
+            {
+                StartRepair.Repair(copy, content, candidate);
+            }
+            catch (InvalidOperationException)
+            {
+                continue;
+            }
+
+            Array.Copy(terrain, map.Terrain, map.TileCount);
+            Array.Copy(deposit, map.Deposit, map.TileCount);
+            Array.Copy(fertility, map.Fertility, map.TileCount);
+            return candidate;
+        }
+
+        return null;
+    }
+
+    // The start region of a candidate footprint: the region holding most of its tiles, ties to the lowest number.
+    // The same vote CheckRivers uses, so the border gate never rejects a site the predicate would accept.
+    private static ushort VoteRegion(GeneratedHeightmap map, Footprint hall, RegionBorders borders, int x, int y)
+    {
+        Span<int> votes = stackalloc int[borders.Top + 1];
+        votes.Clear();
+        for (int dy = 0; dy < hall.Height; dy++)
+        {
+            for (int dx = 0; dx < hall.Width; dx++)
+            {
+                votes[map.Region[((y + dy) * map.Size) + x + dx]]++;
+            }
+        }
+
+        int bestRegion = 0;
+        for (int r = 1; r < votes.Length; r++)
+        {
+            if (votes[r] > votes[bestRegion])
+            {
+                bestRegion = r;
+            }
+        }
+
+        return (ushort)bestRegion;
+    }
+
+    // The fallback candidates for the repair path: the most coastal buildable sites seen, for when no site
+    // verifies. Only sites whose voted start region is river-bounded are tracked (rivers can't be repaired), and
+    // only sites with coast in the window (a hut needs reachable coast). Coastal sites lead because the fishing-hut
+    // site is the hardest unrepairable check to satisfy. Deterministic: ties keep the earlier site, and every scan
+    // visits sites in ascending order.
+    internal sealed class FallbackTracker
+    {
+        /// <summary>How many ranked candidates the tracker keeps: enough coastal sites that one admits repair.</summary>
+        public const int Kept = 2000;
+
+        private readonly (int Coast, int X, int Y)[] _best = new (int, int, int)[Kept];
+        private int _count;
+
+        /// <summary>Adds a candidate, keeping the most coastal. Ties keep the earlier site.</summary>
+        /// <param name="coast">The banked coast tiles in the window (more coastal ranks higher).</param>
+        /// <param name="x">The footprint's left column.</param>
+        /// <param name="y">The footprint's top row.</param>
+        internal void Consider(int coast, int x, int y)
+        {
+            int at = _count;
+            if (_count >= Kept)
+            {
+                at = Kept - 1;
+                if (coast <= _best[at].Coast)
+                {
+                    return;
+                }
+            }
+
+            while (at > 0 && coast > _best[at - 1].Coast)
+            {
+                _best[at] = _best[at - 1];
+                at--;
+            }
+
+            _best[at] = (coast, x, y);
+            if (_count < Kept)
+            {
+                _count++;
+            }
+        }
+
+        /// <summary>Gets the kept candidates from most to least coastal.</summary>
+        /// <returns>The candidates in rank order.</returns>
+        internal System.Collections.Generic.IEnumerable<(int Coast, int X, int Y)> Ranked()
+        {
+            for (int i = 0; i < _count; i++)
+            {
+                yield return _best[i];
+            }
+        }
     }
 
     // Region numbers by river border, longest first with ties to the lowest region.
@@ -207,7 +488,7 @@ public static class StartGuarantee
 
     // Summed-area tables over the per-tile start indicators, so any Chebyshev-24 window around a footprint reads in
     // O(1). Built once per island attempt: six linear passes.
-    private sealed class WindowSums
+    internal sealed class WindowSums
     {
         private readonly int _size;
         private readonly int[] _coast;
@@ -561,13 +842,16 @@ public static class StartGuarantee
 
     // The river boundary of every region in one pass: for each river tile the distinct neighbouring land regions each
     // gain one, and the boundary's bounding box grows. Indexed by region number.
-    private sealed class RegionBorders
+    internal sealed class RegionBorders
     {
         internal readonly int[] Count;
         private readonly int[] _minX;
         private readonly int[] _maxX;
         private readonly int[] _minY;
         private readonly int[] _maxY;
+
+        /// <summary>Gets the highest region number, so vote tallies can size themselves without rescanning.</summary>
+        internal int Top => Count.Length - 1;
 
         private RegionBorders(int[] count, int[] minX, int[] maxX, int[] minY, int[] maxY)
         {
@@ -659,7 +943,7 @@ public static class StartGuarantee
 
     // The road-connected banks of an island: 4-directional components over tiles a dirt road may pave, the same
     // ground rule the predicate's flood uses. Blocking tiles keep -1. Deterministic: ascending fills in a fixed order.
-    private static int[] ComputeBanks(GeneratedHeightmap map, ContentDb content)
+    internal static int[] ComputeBanks(GeneratedHeightmap map, ContentDb content)
     {
         TerrainId highlands = content.IdOf<TerrainId>("highlands");
         int size = map.Size;
@@ -723,11 +1007,106 @@ public static class StartGuarantee
         return def.Buildable && !def.BlocksRoads;
     }
 
-    // The first ascending buildable footprint in a region whose start window clears every threshold on its own
-    // bank, including the exact greedy placement counts the predicate checks. A site found here satisfies the
-    // predicate by construction.
-    private static MapStartSite? ScanRegion(GeneratedHeightmap map, ContentDb content, Footprint hall, WindowSums sums, int[] banks, int region)
+    // What the map format knows about each terrain, so a candidate island can be wrapped for the predicate.
+    internal static MapTerrainFeatures[] TerrainFeaturesOf(ContentDb content)
     {
+        var features = new MapTerrainFeatures[content.Terrains.Count];
+        for (int i = 0; i < features.Length; i++)
+        {
+            features[i] = MapTerrainRules.FeaturesOf(content.Terrains.Names[i]);
+        }
+
+        return features;
+    }
+
+    // Wraps a candidate hall site over a finished heightmap for the predicate: the arrays transfer without copying
+    // and are only read. Stock, names and discoveries are empty because the predicate never reads them.
+    internal static MapDef WrapCandidate(GeneratedHeightmap map, ContentDb content, MapStartSite site, MapTerrainFeatures[] features) =>
+        MapDef.CreateGenerated(
+            "candidate",
+            map.Size,
+            ImmutableCollectionsMarshal.AsImmutableArray(map.Terrain),
+            ImmutableCollectionsMarshal.AsImmutableArray(map.Elevation),
+            ImmutableCollectionsMarshal.AsImmutableArray(map.RiverWidth),
+            ImmutableCollectionsMarshal.AsImmutableArray(map.Region),
+            ImmutableCollectionsMarshal.AsImmutableArray(map.Deposit),
+            ImmutableCollectionsMarshal.AsImmutableArray(map.Fertility),
+            ImmutableCollectionsMarshal.AsImmutableArray(features),
+            site,
+            ImmutableArray<GoodAmount>.Empty,
+            ImmutableArray<MapRegionName>.Empty,
+            0,
+            ImmutableArray<MapDiscovery>.Empty);
+
+    // The settleable land near a candidate hall site: buildable, river-free, gentle tiles on the hall's own bank
+    // within SettlementRadius tiles. Houses need gentle, buildable ground (the same slope rule placement enforces);
+    // the bank keeps the count to land a dirt road can join without bridges. Highland access is still locked, so
+    // highlands do not count. Among verified sites the generator prefers the roomiest, so the Era-I settlement the
+    // bot and the tutorial scenarios build actually fits around the hall.
+    private static int SettleSpace(GeneratedHeightmap map, ContentDb content, Footprint hall, int[] banks, int bank, int x, int y)
+    {
+        TerrainId highlands = content.IdOf<TerrainId>("highlands");
+        int size = map.Size;
+        int open = 0;
+        for (int ty = Math.Max(0, y - SettlementRadius); ty <= Math.Min(size - 1, y + hall.Height - 1 + SettlementRadius); ty++)
+        {
+            for (int tx = Math.Max(0, x - SettlementRadius); tx <= Math.Min(size - 1, x + hall.Width - 1 + SettlementRadius); tx++)
+            {
+                int tile = (ty * size) + tx;
+                if (banks[tile] != bank || map.RiverWidth[tile] != 0)
+                {
+                    continue;
+                }
+
+                TerrainId terrain = map.Terrain[tile];
+                if (terrain.Equals(highlands) || !content.Get(terrain).Buildable || SlopeAt(map, tx, ty) > (int)SlopeClass.Gentle)
+                {
+                    continue;
+                }
+
+                open++;
+            }
+        }
+
+        return open;
+    }
+
+    // The slope class of a heightmap tile from the elevation layer: the largest elevation step to an existing
+    // 4-neighbour, saturating at Steep. The same derivation MapStateLoader runs when it loads a map.
+    private static int SlopeAt(GeneratedHeightmap map, int x, int y)
+    {
+        int here = map.Elevation[(y * map.Size) + x];
+        int steepest = 0;
+        if (x > 0)
+        {
+            steepest = Math.Max(steepest, Math.Abs(here - map.Elevation[(y * map.Size) + x - 1]));
+        }
+
+        if (x < map.Size - 1)
+        {
+            steepest = Math.Max(steepest, Math.Abs(here - map.Elevation[(y * map.Size) + x + 1]));
+        }
+
+        if (y > 0)
+        {
+            steepest = Math.Max(steepest, Math.Abs(here - map.Elevation[((y - 1) * map.Size) + x]));
+        }
+
+        if (y < map.Size - 1)
+        {
+            steepest = Math.Max(steepest, Math.Abs(here - map.Elevation[((y + 1) * map.Size) + x]));
+        }
+
+        return Math.Min(steepest, (int)SlopeClass.Steep);
+    }
+
+    // The roomiest verified buildable footprint in a region: every start-window survivor is checked against the full
+    // predicate (the road reach and the fishing-hut site have no window-sum prefilter), and the most settleable
+    // survivor wins, with ties going to the first in ascending order so the pick stays deterministic.
+    private static MapStartSite? ScanRegion(GeneratedHeightmap map, ContentDb content, Footprint hall, WindowSums sums, int[] banks, RegionBorders borders, MapTerrainFeatures[] features, FallbackTracker tracker, int region)
+    {
+        MapStartSite? best = null;
+        int bestSpace = -1;
         for (int y = 0; y + hall.Height <= map.Size; y++)
         {
             for (int x = 0; x + hall.Width <= map.Size; x++)
@@ -743,6 +1122,12 @@ public static class StartGuarantee
                     continue;
                 }
 
+                int? fallbackScore = FallbackScore(map, content, hall, borders, banks, bank, x, y);
+                if (fallbackScore.HasValue)
+                {
+                    tracker.Consider(fallbackScore.Value, x, y);
+                }
+
                 if (sums.Fits(x, y, hall)
                     && sums.GreedyPlacements(x, y, hall, 5, MinGrainPlacements)
                     && sums.GreedyPlacements(x, y, hall, 4, MinPlainsPlacements)
@@ -750,18 +1135,30 @@ public static class StartGuarantee
                     && sums.GreedyPlacementsBanked(x, y, hall, banks, bank, 5, MinGrainPlacements)
                     && sums.GreedyPlacementsBanked(x, y, hall, banks, bank, 4, MinPlainsPlacements))
                 {
-                    return new MapStartSite(x, y, 0);
+                    var candidate = new MapStartSite(x, y, 0);
+                    if (IsSatisfied(WrapCandidate(map, content, candidate, features), content))
+                    {
+                        int space = SettleSpace(map, content, hall, banks, bank, x, y);
+                        if (space > bestSpace)
+                        {
+                            best = candidate;
+                            bestSpace = space;
+                        }
+                    }
                 }
             }
         }
 
-        return null;
+        return best;
     }
 
-    // The first ascending footprint anywhere whose start window clears every threshold on its own bank. Only the
-    // river boundary stays for the predicate.
-    private static MapStartSite? ScanIsland(GeneratedHeightmap map, ContentDb content, Footprint hall, WindowSums sums, int[] banks)
+    // The roomiest verified footprint anywhere: like the regional scan, every start-window survivor passes the full
+    // predicate and the most settleable one wins. Only the river boundary stays unverified here, and the predicate
+    // checks it.
+    private static MapStartSite? ScanIsland(GeneratedHeightmap map, ContentDb content, Footprint hall, WindowSums sums, int[] banks, RegionBorders borders, MapTerrainFeatures[] features, FallbackTracker tracker)
     {
+        MapStartSite? best = null;
+        int bestSpace = -1;
         for (int y = 0; y + hall.Height <= map.Size; y++)
         {
             for (int x = 0; x + hall.Width <= map.Size; x++)
@@ -777,6 +1174,12 @@ public static class StartGuarantee
                     continue;
                 }
 
+                int? fallbackScore = FallbackScore(map, content, hall, borders, banks, bank, x, y);
+                if (fallbackScore.HasValue)
+                {
+                    tracker.Consider(fallbackScore.Value, x, y);
+                }
+
                 if (sums.Fits(x, y, hall)
                     && sums.GreedyPlacements(x, y, hall, 5, MinGrainPlacements)
                     && sums.GreedyPlacements(x, y, hall, 4, MinPlainsPlacements)
@@ -784,12 +1187,21 @@ public static class StartGuarantee
                     && sums.GreedyPlacementsBanked(x, y, hall, banks, bank, 5, MinGrainPlacements)
                     && sums.GreedyPlacementsBanked(x, y, hall, banks, bank, 4, MinPlainsPlacements))
                 {
-                    return new MapStartSite(x, y, 0);
+                    var candidate = new MapStartSite(x, y, 0);
+                    if (IsSatisfied(WrapCandidate(map, content, candidate, features), content))
+                    {
+                        int space = SettleSpace(map, content, hall, banks, bank, x, y);
+                        if (space > bestSpace)
+                        {
+                            best = candidate;
+                            bestSpace = space;
+                        }
+                    }
                 }
             }
         }
 
-        return null;
+        return best;
     }
 
     private static MapStartSite? ScanRegion(GeneratedHeightmap map, ContentDb content, Footprint hall, int region, bool coastRequired)
@@ -880,79 +1292,111 @@ public static class StartGuarantee
         return false;
     }
 
-    // The Chebyshev distance from a tile to the hall footprint (0 inside it).
-    private static int DistanceToHall(MapDef map, int x, int y, int hallWidth, int hallHeight)
+    // How many steps from the hall footprint the storehouse reach covers: the reach bound is reach × 1000 cost units
+    // and a dirt tile costs its road cost, read from the same content the fields use (the DistanceField bounds and the
+    // road costs in RoadNetwork). The field search seeds the hall's access tiles at cost 0 and charges every further
+    // tile its road cost, so one step more than bound / dirt cost stays inside: every dirt tile costs the same, so the
+    // cost bound below is a plain step count. This is the same formula the reach labels use (storage reach in tiles
+    // times 1000 cost units per dirt tile), shifted by the free seed tile.
+    private static int MaxRoadSteps(ContentDb content)
     {
-        int dx = 0;
-        if (x < map.StartSite.X)
-        {
-            dx = map.StartSite.X - x;
-        }
-        else if (x > map.StartSite.X + hallWidth - 1)
-        {
-            dx = x - (map.StartSite.X + hallWidth - 1);
-        }
-
-        int dy = 0;
-        if (y < map.StartSite.Y)
-        {
-            dy = map.StartSite.Y - y;
-        }
-        else if (y > map.StartSite.Y + hallHeight - 1)
-        {
-            dy = y - (map.StartSite.Y + hallHeight - 1);
-        }
-
-        return Math.Max(dx, dy);
+        int reach = content.Get(content.Required.FoundersHall).Storage?.Reach
+            ?? throw new KeyNotFoundException("The content does not define storage for the Founders' Hall.");
+        int dirtCost = content.Get(content.IdOf<BuildingTypeId>("dirt_road")).RoadCost
+            ?? throw new KeyNotFoundException("The content does not define a road cost for dirt_road.");
+        return (checked(reach * 1000) / dirtCost) + 1;
     }
 
-    // The hall's road-connected bank: the 4-directional flood over tiles a dirt road may pave, from the hall
-    // footprint. Rivers, open water, peaks, marsh and locked highlands divide banks; a road can never join them.
-    private static bool[] FloodBank(MapDef map, ContentDb content, int hallWidth, int hallHeight)
+    // The tiles a dirt road can actually reach from the hall: the cost-bounded flood over tiles a dirt road may pave,
+    // from the hall footprint. Four neighbours only, like the road network's own search (RoadPlacement.Check refuses
+    // river tiles to ordinary roads, and the field Dijkstra steps to the four neighbours): a diagonal step would leak
+    // across thin rivers that roads can never cross. Tiles past the hall's storehouse reach are not reached, because a
+    // longer road would leave them outside every storehouse field.
+    internal static bool[] FloodReach(MapDef map, ContentDb content, int hallWidth, int hallHeight)
     {
+        int maxSteps = MaxRoadSteps(content);
         TerrainId highlands = content.IdOf<TerrainId>("highlands");
         bool[] reached = new bool[map.TileCount];
-        int[] stack = new int[map.TileCount];
-        int top = 0;
+        // Pool the scratch buffers: FloodReach runs thousands of times per island during repair, and allocating
+        // two 256 KB int arrays per call costs a gigabyte of garbage. Rented arrays may be larger than TileCount,
+        // but every index used stays below it, depth is filled and queue slots are written before they are read,
+        // so stale pool contents never leak into the result. Byte-identical outputs.
+        int[] depth = System.Buffers.ArrayPool<int>.Shared.Rent(map.TileCount);
+        int[] queue = System.Buffers.ArrayPool<int>.Shared.Rent(map.TileCount);
+        int head = 0;
+        int tail = 0;
+        try
+        {
+            Array.Fill(depth, -1, 0, map.TileCount);
         for (int dy = 0; dy < hallHeight; dy++)
         {
             for (int dx = 0; dx < hallWidth; dx++)
             {
                 int tile = ((map.StartSite.Y + dy) * map.Width) + map.StartSite.X + dx;
-                if (!reached[tile])
+                if (depth[tile] < 0)
                 {
+                    depth[tile] = 0;
                     reached[tile] = true;
-                    stack[top++] = tile;
+                    queue[tail++] = tile;
                 }
             }
         }
 
-        while (top > 0)
+        while (head < tail)
         {
-            int at = stack[--top];
+            int at = queue[head++];
+            if (depth[at] >= maxSteps)
+            {
+                continue;
+            }
+
             int x = at % map.Width;
             int y = at / map.Width;
-            for (int d = 0; d < 8; d += 2)
+            if (x > 0)
             {
-                int nx = x + _dx[d];
-                int ny = y + _dy[d];
-                if ((uint)nx >= (uint)map.Width || (uint)ny >= (uint)map.Height)
-                {
-                    continue;
-                }
-
-                int n = (ny * map.Width) + nx;
-                if (!reached[n] && RoadGround(map, content, n, highlands))
-                {
-                    reached[n] = true;
-                    stack[top++] = n;
-                }
+                TryStep(map, content, highlands, reached, depth, queue, ref tail, at - 1, at);
             }
+
+            if (x < map.Width - 1)
+            {
+                TryStep(map, content, highlands, reached, depth, queue, ref tail, at + 1, at);
+            }
+
+            if (y > 0)
+            {
+                TryStep(map, content, highlands, reached, depth, queue, ref tail, at - map.Width, at);
+            }
+
+            if (y < map.Height - 1)
+            {
+                TryStep(map, content, highlands, reached, depth, queue, ref tail, at + map.Width, at);
+            }
+        }
+        }
+        finally
+        {
+            System.Buffers.ArrayPool<int>.Shared.Return(depth);
+            System.Buffers.ArrayPool<int>.Shared.Return(queue);
         }
 
         return reached;
     }
 
+    private static void TryStep(MapDef map, ContentDb content, TerrainId highlands, bool[] reached, int[] depth, int[] queue, ref int tail, int tile, int from)
+    {
+        if (depth[tile] >= 0 || !RoadGround(map, content, tile, highlands))
+        {
+            return;
+        }
+
+        depth[tile] = depth[from] + 1;
+        reached[tile] = true;
+        queue[tail++] = tile;
+    }
+
+    // Whether a dirt road may be paved on a tile at the start of the game: the ground rule of RoadPlacement.Check for
+    // a non-bridge road with nothing researched. River tiles are refused to ordinary roads (TerrainNotAllowed); highland
+    // access is still locked (TerrainAccessLocked); every other refusal is terrain that is not buildable or blocks roads.
     private static bool RoadGround(MapDef map, ContentDb content, int tile, TerrainId highlands)
     {
         if (map.RiverWidth[tile] != 0)
@@ -970,44 +1414,129 @@ public static class StartGuarantee
         return def.Buildable && !def.BlocksRoads;
     }
 
-    private static int CountForest(MapDef map, TerrainId forest, int hallWidth, int hallHeight, bool[] bank)
+    // A valid fishing-hut site on reachable coast: the first ascending footprint whose every tile is road-reachable
+    // and gentle enough to build on, with coast under it. Reachable tiles are paveable buildable land, so this carries
+    // the buildable and access rules of the real placement check (BuildingPlacement.Validate) with it; the slope and
+    // coastline rules are checked exactly as the placement code checks them. The area yield is only a warning there,
+    // so a site needs no yield, only the footprint rules.
+    private static string? CheckFishingHut(MapDef map, ContentDb content, bool[] reach)
+    {
+        BuildingDef hut = content.Get(content.IdOf<BuildingTypeId>("fishing_hut"));
+        for (int y = 0; y + hut.Footprint.Height <= map.Height; y++)
+        {
+            for (int x = 0; x + hut.Footprint.Width <= map.Width; x++)
+            {
+                bool coast = false;
+                bool ok = true;
+                for (int dy = 0; dy < hut.Footprint.Height && ok; dy++)
+                {
+                    for (int dx = 0; dx < hut.Footprint.Width; dx++)
+                    {
+                        int tile = ((y + dy) * map.Width) + x + dx;
+                        if (!reach[tile] || SlopeOf(map, x + dx, y + dy) > (int)SlopeClass.Gentle)
+                        {
+                            ok = false;
+                            break;
+                        }
+
+                        coast |= IsCoastTile(map, x + dx, y + dy);
+                    }
+                }
+
+                if (ok && (!hut.Placement.Coastline || coast))
+                {
+                    return null;
+                }
+            }
+        }
+
+        return "hut";
+    }
+
+    // The slope class of a tile from the elevation layer, the same derivation MapStateLoader runs when it loads a
+    // map: the largest elevation step to an existing 4-neighbour, saturating at Steep.
+    private static int SlopeOf(MapDef map, int x, int y)
+    {
+        int here = map.Elevation[(y * map.Width) + x];
+        int steepest = 0;
+        if (x > 0)
+        {
+            steepest = Math.Max(steepest, Math.Abs(here - map.Elevation[(y * map.Width) + x - 1]));
+        }
+
+        if (x < map.Width - 1)
+        {
+            steepest = Math.Max(steepest, Math.Abs(here - map.Elevation[(y * map.Width) + x + 1]));
+        }
+
+        if (y > 0)
+        {
+            steepest = Math.Max(steepest, Math.Abs(here - map.Elevation[((y - 1) * map.Width) + x]));
+        }
+
+        if (y < map.Height - 1)
+        {
+            steepest = Math.Max(steepest, Math.Abs(here - map.Elevation[((y + 1) * map.Width) + x]));
+        }
+
+        return Math.Min(steepest, (int)SlopeClass.Steep);
+    }
+
+    // Whether a tile carries the Coast feature, the same derivation MapStateLoader runs: land that is neither open
+    // water nor river, with open water among its four neighbours. Rivers are not open water.
+    private static bool IsCoastTile(MapDef map, int x, int y)
+    {
+        int tile = (y * map.Width) + x;
+        if ((map.TerrainFeatures[map.Terrain[tile].Value] & MapTerrainFeatures.Water) != 0 || map.RiverWidth[tile] != 0)
+        {
+            return false;
+        }
+
+        return IsWaterTile(map, x - 1, y) || IsWaterTile(map, x + 1, y) || IsWaterTile(map, x, y - 1) || IsWaterTile(map, x, y + 1);
+    }
+
+    private static bool IsWaterTile(MapDef map, int x, int y) =>
+        (uint)x < (uint)map.Width && (uint)y < (uint)map.Height
+        && (map.TerrainFeatures[map.Terrain[(y * map.Width) + x].Value] & MapTerrainFeatures.Water) != 0;
+
+    internal static int CountForest(MapDef map, TerrainId forest, bool[] reach)
     {
         int count = 0;
-        for (int y = 0; y < map.Height; y++)
+        for (int i = 0; i < map.TileCount; i++)
         {
-            for (int x = 0; x < map.Width; x++)
+            if (reach[i] && map.Terrain[i].Equals(forest))
             {
-                int i = (y * map.Width) + x;
-                if (DistanceToHall(map, x, y, hallWidth, hallHeight) <= StartRadius
-                    && bank[i]
-                    && map.Terrain[i].Equals(forest))
-                {
-                    count++;
-                }
+                count++;
             }
         }
 
         return count;
     }
 
-    private static int CountGrainPlacements(MapDef map, TerrainId plains, int hallWidth, int hallHeight, bool[] bank)
+    internal static int CountGrainPlacements(MapDef map, TerrainId plains, bool[] reach)
     {
         uint grain = 1u << (int)CropKind.Grain;
-        return CountPlacements(map, 5, hallWidth, hallHeight, bank, (x, y) =>
+        return CountPlacements(map, 5, reach, (x, y) =>
             map.Terrain[(y * map.Width) + x].Equals(plains) && (map.Fertility[(y * map.Width) + x] & grain) != 0);
     }
 
-    private static int CountPlainsPlacements(MapDef map, TerrainId plains, int hallWidth, int hallHeight, bool[] bank)
+    internal static int CountPlainsPlacements(MapDef map, TerrainId plains, bool[] reach)
     {
-        return CountPlacements(map, 4, hallWidth, hallHeight, bank, (x, y) =>
+        return CountPlacements(map, 4, reach, (x, y) =>
             map.Terrain[(y * map.Width) + x].Equals(plains));
     }
 
-    // Non-overlapping square placements whose every tile is within range, on the bank and fits, top to bottom, left to right.
-    private static int CountPlacements(MapDef map, int size, int hallWidth, int hallHeight, bool[] bank, Func<int, int, bool> fits)
+    // Non-overlapping square placements whose every tile is road-reachable and fits, top to bottom, left to right.
+    private static int CountPlacements(MapDef map, int size, bool[] reach, Func<int, int, bool> fits) =>
+        FindPlacements(map, size, reach, fits).Count;
+
+    // The non-overlapping square placements whose every tile is road-reachable and fits, top to bottom, left to
+    // right: the top-left tile of each block, in ascending order. Shared with the start repair, which fertilizes
+    // the same blocks the predicate counts, so the repaired island passes by construction.
+    internal static List<(int X, int Y)> FindPlacements(MapDef map, int size, bool[] reach, Func<int, int, bool> fits)
     {
+        var found = new List<(int X, int Y)>();
         bool[] used = new bool[map.TileCount];
-        int found = 0;
         for (int by = 0; by + size <= map.Height; by++)
         {
             for (int bx = 0; bx + size <= map.Width; bx++)
@@ -1019,7 +1548,7 @@ public static class StartGuarantee
                     {
                         int x = bx + dx;
                         int y = by + dy;
-                        if (used[(y * map.Width) + x] || !bank[(y * map.Width) + x] || DistanceToHall(map, x, y, hallWidth, hallHeight) > StartRadius || !fits(x, y))
+                        if (used[(y * map.Width) + x] || !reach[(y * map.Width) + x] || !fits(x, y))
                         {
                             ok = false;
                             break;
@@ -1029,7 +1558,7 @@ public static class StartGuarantee
 
                 if (ok)
                 {
-                    found++;
+                    found.Add((bx, by));
                     for (int dy = 0; dy < size; dy++)
                     {
                         for (int dx = 0; dx < size; dx++)
@@ -1044,8 +1573,8 @@ public static class StartGuarantee
         return found;
     }
 
-    // Land tiles (not open water, not river) with open water among their eight neighbours.
-    private static int CountCoast(MapDef map, ContentDb content, int hallWidth, int hallHeight, bool[] bank)
+    // Land tiles (not open water, not river) with open water among their neighbours, over road-reachable tiles.
+    internal static int CountCoast(MapDef map, ContentDb content, bool[] reach)
     {
         TerrainId sea = content.IdOf<TerrainId>("sea");
         TerrainId reef = content.IdOf<TerrainId>("reef");
@@ -1055,8 +1584,7 @@ public static class StartGuarantee
         {
             for (int x = 0; x < map.Width; x++)
             {
-                if (DistanceToHall(map, x, y, hallWidth, hallHeight) > StartRadius
-                    || !bank[(y * map.Width) + x]
+                if (!reach[(y * map.Width) + x]
                     || IsOpenWater(map.Terrain[(y * map.Width) + x], sea, reef, deep)
                     || map.RiverWidth[(y * map.Width) + x] != 0)
                 {
@@ -1092,28 +1620,23 @@ public static class StartGuarantee
         return false;
     }
 
-    private static int CountStone(MapDef map, TerrainId hills, int hallWidth, int hallHeight, bool[] bank)
+    internal static int CountStone(MapDef map, TerrainId hills, bool[] reach)
     {
         int count = 0;
-        for (int y = 0; y < map.Height; y++)
+        for (int i = 0; i < map.TileCount; i++)
         {
-            for (int x = 0; x < map.Width; x++)
+            if (reach[i]
+                && map.Terrain[i].Equals(hills)
+                && map.Deposit[i] == (byte)((int)DepositKind.Stone + 1))
             {
-                int i = (y * map.Width) + x;
-                if (DistanceToHall(map, x, y, hallWidth, hallHeight) <= StartRadius
-                    && bank[i]
-                    && map.Terrain[i].Equals(hills)
-                    && map.Deposit[i] == (byte)((int)DepositKind.Stone + 1))
-                {
-                    count++;
-                }
+                count++;
             }
         }
 
         return count;
     }
 
-    private static int CountClay(MapDef map, int hallWidth, int hallHeight, bool[] bank)
+    internal static int CountClay(MapDef map, bool[] reach)
     {
         int count = 0;
         for (int y = 0; y < map.Height; y++)
@@ -1121,8 +1644,7 @@ public static class StartGuarantee
             for (int x = 0; x < map.Width; x++)
             {
                 int i = (y * map.Width) + x;
-                if (DistanceToHall(map, x, y, hallWidth, hallHeight) > StartRadius
-                    || !bank[i]
+                if (!reach[i]
                     || map.Deposit[i] != (byte)((int)DepositKind.Clay + 1))
                 {
                     continue;

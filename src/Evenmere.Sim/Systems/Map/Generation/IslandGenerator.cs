@@ -147,8 +147,11 @@ public static class IslandGenerator
     /// <summary>
     /// Generates the finished island for a new game: the M2-01 heightmap plus the M2-02a terrain layers, M2-02b regions
     /// and discoveries, and a hall site chosen by the start guarantee. When the island fails the guarantee it is
-    /// re-seeded with a deterministic sub-seed (recorded in <c>MapDef.SubSeed</c>), up to 16 attempts. Like the other
-    /// entry points, a pure function of <c>(seed, size, content)</c>: the same arguments give the same island on every CPU.
+    /// re-seeded with a deterministic sub-seed (recorded in <c>MapDef.SubSeed</c>), up to 16 attempts, repairing the
+    /// best fallback candidate in place when nothing verifies. If no sub-seed admits repair, the closest miss is
+    /// returned instead of throwing, so the game can always start; the start-guarantee test reports such seeds.
+    /// Like the other entry points, a pure function of <c>(seed, size, content)</c>: the same arguments give the
+    /// same island on every CPU.
     /// </summary>
     /// <param name="seed">The generator seed.</param>
     /// <param name="size">The width and height in tiles: 256, 320 or 384.</param>
@@ -157,7 +160,7 @@ public static class IslandGenerator
     /// <exception cref="ArgumentNullException"><paramref name="content"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="size"/> is not 256, 320 or 384.</exception>
     /// <exception cref="KeyNotFoundException">The content does not define a terrain, good or building this generator needs.</exception>
-    /// <exception cref="InvalidOperationException">No sub-seed satisfied the start guarantee.</exception>
+    /// <exception cref="InvalidOperationException">No sub-seed has a buildable Founders' Hall footprint.</exception>
     public static MapDef Generate(int seed, int size, ContentDb content)
     {
         ArgumentNullException.ThrowIfNull(content);
@@ -166,24 +169,46 @@ public static class IslandGenerator
             throw new ArgumentOutOfRangeException(nameof(size), size, $"A generated island is {MinSize}, {DefaultSize} or {MaxSize} tiles across.");
         }
 
+        // The best failing island, for the phase-3 fallback below: generation never throws for an uninhabitable
+        // start, it returns the closest miss so the game can start and the tests report the shortfall.
+        MapDef? bestFallback = null;
+        int bestFailCount = int.MaxValue;
         for (int attempt = 0; attempt < StartGuarantee.MaxAttempts; attempt++)
         {
-            int effective = attempt == 0 ? seed : unchecked(seed ^ (attempt * unchecked((int)0x9E3779B9)));
+            int effective = EffectiveSeed(seed, attempt);
             GeneratedHeightmap map = GenerateTerrain(effective, size, content);
             int regions = RegionBuilder.Build(map, effective, content);
             MapDiscovery[] discoveries = DiscoveryPlacer.Place(map, effective, content);
+            // FindStartSite repairs the best fallback candidate in place when nothing verifies, so a returned
+            // site that satisfies the predicate ends the search: verified or repaired, the island is playable.
             MapStartSite site = StartGuarantee.FindStartSite(map, content);
             MapDef island = Assemble(seed, map, content, regions, site, discoveries, (byte)attempt);
             if (StartGuarantee.IsSatisfied(island, content))
             {
                 return island;
             }
+
+            int failCount = StartGuarantee.FailingChecks(island, content).Count;
+            if (failCount < bestFailCount)
+            {
+                bestFailCount = failCount;
+                bestFallback = island;
+            }
+        }
+
+        if (bestFallback is not null)
+        {
+            return bestFallback;
         }
 
         throw new InvalidOperationException(
-            $"Seed {seed} at size {size} failed the start guarantee on all {StartGuarantee.MaxAttempts} sub-seeds; " +
-            "report the seed rather than raising the attempt cap (M2-02b).");
+            $"Seed {seed} at size {size} has no buildable Founders' Hall footprint in {StartGuarantee.MaxAttempts} sub-seeds.");
     }
+
+    // The deterministic sub-seed for a guarantee attempt: the seed itself first, then the seed mixed with the
+    // attempt number, so every attempt explores different terrain on every CPU.
+    internal static int EffectiveSeed(int seed, int attempt) =>
+        attempt == 0 ? seed : unchecked(seed ^ (attempt * unchecked((int)0x9E3779B9)));
 
     // Converts a finished heightmap into the immutable map definition the rest of the simulation loads: terrain
     // features by terrain name (the same rule the authored loader uses), one generated region name per region, and

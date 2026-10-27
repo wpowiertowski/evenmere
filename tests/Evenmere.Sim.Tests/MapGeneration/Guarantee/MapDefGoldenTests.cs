@@ -53,7 +53,7 @@ public sealed class MapDefGoldenTests
     {
         Dictionary<(int Seed, int Size), string> goldens = LoadGoldens();
 
-        GeneratedIslandFixture.HashOf(IslandGenerator.Generate(seed, size, GeneratedIslandFixture.Content))
+        GeneratedIslandFixture.HashOf(GeneratedIslands.Get(seed, size))
             .ShouldBe(goldens[(seed, size)]);
     }
 

@@ -26,7 +26,7 @@ public sealed class RegionTests
     [MemberData(nameof(SeedSizePairs))]
     public void Generate_HasFortyToEightyRegions(int seed, int size)
     {
-        MapDef island = IslandGenerator.Generate(seed, size, GeneratedIslandFixture.Content);
+        MapDef island = GeneratedIslands.Get(seed, size);
 
         int top = 0;
         foreach (ushort region in island.Region)
@@ -47,7 +47,7 @@ public sealed class RegionTests
     [MemberData(nameof(SeedSizePairs))]
     public void Generate_EveryRegionIsNonEmpty(int seed, int size)
     {
-        MapDef island = IslandGenerator.Generate(seed, size, GeneratedIslandFixture.Content);
+        MapDef island = GeneratedIslands.Get(seed, size);
 
         int top = 0;
         foreach (ushort region in island.Region)
@@ -74,7 +74,7 @@ public sealed class RegionTests
     [MemberData(nameof(SeedSizePairs))]
     public void Generate_RegionNames_AreSortedAndUnique(int seed, int size)
     {
-        MapDef island = IslandGenerator.Generate(seed, size, GeneratedIslandFixture.Content);
+        MapDef island = GeneratedIslands.Get(seed, size);
 
         for (int r = 0; r < island.RegionNames.Length; r++)
         {
