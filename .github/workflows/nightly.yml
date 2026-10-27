@@ -87,3 +87,34 @@ jobs:
         with:
           name: perf-reports
           path: perf-reports
+
+  # M2-02c: nightly full start-guarantee sweep (seeds 1-100 at 256, 320 and 384). The normal suite runs
+  # seeds 1-20; this sets EVENMERE_FULL_SWEEP=1 for the exhaustive contract. Slow (about 11 minutes),
+  # so nightly only.
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Build
+        run: dotnet build Evenmere.sln -c Release --nologo
+
+      - name: Run full start-guarantee sweep
+        env:
+          EVENMERE_FULL_SWEEP: 1
+        run: dotnet test -c Release --no-build --ignore-exit-code 8 --filter "FullyQualifiedName~StartGuaranteeTests.Generate_Seeds1To100AtAllSizes"

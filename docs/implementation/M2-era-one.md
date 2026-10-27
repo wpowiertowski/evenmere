@@ -67,7 +67,7 @@ file per card as listed; never edit another card's file.
 | M2-01 | Island generator: heightmap, coast and biomes | sim | M2-00 | done |
 | M2-02a | Rivers, fertility and deposits | sim | M2-01 | done |
 | M2-02b | Regions, discoveries, start guarantee and generated new games | sim | M2-02a | done |
-| M2-02c | Start guarantee by road reach | sim | M2-02b, M2-17a | todo |
+| M2-02c | Start guarantee by road reach | sim | M2-02b, M2-17a | done |
 | M2-03 | Map generation preview CLI and seed gallery | tools | M2-02b | done |
 | M2-04 | Bridges and river crossing | sim | M2-00 | done |
 | M2-05 | Seasons | sim | M2-00 | done |
@@ -1229,6 +1229,8 @@ Small issues found while reviewing M2 tasks, each with the card or lane it belon
 | M2-34 | Building the storehouse distance fields after a roads change still costs up to about 50 ms on `perf-20k` (953 storehouses). Logistics now pays it first (its Deck average is 0.42 against a 0.50 budget), and the tick's p99 is still about 7.9 ms Deck. Labelled per-tile costs, or incremental field updates, would remove it. Not gating. | Sim perf task before M3 |
 | M2-17a | `EraOneBot.cs` is 3,184 lines and copies v1's goal mechanics verbatim. Split it into components and share the mechanics with `BalanceBot`. Also review `SeversNetwork` for false positives on river-laced ground. | M2-17b |
 | M2-17a | Generated-island pacing on the two green seeds: 100 Villagers missed by Era II (seed 1 had 80 Villagers at 112 min, seed 5 had 50 at 112.5). Era II landed at 112 min. | M2-17b (pacing) |
+| M2-02c | On generated islands the fixed slice build order caps at 50–98 Villagers. Wood starves while sawpits hold 120–450 timber, so sawpits eat the wood houses need. Era I economy input. | M2-17b (economy) |
+| M2-02c | Start repair takes about 2.3 s on 256 seeds 18 and 19 (target 2 s, Steam Deck about 3× slower). Counting from the reach list would close the gap. | Sim perf, before M4 |
 | M2-19 | ~~The inspector names tradition, festival, happening and monument sources "from 0".~~ Done in M2-13b. | M2-13b (done) |
 | M2-19 | ~~Completion toasts overlap right-docked panels.~~ Done in M2-35. | M2-35 (done) |
 | M2-19 | ~~One shared effect formatter.~~ Done in M2-35 (`EffectText`). | M2-35 (done) |
@@ -1255,3 +1257,9 @@ _Filled in when M2 closes._
 1. **Performance gate: Deck-equivalent only.** The M2 gate binds on the dev-Mac `perf-2k` average × the Mac→Deck factor 3.0 (single-core M4 Pro vs Deck Zen 2, about 3; recalibrated on hardware in M4), which must be ≤ 0.6 ms — so Mac ≤ 0.2 ms. `evenmere perf` prints raw and Deck-equivalent numbers; nightly records raw for the trend.
 2. **Pacing window: measure first, then fix.** 90–120 minutes stays provisional. M2-17a reports real pacing on the starter island and 5 seeds; the developer confirms or moves the window; M2-17b tunes content to the confirmed window.
 3. **Gamepad: automated only.** The hand check is dropped. The M2 gate needs every control reachable by `ui_*` focus navigation at 1280 × 800, proven by the M2-26 `--focus-walk` smoke pass. The developer hand-tests gamepad play with a controller before the first beta (the M4 public build).
+
+## Answered (developer, 2026-10-26)
+
+1. **Pacing window confirmed: 90–120 minutes.** On M2-17a's numbers (starter Era II at 91.5 min; generated seeds at about 103–112 min), the developer said "those era ii times look good". M2-17b tunes content to keep every map inside 90–120.
+2. **The generated-island scenario is retargeted.** M2-02c's stricter guarantee changed seed 7's island. The fixed slice build order then reached 68 Villagers, and no seed in 7–500 reached 100 (best 98). The developer chose to assert the card's bar instead: `generated_seed7.json` expects at least 50 Villagers, with every other expectation kept. Reaching 100 Villagers on generated islands is covered by the adaptive Era I bot's multi-seed runs (M2-17b).
+

@@ -29,7 +29,7 @@ public sealed class DiscoveryTests
     [MemberData(nameof(SeedSizePairs))]
     public void Generate_Discoveries_AreInRange(int seed, int size)
     {
-        MapDef island = IslandGenerator.Generate(seed, size, GeneratedIslandFixture.Content);
+        MapDef island = GeneratedIslands.Get(seed, size);
 
         int wonders = island.Discoveries.Count(static d => d.Kind == DiscoveryKind.NaturalWonder);
         int ruins = island.Discoveries.Count(static d => d.Kind == DiscoveryKind.Ruin);
@@ -46,7 +46,7 @@ public sealed class DiscoveryTests
     [MemberData(nameof(SeedSizePairs))]
     public void Generate_Discoveries_AreSortedAndValid(int seed, int size)
     {
-        MapDef island = IslandGenerator.Generate(seed, size, GeneratedIslandFixture.Content);
+        MapDef island = GeneratedIslands.Get(seed, size);
         ContentDb content = GeneratedIslandFixture.Content;
 
         ushort top = 0;
