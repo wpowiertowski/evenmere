@@ -9,8 +9,10 @@ namespace Evenmere.Sim.Systems.Map.Generation;
 /// (Barnes) pass conditions the per-mille heights so every land tile drains to the open sea; D8 flow
 /// on that surface gives each tile an accumulation count. Tiles above a size-scaled threshold become
 /// rivers — tributaries join naturally and count — widening past a second threshold, with speckle and
-/// too-close networks pruned away. Actual elevations are lightly carved along river tiles so they never
-/// rise downstream. The same inputs always paint the same rivers: every tie-break is by tile index.
+/// too-close networks pruned away. Every diagonal step is then bridged with a side tile so the finished
+/// networks are 4-connected (a road can never slip between two corner-touching river tiles without a
+/// bridge). Actual elevations are lightly carved along river tiles so they never rise downstream.
+/// The same inputs always paint the same rivers: every tie-break is by tile index.
 /// </summary>
 internal static class RiverTracer
 {
@@ -48,8 +50,10 @@ internal static class RiverTracer
     public const int RiverGap = 3;
 
     /// <summary>No walk keeps the same compass direction for more than this many consecutive steps:
-    /// walks that cannot turn are discarded, so no river ever runs straight for long.</summary>
-    public const int MaxStraightRun = 12;
+    /// walks that cannot turn are discarded, so no river ever runs straight for long. Eleven (not twelve)
+    /// leaves one tile of headroom: the 4-connectivity bridges below extend a maximal run by at most one,
+    /// and twelve tiles plus a bridge still pass the no-long-straight-run rule.</summary>
+    public const int MaxStraightRun = 11;
 
     /// <summary>Stream separation for the flood tie-break hash: it must differ from every other generator stream.</summary>
     public const int FloodTieStreamXor = unchecked((int)0x0F1E2D3C);
@@ -148,6 +152,17 @@ internal static class RiverTracer
             }
         }
 
+        // Bridge every diagonal step after pruning and carving, so the carve decisions above still describe
+        // these networks: bridging only adds tiles inside the surviving 8-connected components, and every
+        // bridge sits level with the lower of its two course tiles, so no carved downhill path ever rises
+        // through a bridge. The prune then runs again on the finished geometry: bridges fatten the smallest
+        // systems over the main length and close parallel gaps, so the count cap and the spacing rule are
+        // re-enforced here (speckle and source needs cannot re-trigger: bridging only grows networks and
+        // never raises their highest tile). Dropping a system only removes tiles, so carved downhill paths
+        // and straight-run rays elsewhere are untouched.
+        ConnectDiagonals(map, isRiver, accumulation);
+        PruneRivers(map, sea, edgeSea, isRiver, accumulation);
+
         // The wide threshold scales to the biggest river discharges on this island, so the widest
         // mouth reaches count as wide while every island still grows both classes.
         int maxRiverAcc = 1;
@@ -166,6 +181,96 @@ internal static class RiverTracer
             {
                 map.Terrain[i] = river;
                 map.RiverWidth[i] = accumulation[i] >= wide ? (byte)2 : (byte)1;
+            }
+        }
+    }
+
+    // Bridges every diagonal river step with a side tile so the finished networks are 4-connected: wherever
+    // two river tiles touch only at a corner, the lower of the two shared orthogonal neighbours becomes
+    // river too (ties break to the lower tile index, so the choice is deterministic). A shared neighbour
+    // that is already river counts only when it sits no higher than the lower of the pair: a knuckle on the
+    // upstream side still leaves the lower tile with no orthogonal step toward its mouth, so the lower side
+    // is bridged anyway. The bridge takes the lower of the pair's elevations, so both course tiles still
+    // step down or level onto it, and the larger of the pair's accumulations, so it reads the course's width
+    // class. A bridge that would complete a 13-step straight run tries the higher side instead; when both
+    // sides complete one, the lower still wins, because connectivity outranks straightness. Pairs are visited
+    // in ascending tile order to a fixpoint, so the result is identical on every CPU.
+    private static void ConnectDiagonals(GeneratedHeightmap map, bool[] isRiver, int[] accumulation)
+    {
+        int size = map.Size;
+        int tiles = map.TileCount;
+        byte[] elevation = map.Elevation;
+        int[] probe = new int[1];
+        bool changed = true;
+        for (int pass = 0; changed && pass <= tiles; pass++)
+        {
+            changed = false;
+            for (int i = 0; i < tiles; i++)
+            {
+                if (!isRiver[i])
+                {
+                    continue;
+                }
+
+                int x = i % size;
+                int y = i / size;
+                for (int d = 1; d < 8; d += 2)
+                {
+                    int nx = x + _dx[d];
+                    int ny = y + _dy[d];
+                    if ((uint)nx >= (uint)size || (uint)ny >= (uint)size)
+                    {
+                        continue;
+                    }
+
+                    int n = (ny * size) + nx;
+                    if (n <= i || !isRiver[n])
+                    {
+                        continue;
+                    }
+
+                    int first = (y * size) + nx;
+                    int second = (ny * size) + x;
+                    int low = Math.Min(elevation[i], elevation[n]);
+                    if ((isRiver[first] && elevation[first] <= low) || (isRiver[second] && elevation[second] <= low))
+                    {
+                        continue;
+                    }
+
+                    int pick = first;
+                    int other = second;
+                    if (elevation[second] < elevation[first] || (elevation[second] == elevation[first] && second < first))
+                    {
+                        pick = second;
+                        other = first;
+                    }
+
+                    // A bridge extending a 13-tile collinear run to 14 would break the no-long-straight-run
+                    // rule the walks were vetoed against, so the higher side gets its chance first. Tiles
+                    // that are already river stay river throughout the probes; only added tiles are checked.
+                    bool pickWas = isRiver[pick];
+                    bool otherWas = isRiver[other];
+                    isRiver[pick] = true;
+                    probe[0] = pick;
+                    bool straight = !pickWas && CompletesStraightRun(isRiver, probe, 1, size);
+                    isRiver[pick] = pickWas;
+                    if (straight)
+                    {
+                        isRiver[other] = true;
+                        probe[0] = other;
+                        straight = !otherWas && CompletesStraightRun(isRiver, probe, 1, size);
+                        isRiver[other] = otherWas;
+                        if (!straight)
+                        {
+                            pick = other;
+                        }
+                    }
+
+                    elevation[pick] = (byte)low;
+                    accumulation[pick] = Math.Max(accumulation[i], accumulation[n]);
+                    isRiver[pick] = true;
+                    changed = true;
+                }
             }
         }
     }

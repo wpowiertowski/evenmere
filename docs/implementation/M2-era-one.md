@@ -106,7 +106,7 @@ file per card as listed; never edit another card's file.
 | M2-36 | Tree and build-menu fixes found with full Era I content | game | M2-13b | done |
 | M2-37 | Playtest fixes: camera clipping and floating river strips | game | — | done |
 | M2-38 | Rivers sit in a channel below their banks | game | M2-37 | done |
-| M2-39 | Rivers as 4-connected courses | sim | M2-02c | todo |
+| M2-39 | Rivers as 4-connected courses | sim | M2-02c | done |
 
 ---
 
