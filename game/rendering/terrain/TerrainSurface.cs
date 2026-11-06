@@ -1,3 +1,5 @@
+using System.Numerics;
+
 namespace Evenmere.Game.Rendering.Terrain;
 
 /// <summary>
@@ -74,16 +76,33 @@ public static class TerrainSurface
     public const float RiverCarveCapDepth = 1.0f;
 
     /// <summary>
+    /// How far above the carved bed a bank corner stands at its lowest: where the channel runs above its bank
+    /// (a contour stream on a slope, or a sill at a river mouth), the bank rises to this height over the bed, like a
+    /// natural levee lip. Valley banks stand far higher and never feel it. Together with
+    /// <see cref="RiverBankFreeboard"/> it proves the water always sits visibly in its channel: the bank stands at
+    /// least the levee (0.25) over the bed while the water rides one freeboard (0.15) under the bank — and
+    /// where the bank stands lower, the water drops to <see cref="RiverWaterAboveBedMin"/> (0.05) over the bed,
+    /// which the levee still clears by 0.2. So the bank stands above the water by at least the freeboard
+    /// everywhere, the 0.15 the eye needs.
+    /// </summary>
+    public const float RiverBankLevee = 0.25f;
+
+    /// <summary>
     /// How far above the carved bed the water surface stays at its lowest: the strip never dips into the bed,
     /// even where the bank clamp below binds.
     /// </summary>
     public const float RiverWaterAboveBedMin = 0.05f;
 
     /// <summary>
-    /// The least a bank top stands above the water surface: the last line of defence after the carve, so the water
-    /// always reads as sitting in its channel. The carve normally leaves more (depth minus lift).
+    /// How far below the bank the water surface rides: the strip sits just under the bank edge, so even a
+    /// one-tile slot reads as a blue ribbon with a thin ink line on each bank instead of a dark slot. The visible
+    /// bank wall then runs only from the bank edge down to the water; below the waterline the wall is hidden
+    /// behind the opaque strip anyway. Where the bank stands lower (a sill), the water drops to
+    /// <see cref="RiverWaterAboveBedMin"/> over the bed instead, and the levee (<see cref="RiverBankLevee"/>)
+    /// keeps the bank above even that — so the bank clears the water by at least this freeboard everywhere,
+    /// the 0.15 the eye needs.
     /// </summary>
-    public const float RiverBankFreeboard = 0.3f;
+    public const float RiverBankFreeboard = 0.15f;
 
     /// <summary>
     /// What the riverbed rules read from a tile grid, without owning any layout: the one shared source for the
@@ -220,32 +239,44 @@ public static class TerrainSurface
     }
 
     /// <summary>
-    /// Gets the strip height at one shared corner: the carved bed plus the lift, clamped below the highest
-    /// adjacent bank top while staying above the bed, so the water sits visibly in its channel with no side faces
-    /// to show. The uphill bank is what matters: on a hillside the downhill grade falls away, which is the natural
-    /// read for a contour stream.
+    /// Gets the strip height at one shared corner: the bank height minus the freeboard, so the water rides just
+    /// under the bank edge (M2-38 round 3: a thin film far below the banks hid down the slot and read as dark
+    /// ink diamonds at distance). Clamped to stay above the bed, so the strip never dips into the channel floor.
     /// The corners stay shared, so the water runs unbroken from source to mouth.
     /// </summary>
-    /// <param name="bedCorner">The carved corner height (the terrain surface there).</param>
-    /// <param name="bankMax">The highest adjacent land base height, or positive infinity when no land shares the corner.</param>
+    /// <param name="bedCorner">The carved corner height (the riverbed surface there).</param>
+    /// <param name="landHeight">The land mesh height at the corner (<see cref="LandCornerHeight"/>), or positive infinity when no bank shares it.</param>
     /// <returns>The strip height at the corner.</returns>
-    public static float StripCornerHeight(float bedCorner, float bankMax)
+    public static float StripCornerHeight(float bedCorner, float landHeight)
     {
-        if (float.IsPositiveInfinity(bankMax))
+        if (float.IsPositiveInfinity(landHeight))
         {
             return bedCorner + RiverStripLift;
         }
 
-        float floor = bedCorner + RiverWaterAboveBedMin;
-        float ceiling = bankMax - RiverBankFreeboard;
-        if (ceiling < floor)
-        {
-            // Degenerate (banks below the bed): the carve normally prevents this, but the water must never
-            // dive into the bed, so it rides at its minimum depth instead of honouring the freeboard.
-            ceiling = floor;
-        }
+        // Just under the bank; the levee keeps degenerate banks above even the bed minimum, so the gate holds.
+        return Math.Max(landHeight - RiverBankFreeboard, bedCorner + RiverWaterAboveBedMin);
+    }
 
-        return Math.Clamp(bedCorner + RiverStripLift, floor, ceiling);
+    /// <summary>
+    /// Gets the fog drape height at one tile corner: the highest surface the terrain mesh draws there (the bank
+    /// or the carved bed, whichever stands taller), plus the caller's lift — so the haze always rides above the
+    /// visible mesh, including bank walls and levee lips. It reads the same <see cref="LandCornerHeight"/> bank
+    /// rule and <see cref="ResolveCorner"/> bed rule as the chunk mesh, never its own copy.
+    /// </summary>
+    /// <param name="first">The base height (<see cref="MeshTopHeight"/>) of the (−x, −y) sharing tile.</param>
+    /// <param name="second">The base height of the (+x, −y) sharing tile.</param>
+    /// <param name="third">The base height of the (−x, +y) sharing tile.</param>
+    /// <param name="fourth">The base height of the (+x, +y) sharing tile.</param>
+    /// <param name="existMask">Bit <c>i</c> set when sharing tile <c>i</c> exists (is on the map), in the same order.</param>
+    /// <param name="riverMask">Bit <c>i</c> set when sharing tile <c>i</c> is a river tile, in the same order.</param>
+    /// <param name="lift">How far the haze rides above the surface.</param>
+    /// <returns>The drape height at the corner, in world units.</returns>
+    public static float FogCornerHeight(float first, float second, float third, float fourth, int existMask, int riverMask, float lift)
+    {
+        float bank = LandCornerHeight(first, second, third, fourth, existMask, riverMask);
+        float bed = ResolveCorner(first, second, third, fourth, riverMask, BitOperations.PopCount((uint)existMask));
+        return Math.Max(bank, bed) + lift;
     }
 
     /// <summary>Gets the ground height of an elevation step count.</summary>
@@ -267,10 +298,72 @@ public static class TerrainSurface
     };
 
     /// <summary>
-    /// Resolves one tile corner shared by up to four tiles. A corner touched by at least one river tile is carved to
-    /// the river bed: the lowest bed height among the sharing river tiles, so river tiles are flat, banks slope
-    /// down over one tile, and mouths cut a channel into the sea. Otherwise the corner averages the sharing base
-    /// heights, so flat areas stay flat and slopes become facets. A corner past the map edge is skipped by the caller.
+    /// Resolves one tile corner for a non-river tile: the average of the sharing non-river base heights, raised to
+    /// a levee (<see cref="RiverBankLevee"/>) over the carved bed where a river shares the corner, so a bank
+    /// keeps its own height at the river edge — and where the channel runs above its bank (a contour stream on a
+    /// slope), the bank still stands visibly above the water instead of drowning under the strip. (M2-38: shared
+    /// carved corners put the land mesh below the water surface, so the strip read as a floating slab.) River tiles
+    /// next door resolve through <see cref="ResolveCorner"/> (the carved bed), and a bank wall in the chunk mesh
+    /// spans the gap between the two heights. When no sharing tile is a bank (a vertex fully inside a river), there
+    /// is no bank to stand on, so it falls back to <see cref="ResolveCorner"/> (the carved bed), which is defined
+    /// whenever a river shares it.
+    /// </summary>
+    /// <param name="first">The base height (<see cref="MeshTopHeight"/>) of the (−x, −y) sharing tile.</param>
+    /// <param name="second">The base height of the (+x, −y) sharing tile.</param>
+    /// <param name="third">The base height of the (−x, +y) sharing tile.</param>
+    /// <param name="fourth">The base height of the (+x, +y) sharing tile.</param>
+    /// <param name="existMask">Bit <c>i</c> set when sharing tile <c>i</c> exists (is on the map), in the same order.</param>
+    /// <param name="riverMask">Bit <c>i</c> set when sharing tile <c>i</c> is a river tile, in the same order.</param>
+    /// <returns>The bank corner height in world units.</returns>
+    public static float LandCornerHeight(float first, float second, float third, float fourth, int existMask, int riverMask)
+    {
+        float sum = 0f;
+        int count = 0;
+        if ((existMask & 1) != 0 && (riverMask & 1) == 0)
+        {
+            sum += first;
+            count++;
+        }
+
+        if ((existMask & 2) != 0 && (riverMask & 2) == 0)
+        {
+            sum += second;
+            count++;
+        }
+
+        if ((existMask & 4) != 0 && (riverMask & 4) == 0)
+        {
+            sum += third;
+            count++;
+        }
+
+        if ((existMask & 8) != 0 && (riverMask & 8) == 0)
+        {
+            sum += fourth;
+            count++;
+        }
+
+        if (count == 0)
+        {
+            return ResolveCorner(first, second, third, fourth, riverMask, BitOperations.PopCount((uint)existMask));
+        }
+
+        float bank = sum / count;
+        if ((riverMask & existMask) != 0)
+        {
+            // A river shares the corner: the levee keeps the bank above the channel it borders.
+            float bed = ResolveCorner(first, second, third, fourth, riverMask, BitOperations.PopCount((uint)existMask));
+            bank = Math.Max(bank, bed + RiverBankLevee);
+        }
+
+        return bank;
+    }
+
+    /// <summary>
+    /// Resolves one tile corner for a river tile (the channel surface): the lowest bed height among the sharing
+    /// river tiles, so the channel runs flat and continuous, and mouths cut into the sea floor. Non-river tiles
+    /// resolve through <see cref="LandCornerHeight"/> instead, so the two surfaces meet at a bank wall rather
+    /// than a shared carved corner. A corner past the map edge is skipped by the caller.
     /// </summary>
     /// <param name="first">The base height (<see cref="MeshTopHeight"/>) of the (−x, −y) sharing tile.</param>
     /// <param name="second">The base height of the (+x, −y) sharing tile.</param>

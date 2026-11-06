@@ -105,6 +105,8 @@ file per card as listed; never edit another card's file.
 | M2-35 | Polish pass from review | game + sim + tools | — | done |
 | M2-36 | Tree and build-menu fixes found with full Era I content | game | M2-13b | done |
 | M2-37 | Playtest fixes: camera clipping and floating river strips | game | — | done |
+| M2-38 | Rivers sit in a channel below their banks | game | M2-37 | done |
+| M2-39 | Rivers as 4-connected courses | sim | M2-02c | todo |
 
 ---
 
@@ -1232,6 +1234,40 @@ Meanwhile `StartGuarantee` counts resources over a flood that leaks diagonally a
 2. **River strips float above their banks.** The water rode a fixed lift over the carved bed, which put it above low or sloping banks.
 
 **Acceptance:** street-zoom shots of the starter landing river and the hall show nothing clipped and the river below its banks; picking still hits the right tiles; ground sampling matches the mesh corner for corner; `REQUIRE_GODOT=1 scripts/verify.sh` passes.
+
+---
+
+### M2-38 · Rivers sit in a channel below their banks
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| game | M2-37 | `game/rendering/terrain/**`, `game/rendering/water/**`, `game/rendering/fog/**`, `game/data/visuals/GroundSampler.cs`, tests |
+
+**Found in the developer's playtest after M2-37:** at default zoom the river still read as a raised slab. Land and river tiles shared corner vertices, so the bank corners were dragged down to the bed while the water rode above it.
+
+**Acceptance:**
+- `RiverFreeboardTests`: on the starter island and generated seeds 1 and 7, every land edge beside a river sits at least 0.15 above the water, with no visible water side faces. It failed on M2-37 (1,260 violations on the starter) and passes with zero.
+- `FogDrapeTests`: fog covers the new bank geometry.
+- The developer's default-zoom view shows the water in a channel.
+
+---
+
+### M2-39 · Rivers as 4-connected courses
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| sim | M2-02c | `src/Evenmere.Sim/Systems/Map/Generation/**` (the river tracer), the generation tests and goldens |
+
+**Found in M2-38's review:** generated rivers trace D8 courses, so consecutive river tiles often touch only at a corner. Rendered with M2-38's channel, a diagonal river reads as a chain of separate blue diamonds instead of a stream. For gameplay, a 4-connected road can slip between two diagonal river tiles without a bridge, the same leak M2-02c found in the start guarantee.
+
+**Goal:** every river is a 4-connected chain of tiles, so it draws as a continuous stream and blocks land travel like the starter island's rivers.
+
+**Steps:**
+1. Where the course steps diagonally, insert one side tile, choosing the lower of the two candidates so the river never rises.
+2. Keep the M2-02a properties: never rising, reaching the sea, the river count and share bands, and no long straight runs.
+3. Re-baseline the fertility, `MapDef`, ASCII and preview goldens with the reason. The start guarantee (M2-02c) must still hold on seeds 1–100.
+
+**Acceptance:** a test that every river tile on seeds 1–50 at all sizes has a 4-connected river neighbour toward its mouth; a generated river shot at default zoom reading as a continuous stream; `scripts/verify.sh` passes.
 
 ---
 

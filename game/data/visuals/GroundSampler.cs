@@ -7,15 +7,16 @@ namespace Evenmere.Game.Data.Visuals;
 
 /// <summary>
 /// The rendered ground heights the building and road renderers stand on. The corner rule reads the shared
-/// riverbed bake in <c>TerrainSurface</c> exactly like <c>TerrainRenderer</c> does (smoothed carved river beds,
-/// otherwise the average of the sharing base heights), so a pad or a road strip computed here lands on the
-/// visible mesh. It owns no heights itself; every number comes from the shared rule.
+/// riverbed bake in <c>TerrainSurface</c> exactly like <c>TerrainRenderer</c> does (the bank heights average the
+/// sharing non-river tiles, so pads sit on the visible mesh; river tiles next door keep their carved bed under a
+/// bank wall). It owns no heights itself; every number comes from the shared rule.
 /// </summary>
 public static class GroundSampler
 {
     /// <summary>
-    /// Gets the height of the tile corner shared by the tiles around vertex (vx, vy), in world units: the smoothed
-    /// carved river bed when a sharing tile is a river tile, else the average of the sharing base heights.
+    /// Gets the height of the tile corner shared by the tiles around vertex (vx, vy), in world units: the average of
+    /// the sharing non-river base heights (the visible bank), falling back to the smoothed carved river bed where no
+    /// bank shares the corner. Buildings and roads stand on land, so they read the bank, never the channel.
     /// </summary>
     /// <param name="map">The map queries.</param>
     /// <param name="content">The content, for terrain names.</param>
@@ -29,7 +30,7 @@ public static class GroundSampler
         float third = 0f;
         float fourth = 0f;
         int riverMask = 0;
-        int count = 0;
+        int existMask = 0;
         int bit = 1;
         QueryBedTiles tiles = new(map, content);
         for (int dy = -1; dy <= 0; dy++)
@@ -68,14 +69,14 @@ public static class GroundSampler
                         riverMask |= bit;
                     }
 
-                    count++;
+                    existMask |= bit;
                 }
 
                 bit <<= 1;
             }
         }
 
-        return TerrainSurface.ResolveCorner(first, second, third, fourth, riverMask, count);
+        return TerrainSurface.LandCornerHeight(first, second, third, fourth, existMask, riverMask);
     }
 
     // The tile grid as the shared riverbed rule reads it: base heights with land/river buckets, so the sampler

@@ -68,7 +68,9 @@ public sealed class TerrainTests
 
         flat.Rebuild(elevations, terrain, flatWater, new float[window * window], 96, 96, -1, -1);
         river.Rebuild(elevations, terrain, riverWater, riverBeds, 96, 96, -1, -1);
-        river.VertexCount.ShouldBe(flat.VertexCount);
+        // The river tile keeps its two triangles and gains one bank wall per land edge (four edges of two
+        // triangles here), so the channel meets the banks without a crack.
+        river.VertexCount.ShouldBe(flat.VertexCount + 24);
 
         float flatMin = MinY(flat);
         float riverMin = MinY(river);
@@ -113,22 +115,22 @@ public sealed class TerrainTests
     }
 
     [Fact]
-    public void StripCornerHeight_WithoutBanks_RidesOverBed()
+    public void StripCornerHeight_WithoutBank_RidesOverBed()
     {
         TerrainSurface.StripCornerHeight(0.4f, float.PositiveInfinity).ShouldBe(0.4f + TerrainSurface.RiverStripLift);
     }
 
     [Fact]
-    public void StripCornerHeight_WithHighBanks_RidesOverBed()
+    public void StripCornerHeight_WithHighBank_RidesBelowIt()
     {
-        // The lift leaves more than the freeboard, so the clamp never binds.
-        TerrainSurface.StripCornerHeight(0.4f, 2.0f).ShouldBe(0.4f + TerrainSurface.RiverStripLift);
+        // The water rides one freeboard under the bank, far above the bed.
+        TerrainSurface.StripCornerHeight(0.4f, 2.0f).ShouldBe(2.0f - TerrainSurface.RiverBankFreeboard);
     }
 
     [Fact]
-    public void StripCornerHeight_WithLowBanks_StaysAboveBed()
+    public void StripCornerHeight_WithLowBank_StaysAboveBed()
     {
-        // Degenerate (banks below the bed): the carve normally prevents this corner, but the strip must never
+        // Degenerate (bank below the bed): the bank rule normally prevents this corner, but the strip must never
         // dive into the bed, so it rides at its minimum depth instead of honouring the freeboard.
         TerrainSurface.StripCornerHeight(1.6f, 1.0f).ShouldBe(1.6f + TerrainSurface.RiverWaterAboveBedMin);
     }

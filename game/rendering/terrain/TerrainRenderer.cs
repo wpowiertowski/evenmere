@@ -168,24 +168,84 @@ public sealed partial class TerrainRenderer : Node3D
             return TerrainSurface.WaterSurfaceY;
         }
 
-        float h00 = CornerHeight(queried, x, y);
-        float h10 = CornerHeight(queried, x + 1, y);
-        float h01 = CornerHeight(queried, x, y + 1);
-        float h11 = CornerHeight(queried, x + 1, y + 1);
+        float h00 = LandCornerHeight(queried, x, y);
+        float h10 = LandCornerHeight(queried, x + 1, y);
+        float h01 = LandCornerHeight(queried, x, y + 1);
+        float h11 = LandCornerHeight(queried, x + 1, y + 1);
         if (kind == WaterKind.River)
         {
-            // The strip rides the carved corners plus the lift, so the centre matches the visible water.
-            return ((h00 + h10 + h01 + h11) * 0.25f) + TerrainSurface.RiverStripLift;
+            // The strip rides the carved corners clamped below the bank, so the centre matches the visible water.
+            float w00 = TerrainSurface.StripCornerHeight(BedCornerHeight(queried, x, y), h00);
+            float w10 = TerrainSurface.StripCornerHeight(BedCornerHeight(queried, x + 1, y), h10);
+            float w01 = TerrainSurface.StripCornerHeight(BedCornerHeight(queried, x, y + 1), h01);
+            float w11 = TerrainSurface.StripCornerHeight(BedCornerHeight(queried, x + 1, y + 1), h11);
+            return (w00 + w10 + w01 + w11) * 0.25f;
         }
 
         return (h00 + h10 + h01 + h11) * 0.25f;
     }
 
-    // The height of the tile corner shared by the tiles around vertex (vx, vy): the carved river bed when a
-    // neighbour is a river tile (bank-aware: deepened below nearby land, so perched channels drop into their
-    // valleys), else the average of the neighbours' base heights. Land contributes its ground, water its bed,
-    // rivers their effective bed.
-    private float CornerHeight(IMapQueries map, int vx, int vy)
+    // The bank height of the tile corner shared by the tiles around vertex (vx, vy): the average of the
+    // neighbours' non-river base heights, falling back to the carved bed where no bank shares the corner.
+    // Land contributes its ground, water its bed, rivers their effective bed (read only for the fallback).
+    private float LandCornerHeight(IMapQueries map, int vx, int vy)
+    {
+        float h0 = 0f;
+        float h1 = 0f;
+        float h2 = 0f;
+        float h3 = 0f;
+        int riverMask = 0;
+        int existMask = 0;
+        int bit = 1;
+        for (int dy = -1; dy <= 0; dy++)
+        {
+            for (int dx = -1; dx <= 0; dx++)
+            {
+                int tileX = vx + dx;
+                int tileY = vy + dy;
+                if (tileX >= 0 && tileY >= 0 && tileX < map.Width && tileY < map.Height)
+                {
+                    TileInfo tile = map.GetTile(tileX, tileY);
+                    string name = _host?.Content.Terrains.Names[tile.Terrain.Value] ?? string.Empty;
+                    WaterKind kind = TerrainSurface.Classify(name, (tile.Features & TileFeatures.River) != 0);
+                    float baseHeight = kind == WaterKind.River
+                        ? _effBed[(tileY * map.Width) + tileX]
+                        : TerrainSurface.MeshTopHeight(tile.Elevation, kind);
+                    if (bit == 1)
+                    {
+                        h0 = baseHeight;
+                    }
+                    else if (bit == 2)
+                    {
+                        h1 = baseHeight;
+                    }
+                    else if (bit == 4)
+                    {
+                        h2 = baseHeight;
+                    }
+                    else
+                    {
+                        h3 = baseHeight;
+                    }
+
+                    if (kind == WaterKind.River)
+                    {
+                        riverMask |= bit;
+                    }
+
+                    existMask |= bit;
+                }
+
+                bit <<= 1;
+            }
+        }
+
+        return TerrainSurface.LandCornerHeight(h0, h1, h2, h3, existMask, riverMask);
+    }
+
+    // The carved bed at the tile corner shared by the tiles around vertex (vx, vy): the smoothed bank-aware
+    // surface the river tiles draw. Rivers contribute their effective bed; every other tile its base height.
+    private float BedCornerHeight(IMapQueries map, int vx, int vy)
     {
         float h0 = 0f;
         float h1 = 0f;
