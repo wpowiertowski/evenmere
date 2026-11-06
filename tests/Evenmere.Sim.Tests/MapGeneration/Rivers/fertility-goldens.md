@@ -17,20 +17,25 @@ changed for that reason.
 would complete a 13-step straight river run, so river courses (and downstream deposits and
 fertility) shifted for that reason.
 
+**Re-baselined in M2-39:** every diagonal river step is bridged with a side tile so networks are
+4-connected, the same-direction walk cap drops from 12 to 11 to leave headroom for the bridges,
+and the prune re-runs on the finished geometry; every river, deposit-adjacency and fertility pattern
+changed for that reason.
+
 | Seed | Size | Hash |
 |------|------|------|
-| 1 | 256 | 0472d7a757025247 |
-| 1 | 320 | b5baeb033986c371 |
-| 1 | 384 | f5637fb0907f0023 |
-| 2 | 256 | 416ca82913658f2d |
-| 2 | 320 | 9873c5e0c6b25a0c |
-| 2 | 384 | 51c843652d417101 |
-| 3 | 256 | 673373737601c52f |
-| 3 | 320 | 649f951cc4f9509a |
-| 3 | 384 | 30fbfa32dd9b5f13 |
-| 4 | 256 | d422dee7cc8f8501 |
-| 4 | 320 | fac41a0c3f053add |
-| 4 | 384 | c329bfa32c2e930c |
-| 5 | 256 | 5e52c39431aa457b |
-| 5 | 320 | 68752f4a5c09456f |
-| 5 | 384 | 6b5acc5089425768 |
+| 1 | 256 | 07e9a5e9ccff028b |
+| 1 | 320 | 19644cb4e4bdc5b6 |
+| 1 | 384 | 69432e1922b6e515 |
+| 2 | 256 | a5dc90ec1bde3e99 |
+| 2 | 320 | 23a6f9ffdd84699e |
+| 2 | 384 | 6314efe455f28421 |
+| 3 | 256 | 24935dd521b30e4e |
+| 3 | 320 | 9781cee4305edd57 |
+| 3 | 384 | 0611e4112d6a6d29 |
+| 4 | 256 | b1707e63b409fe28 |
+| 4 | 320 | db9ecd3041c157ed |
+| 4 | 384 | 2de28706f22a0006 |
+| 5 | 256 | 8f3424e930e6c38f |
+| 5 | 320 | f62a4e6268be09f3 |
+| 5 | 384 | 4a4ec89cf1ecbe3c |

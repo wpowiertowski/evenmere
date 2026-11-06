@@ -20,20 +20,26 @@ including seed 1 at 256 which now generates instead of throwing); the other eigh
 to the M2-02b round-2 baseline. Heightmap goldens are untouched (elevation never changes); fertility
 goldens are untouched (GenerateTerrain runs before repair).
 
+**Re-baselined in M2-39:** every diagonal river step is bridged with a side tile so networks are
+4-connected, the same-direction walk cap drops from 12 to 11, and the prune re-runs on the finished
+geometry; every island changed for that reason. Heightmap goldens are untouched (GenerateHeightmap
+runs before rivers). Seed 2 at 256 replaces seed 1 at 256 as the repair witness: seed 1 at 256 now
+verifies outright.
+
 | Seed | Size | Hash |
 |------|------|------|
-| 1 | 256 | b9cbbe12273ec81f |
-| 2 | 256 | 82b19bf3f9642d9f |
-| 3 | 256 | 07f4468689fee908 |
-| 4 | 256 | 78d523d917e14af4 |
-| 5 | 256 | 4e3efe6b84244bfa |
-| 1 | 320 | 560af86bd3c816af |
-| 2 | 320 | 0fd75e3b9f6c6597 |
-| 3 | 320 | b3b1f2cd55ccc9f8 |
-| 4 | 320 | 4178d0903a927115 |
-| 5 | 320 | aef2f0642259c625 |
-| 1 | 384 | 9b82d411c9c3001b |
-| 2 | 384 | 6305e091f1d33f4f |
-| 3 | 384 | 5989f624353c10f5 |
-| 4 | 384 | 9328ccfc9eab7eee |
-| 5 | 384 | 1c09cecabb7e2e9e |
+| 1 | 256 | 7464ed0ad75a5768 |
+| 2 | 256 | 74391fb6768eb036 |
+| 3 | 256 | 3bb3e4bcf8c4305c |
+| 4 | 256 | c759e4356f83bb10 |
+| 5 | 256 | 7e6cbe51cddb7e42 |
+| 1 | 320 | 1ce48fe12ff93bcf |
+| 2 | 320 | 5603eb09121c2dff |
+| 3 | 320 | c095fddf68e3e013 |
+| 4 | 320 | 50a79c1120409342 |
+| 5 | 320 | 3709094efd5ec30b |
+| 1 | 384 | 3bfd21565936cfb5 |
+| 2 | 384 | d1da0c7885e1bf3a |
+| 3 | 384 | 184f403ed0dcecb1 |
+| 4 | 384 | 2d6f47c475d06601 |
+| 5 | 384 | c5ba31d32ad7cc5d |

@@ -46,9 +46,9 @@ public sealed class NewGamePreviewTests
     }
 
     [Theory]
-    [InlineData(1, "495fcb9d5b974452")]
-    [InlineData(2, "88177323dc42c269")]
-    [InlineData(3, "9c46206fcb51f027")]
+    [InlineData(1, "057d08de093f7980")]
+    [InlineData(2, "ba98fea2b1a090bc")]
+    [InlineData(3, "627964fd06c8b21d")]
     public void Render_FixedSeeds_HaveFixedHashes(int seed, string expected)
     {
         MapDef island = IslandGenerator.Generate(seed, 320, TestContent.Db);

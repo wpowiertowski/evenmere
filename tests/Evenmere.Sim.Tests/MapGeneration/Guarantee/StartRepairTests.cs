@@ -25,16 +25,17 @@ public sealed class StartRepairTests
     [Fact]
     public void Generate_RepairedSeed_ChangesALayer()
     {
-        // Seed 1 at 256 fails every sub-seed without repair (brute-forced in round 1), so generating it must repair
-        // something: at least one of the terrain, deposit or fertility layers differs from the fresh terrain.
-        MapDef island = GeneratedIslands.Get(1, 256);
-        int effective = IslandGenerator.EffectiveSeed(1, island.SubSeed);
+        // Seed 2 at 256 does not verify on sub-seed 0 and wins on sub-seed 1 with the repair applied (seed 1
+        // at 256, the round-1 witness, now verifies outright with 4-connected rivers), so generating it must
+        // repair something: at least one of the terrain, deposit or fertility layers differs from the fresh terrain.
+        MapDef island = GeneratedIslands.Get(2, 256);
+        int effective = IslandGenerator.EffectiveSeed(2, island.SubSeed);
         GeneratedHeightmap fresh = IslandGenerator.GenerateTerrain(effective, 256, GeneratedIslandFixture.Content);
 
         bool sameTerrain = island.Terrain.AsSpan().SequenceEqual(fresh.Terrain);
         bool sameDeposit = island.Deposit.AsSpan().SequenceEqual(fresh.Deposit);
         bool sameFertility = System.Runtime.InteropServices.MemoryMarshal.AsBytes(island.Fertility.AsSpan())
             .SequenceEqual(System.Runtime.InteropServices.MemoryMarshal.AsBytes(fresh.Fertility.AsSpan()));
-        (sameTerrain && sameDeposit && sameFertility).ShouldBeFalse("seed 1 at 256 needs the start repair");
+        (sameTerrain && sameDeposit && sameFertility).ShouldBeFalse("seed 2 at 256 needs the start repair");
     }
 }
