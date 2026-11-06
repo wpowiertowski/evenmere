@@ -1,8 +1,10 @@
+using Evenmere.Content;
 using Evenmere.Game.Host;
 using Evenmere.Game.Rendering.Camera;
 using Evenmere.Game.Rendering.Overlays;
 using Evenmere.Game.Rendering.Terrain;
 using Evenmere.Sim;
+using Evenmere.Sim.Queries;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Exploration;
 using Godot;
@@ -163,6 +165,8 @@ public sealed partial class FogRenderer : Node3D
         _isWater = new bool[width * height];
         _isRiver = new bool[width * height];
         System.Collections.Immutable.ImmutableArray<string> terrainNames = host.Content.Terrains.Names;
+        float[] beds = new float[width * height];
+        TerrainSurface.BakeRiverBeds(new MapBedTiles(host, host.Content), beds);
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
@@ -170,24 +174,35 @@ public sealed partial class FogRenderer : Node3D
                 TileInfo tile = host.Query.Map.GetTile(x, y);
                 int i = (y * width) + x;
                 _regions[i] = tile.Region;
-                _heights[i] = Math.Max(TerrainSurface.GroundHeight(tile.Elevation), TerrainSurface.WaterSurfaceY) + Lift;
                 WaterKind kind = TerrainSurface.Classify(
                     terrainNames[tile.Terrain.Value],
                     (tile.Features & TileFeatures.River) != 0);
                 _isWater[i] = kind is WaterKind.Sea or WaterKind.Deep or WaterKind.Reef or WaterKind.River;
                 _isRiver[i] = kind == WaterKind.River;
+                // Picking rides the visible surface: the water on rivers (set below once the drape corners
+                // are known), the clamped ground or sea plane elsewhere — the same heights the meshes draw.
+                _heights[i] = kind == WaterKind.River
+                    ? float.NaN
+                    : Math.Max(TerrainSurface.MeshTopHeight(tile.Elevation, kind), TerrainSurface.WaterSurfaceY);
             }
         }
 
-        // The drape: every tile corner takes the averaged height of the tiles sharing it, exactly like
-        // the terrain surface, so neighbouring patches agree on boundary values and the haze never steps.
+        // The drape: every tile corner takes the highest surface the terrain mesh draws there (bank or bed),
+        // through the shared rule in TerrainSurface, so neighbouring patches agree on boundary values, the haze
+        // never steps, and no bank wall or levee lip in a fogged region can show through.
         _corners = new float[(width + 1) * (height + 1)];
+        float[] water = new float[(width + 1) * (height + 1)];
         for (int cy = 0; cy <= height; cy++)
         {
             for (int cx = 0; cx <= width; cx++)
             {
-                float sum = 0f;
-                int count = 0;
+                float h0 = 0f;
+                float h1 = 0f;
+                float h2 = 0f;
+                float h3 = 0f;
+                int riverMask = 0;
+                int existMask = 0;
+                int bit = 1;
                 for (int dy = -1; dy <= 0; dy++)
                 {
                     for (int dx = -1; dx <= 0; dx++)
@@ -196,13 +211,64 @@ public sealed partial class FogRenderer : Node3D
                         int ny = cy + dy;
                         if (nx >= 0 && ny >= 0 && nx < width && ny < height)
                         {
-                            sum += _heights[(ny * width) + nx];
-                            count++;
+                            int ni = (ny * width) + nx;
+                            TileInfo tile = host.Query.Map.GetTile(nx, ny);
+                            WaterKind kind = TerrainSurface.Classify(
+                                terrainNames[tile.Terrain.Value],
+                                (tile.Features & TileFeatures.River) != 0);
+                            float baseHeight = kind == WaterKind.River
+                                ? beds[ni]
+                                : TerrainSurface.MeshTopHeight(tile.Elevation, kind);
+                            if (bit == 1)
+                            {
+                                h0 = baseHeight;
+                            }
+                            else if (bit == 2)
+                            {
+                                h1 = baseHeight;
+                            }
+                            else if (bit == 4)
+                            {
+                                h2 = baseHeight;
+                            }
+                            else
+                            {
+                                h3 = baseHeight;
+                            }
+
+                            existMask |= bit;
+                            if (kind == WaterKind.River)
+                            {
+                                riverMask |= bit;
+                            }
                         }
+
+                        bit <<= 1;
                     }
                 }
 
-                _corners[(cy * (width + 1)) + cx] = count == 0 ? 0f : sum / count;
+                _corners[(cy * (width + 1)) + cx] = TerrainSurface.FogCornerHeight(h0, h1, h2, h3, existMask, riverMask, Lift);
+                water[(cy * (width + 1)) + cx] = TerrainSurface.StripCornerHeight(
+                    TerrainSurface.ResolveCorner(h0, h1, h2, h3, riverMask, System.Numerics.BitOperations.PopCount((uint)existMask)),
+                    TerrainSurface.LandCornerHeight(h0, h1, h2, h3, existMask, riverMask));
+            }
+        }
+
+        // River tiles pick on the water they show: the corner average, matching the visible strip.
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                int i = (y * width) + x;
+                if (!_isRiver[i])
+                {
+                    continue;
+                }
+
+                _heights[i] = (water[(y * (width + 1)) + x]
+                    + water[(y * (width + 1)) + x + 1]
+                    + water[((y + 1) * (width + 1)) + x]
+                    + water[((y + 1) * (width + 1)) + x + 1]) * 0.25f;
             }
         }
 
@@ -598,6 +664,32 @@ public sealed partial class FogRenderer : Node3D
         }
 
         return $"{best}:{count}";
+    }
+
+    // The tile grid as the shared riverbed rule reads it: base heights with land/river buckets, so the drape
+    // shares the single bake source and is never copied here.
+    private readonly struct MapBedTiles(SimHost host, ContentDb content) : TerrainSurface.IRiverBedTiles
+    {
+        public int Width => host.Query.Map.Width;
+
+        public int Height => host.Query.Map.Height;
+
+        public bool IsRiver(int x, int y) => KindOf(x, y) == WaterKind.River;
+
+        public bool IsLand(int x, int y) => KindOf(x, y) == WaterKind.Land;
+
+        public float BaseHeight(int x, int y)
+        {
+            TileInfo tile = host.Query.Map.GetTile(x, y);
+            return TerrainSurface.MeshTopHeight(tile.Elevation, KindOf(x, y));
+        }
+
+        private WaterKind KindOf(int x, int y)
+        {
+            TileInfo tile = host.Query.Map.GetTile(x, y);
+            string name = content.Terrains.Names[tile.Terrain.Value];
+            return TerrainSurface.Classify(name, (tile.Features & TileFeatures.River) != 0);
+        }
     }
 
     private sealed record FogPatch(MeshInstance3D Fill, MeshInstance3D? Shallows, MeshInstance3D Outline);

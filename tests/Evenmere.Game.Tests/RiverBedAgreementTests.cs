@@ -6,12 +6,15 @@ using Evenmere.Game.Rendering.Terrain;
 using Evenmere.Sim.Queries;
 using Evenmere.Sim.Queries.Types;
 using Evenmere.Sim.Systems.Map.Generation;
+using System.Numerics;
 
 namespace Evenmere.Game.Tests;
 
-/// <summary>M2-38: the ground sampler reads the same smoothed bank-aware beds as the terrain mesh, from the shared
-/// rule in <see cref="TerrainSurface"/> — never a second copy. The agreement is checked corner by corner over two
-/// whole real islands (the starter and generated seed 1), mesh triangles against sampler corners.</summary>
+/// <summary>M2-38: the ground sampler reads the same shared bank heights as the terrain mesh's land tiles, from the shared
+/// rule in <see cref="TerrainSurface"/> — never a second copy. River tiles next door keep their carved bed under a
+/// bank wall: mesh corners on river tiles match the carved bed rule, every other mesh corner and every sampler
+/// corner match the bank rule. The agreement is checked corner by corner over two whole real islands (the starter
+/// and generated seed 1), mesh triangles against sampler corners.</summary>
 public sealed class RiverBedAgreementTests
 {
     private const float Tight = 1e-4f;
@@ -84,6 +87,12 @@ public sealed class RiverBedAgreementTests
         float[] beds = new float[width * height];
         TerrainSurface.BakeRiverBeds(new ArrayBedTiles(elevations, kinds, width, height), beds);
 
+        float[] landMesh = new float[(width + 1) * (height + 1)];
+        float[] bedMesh = new float[(width + 1) * (height + 1)];
+        Array.Fill(landMesh, float.NaN);
+        Array.Fill(bedMesh, float.NaN);
+        List<string> inconsistencies = new();
+
         var builder = new TerrainChunkBuilder();
         int window = TerrainChunkBuilder.WindowTiles;
         byte[] windowElevations = new byte[window * window];
@@ -114,36 +123,92 @@ public sealed class RiverBedAgreementTests
 
                 builder.Rebuild(windowElevations, windowTerrains, windowKinds, windowBeds, width, height, firstX - 1, firstY - 1);
 
-                ReadOnlySpan<float> verts = builder.Vertices;
-                for (int t = 0; t < TerrainChunkBuilder.ChunkTiles * TerrainChunkBuilder.ChunkTiles; t++)
+                int consumed = ChunkMeshReader.ReadCorners(
+                    builder.Vertices, kinds, width, height, firstX, firstY, landMesh, bedMesh, null, inconsistencies);
+                if (consumed != builder.VertexCount)
                 {
-                    int tileX = firstX + (t % TerrainChunkBuilder.ChunkTiles);
-                    int tileY = firstY + (t / TerrainChunkBuilder.ChunkTiles);
-                    for (int c = 0; c < 4; c++)
-                    {
-                        int vx = tileX + (c % 2);
-                        int vy = tileY + (c / 2);
-                        float meshHeight = CornerFromVerts(verts, t, tileX, tileY, vx, vy);
-                        float samplerHeight = GroundSampler.CornerHeight(queries, content, vx, vy);
-                        samplerHeight.ShouldBe(meshHeight, Tight, $"corner ({vx}, {vy}) on a {width}x{height} island");
-                    }
+                    inconsistencies.Add($"chunk ({firstX}, {firstY}) consumed {consumed} of {builder.VertexCount} vertices");
+                }
+            }
+        }
+
+        inconsistencies.ShouldBeEmpty("the mesh layout drifted from the reader");
+
+        for (int vy = 0; vy <= height; vy++)
+        {
+            for (int vx = 0; vx <= width; vx++)
+            {
+                (float land, float bed) = CornerExpectations(elevations, kinds, beds, width, height, vx, vy);
+                int vi = (vy * (width + 1)) + vx;
+                float samplerHeight = GroundSampler.CornerHeight(queries, content, vx, vy);
+                samplerHeight.ShouldBe(land, Tight, $"sampler corner ({vx}, {vy}) on a {width}x{height} island");
+                if (!float.IsNaN(landMesh[vi]))
+                {
+                    landMesh[vi].ShouldBe(land, Tight, $"land mesh corner ({vx}, {vy}) on a {width}x{height} island");
+                }
+
+                if (!float.IsNaN(bedMesh[vi]))
+                {
+                    bedMesh[vi].ShouldBe(bed, Tight, $"river mesh corner ({vx}, {vy}) on a {width}x{height} island");
                 }
             }
         }
     }
 
-    private static float CornerFromVerts(ReadOnlySpan<float> verts, int tile, int tileX, int tileY, int vx, int vy)
+    // The two corner values the shared rule gives at one vertex: the bank height (what land tiles draw and the
+    // sampler reads) and the carved bed (what river tiles draw).
+    private static (float Land, float Bed) CornerExpectations(byte[] elevations, byte[] kinds, float[] beds, int width, int height, int vx, int vy)
     {
-        for (int k = 0; k < 6; k++)
+        float h0 = 0f;
+        float h1 = 0f;
+        float h2 = 0f;
+        float h3 = 0f;
+        int riverMask = 0;
+        int existMask = 0;
+        int bit = 1;
+        for (int dy = -1; dy <= 0; dy++)
         {
-            int v = (tile * 6) + k;
-            if (Math.Abs(verts[(v * 3) + 0] - vx) < 1e-6f && Math.Abs(verts[(v * 3) + 2] - vy) < 1e-6f)
+            for (int dx = -1; dx <= 0; dx++)
             {
-                return verts[(v * 3) + 1];
+                int tileX = vx + dx;
+                int tileY = vy + dy;
+                if (tileX >= 0 && tileY >= 0 && tileX < width && tileY < height)
+                {
+                    int i = (tileY * width) + tileX;
+                    float baseHeight = kinds[i] == (byte)WaterKind.River
+                        ? beds[i]
+                        : TerrainSurface.MeshTopHeight(elevations[i], (WaterKind)kinds[i]);
+                    if (bit == 1)
+                    {
+                        h0 = baseHeight;
+                    }
+                    else if (bit == 2)
+                    {
+                        h1 = baseHeight;
+                    }
+                    else if (bit == 4)
+                    {
+                        h2 = baseHeight;
+                    }
+                    else
+                    {
+                        h3 = baseHeight;
+                    }
+
+                    existMask |= bit;
+                    if (kinds[i] == (byte)WaterKind.River)
+                    {
+                        riverMask |= bit;
+                    }
+                }
+
+                bit <<= 1;
             }
         }
 
-        throw new InvalidOperationException($"Tile ({tileX}, {tileY}) emits no vertex at corner ({vx}, {vy}).");
+        return (
+            TerrainSurface.LandCornerHeight(h0, h1, h2, h3, existMask, riverMask),
+            TerrainSurface.ResolveCorner(h0, h1, h2, h3, riverMask, BitOperations.PopCount((uint)existMask)));
     }
 
     private static MapDef LoadStarter()
