@@ -65,6 +65,7 @@ public sealed class TerrainChunkBuilder
     /// <param name="elevations">The elevation per window tile (0–15).</param>
     /// <param name="terrainIndex">The colour index per window tile (the content terrain ID value).</param>
     /// <param name="waterKind">The <see cref="WaterKind"/> value per window tile.</param>
+    /// <param name="bedEff">The effective riverbed per window tile (<see cref="TerrainSurface.EffectiveRiverBed"/>); read for river tiles, ignored otherwise.</param>
     /// <param name="mapWidth">The map width in tiles; emit tiles past it are skipped.</param>
     /// <param name="mapHeight">The map height in tiles; emit tiles past it are skipped.</param>
     /// <param name="originX">The world tile column of the window's top-left tile (one halo tile before the chunk).</param>
@@ -73,6 +74,7 @@ public sealed class TerrainChunkBuilder
         byte[] elevations,
         byte[] terrainIndex,
         byte[] waterKind,
+        float[] bedEff,
         int mapWidth,
         int mapHeight,
         int originX,
@@ -92,10 +94,10 @@ public sealed class TerrainChunkBuilder
                     continue;
                 }
 
-                float h00 = CornerAt(elevations, waterKind, mapWidth, mapHeight, originX, originY, wx, wy);
-                float h10 = CornerAt(elevations, waterKind, mapWidth, mapHeight, originX, originY, wx + 1, wy);
-                float h01 = CornerAt(elevations, waterKind, mapWidth, mapHeight, originX, originY, wx, wy + 1);
-                float h11 = CornerAt(elevations, waterKind, mapWidth, mapHeight, originX, originY, wx + 1, wy + 1);
+                float h00 = CornerAt(elevations, waterKind, bedEff, mapWidth, mapHeight, originX, originY, wx, wy);
+                float h10 = CornerAt(elevations, waterKind, bedEff, mapWidth, mapHeight, originX, originY, wx + 1, wy);
+                float h01 = CornerAt(elevations, waterKind, bedEff, mapWidth, mapHeight, originX, originY, wx, wy + 1);
+                float h11 = CornerAt(elevations, waterKind, bedEff, mapWidth, mapHeight, originX, originY, wx + 1, wy + 1);
                 byte colour = terrainIndex[(wy * WindowTiles) + wx];
 
                 if (Math.Abs(h00 - h11) <= Math.Abs(h10 - h01))
@@ -119,6 +121,7 @@ public sealed class TerrainChunkBuilder
     private static float CornerAt(
         byte[] elevations,
         byte[] waterKind,
+        float[] bedEff,
         int mapWidth,
         int mapHeight,
         int originX,
@@ -142,7 +145,11 @@ public sealed class TerrainChunkBuilder
                 if (worldX >= 0 && worldY >= 0 && worldX < mapWidth && worldY < mapHeight)
                 {
                     int i = ((vy + dy) * WindowTiles) + vx + dx;
-                    float baseHeight = TerrainSurface.MeshTopHeight(elevations[i], (WaterKind)waterKind[i]);
+                    // A river tile contributes its bank-aware effective bed (carved below nearby land), so
+                    // perched channels drop into their valleys; every other tile contributes its base height.
+                    float baseHeight = waterKind[i] == (byte)WaterKind.River
+                        ? bedEff[i]
+                        : TerrainSurface.MeshTopHeight(elevations[i], (WaterKind)waterKind[i]);
                     if (bit == 1)
                     {
                         h0 = baseHeight;

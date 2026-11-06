@@ -1,3 +1,4 @@
+using Evenmere.Content;
 using Evenmere.Game.Controls;
 using Evenmere.Game.Data.Visuals.Terrain;
 using Evenmere.Game.Host;
@@ -34,6 +35,8 @@ public sealed partial class TerrainRenderer : Node3D
     private readonly byte[] _elevations = new byte[TerrainChunkBuilder.WindowTiles * TerrainChunkBuilder.WindowTiles];
     private readonly byte[] _terrains = new byte[TerrainChunkBuilder.WindowTiles * TerrainChunkBuilder.WindowTiles];
     private readonly byte[] _kinds = new byte[TerrainChunkBuilder.WindowTiles * TerrainChunkBuilder.WindowTiles];
+    private readonly float[] _bedEffWindow = new float[TerrainChunkBuilder.WindowTiles * TerrainChunkBuilder.WindowTiles];
+    private float[] _effBed = [];
 
     private SimHost? _host;
     private CameraRig? _rig;
@@ -179,8 +182,9 @@ public sealed partial class TerrainRenderer : Node3D
     }
 
     // The height of the tile corner shared by the tiles around vertex (vx, vy): the carved river bed when a
-    // neighbour is a river tile, else the average of the neighbours' base heights. Land contributes its ground,
-    // water its bed, rivers their lowered bed.
+    // neighbour is a river tile (bank-aware: deepened below nearby land, so perched channels drop into their
+    // valleys), else the average of the neighbours' base heights. Land contributes its ground, water its bed,
+    // rivers their effective bed.
     private float CornerHeight(IMapQueries map, int vx, int vy)
     {
         float h0 = 0f;
@@ -201,7 +205,9 @@ public sealed partial class TerrainRenderer : Node3D
                     TileInfo tile = map.GetTile(tileX, tileY);
                     string name = _host?.Content.Terrains.Names[tile.Terrain.Value] ?? string.Empty;
                     WaterKind kind = TerrainSurface.Classify(name, (tile.Features & TileFeatures.River) != 0);
-                    float baseHeight = TerrainSurface.MeshTopHeight(tile.Elevation, kind);
+                    float baseHeight = kind == WaterKind.River
+                        ? _effBed[(tileY * map.Width) + tileX]
+                        : TerrainSurface.MeshTopHeight(tile.Elevation, kind);
                     if (bit == 1)
                     {
                         h0 = baseHeight;
@@ -298,6 +304,8 @@ public sealed partial class TerrainRenderer : Node3D
         int chunksY = (map.Height + ChunkCoord.TilesPerSide - 1) / ChunkCoord.TilesPerSide;
         _chunks = new MeshInstance3D?[chunksX, chunksY];
         _queued = new bool[chunksX * chunksY];
+        _effBed = new float[map.Width * map.Height];
+        TerrainSurface.BakeRiverBeds(new MapBedTiles(map, _host.Content), _effBed);
 
         float maxGround = 0f;
         for (int y = 0; y < map.Height; y++)
@@ -387,6 +395,41 @@ public sealed partial class TerrainRenderer : Node3D
         return kind is WaterKind.Sea or WaterKind.Deep or WaterKind.Reef;
     }
 
+    // The tile grid as the shared riverbed rule reads it: base heights with land/river buckets, so the bake
+    // stays the single source and is never copied here.
+    private readonly struct MapBedTiles : TerrainSurface.IRiverBedTiles
+    {
+        private readonly IMapQueries _map;
+        private readonly ContentDb _content;
+
+        public MapBedTiles(IMapQueries map, ContentDb content)
+        {
+            _map = map;
+            _content = content;
+        }
+
+        public int Width => _map.Width;
+
+        public int Height => _map.Height;
+
+        public bool IsRiver(int x, int y) => KindOf(x, y) == WaterKind.River;
+
+        public bool IsLand(int x, int y) => KindOf(x, y) == WaterKind.Land;
+
+        public float BaseHeight(int x, int y)
+        {
+            TileInfo tile = _map.GetTile(x, y);
+            return TerrainSurface.MeshTopHeight(tile.Elevation, KindOf(x, y));
+        }
+
+        private WaterKind KindOf(int x, int y)
+        {
+            TileInfo tile = _map.GetTile(x, y);
+            string name = _content.Terrains.Names[tile.Terrain.Value];
+            return TerrainSurface.Classify(name, (tile.Features & TileFeatures.River) != 0);
+        }
+    }
+
     private int ChunksX() => _chunks.GetLength(0);
 
     private void Enqueue(ChunkCoord chunk)
@@ -432,6 +475,7 @@ public sealed partial class TerrainRenderer : Node3D
                     _elevations[i] = 0;
                     _terrains[i] = 0;
                     _kinds[i] = (byte)WaterKind.Sea;
+                    _bedEffWindow[i] = 0f;
                     continue;
                 }
 
@@ -440,10 +484,11 @@ public sealed partial class TerrainRenderer : Node3D
                 _elevations[i] = (byte)tile.Elevation;
                 _terrains[i] = (byte)tile.Terrain.Value;
                 _kinds[i] = (byte)TerrainSurface.Classify(name, (tile.Features & TileFeatures.River) != 0);
+                _bedEffWindow[i] = _kinds[i] == (byte)WaterKind.River ? _effBed[(tileY * chunkMap.Width) + tileX] : 0f;
             }
         }
 
-        _builder.Rebuild(_elevations, _terrains, _kinds, chunkMap.Width, chunkMap.Height, firstX - 1, firstY - 1);
+        _builder.Rebuild(_elevations, _terrains, _kinds, _bedEffWindow, chunkMap.Width, chunkMap.Height, firstX - 1, firstY - 1);
 
         Godot.Collections.Array arrays = new();
         arrays.Resize((int)Mesh.ArrayType.Max);

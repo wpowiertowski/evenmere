@@ -60,6 +60,14 @@ public sealed partial class CameraRig : Node3D
     private float _checkZoomBefore;
     private ulong _checkZoomFrame;
 
+    // Debug-only screenshot framing (M2-37): --street-zoom holds the zoom at MinZoom (full street zoom, which no
+    // --camera-view preset reaches) and --camera-focus=x,y pins the focus to one tile, so scripted shots frame
+    // any map identically run after run. Both are parsed once and honoured every frame while set.
+    private const string StreetZoomFlag = "--street-zoom";
+    private const string CameraFocusPrefix = "--camera-focus=";
+    private bool _streetZoom;
+    private Vector2I? _focusOverrideTile;
+
     // True from the first mouse-motion event until the pointer leaves the window. Entering the window is not enough: the
     // position is only known from a motion event, and edge scrolling must never act on a guess.
     private bool _pointerInside;
@@ -229,6 +237,7 @@ public sealed partial class CameraRig : Node3D
         if (OS.IsDebugBuild())
         {
             ParseCheckZoom();
+            ParseCameraDebugFlags();
         }
 
         ApplyTransform(minZoom, maxZoom);
@@ -273,6 +282,7 @@ public sealed partial class CameraRig : Node3D
         float dt = Math.Min((float)delta, MaxStepSeconds);
         (float minZoom, float maxZoom) = ZoomRange();
 
+        ApplyCameraDebugFlags(minZoom);
         UpdateZoom(dt, minZoom, maxZoom);
         UpdateRotation(dt);
         UpdatePan(dt);
@@ -616,8 +626,45 @@ public sealed partial class CameraRig : Node3D
         // The rig turns about the focus point; the camera hangs behind and above it, looking at the focus.
         Position = new Vector3(_focus.X, _focusHeight, _focus.Y);
         Rotation = new Vector3(0f, _yaw, 0f);
-        _camera.Position = new Vector3(0f, MathF.Sin(pitch) * zoom, MathF.Cos(pitch) * zoom);
+        if (Projection == CameraProjection.Orthographic)
+        {
+            // Framing in an orthographic view comes from the span alone, so the camera sits at one constant
+            // distance in the rig's local space (M2-37): the zoom keeps driving the span and the pitch blend exactly
+            // as before, but nothing between the camera and the focus can cross the near plane and clip. The depth
+            // range never changes, so the ink reads exactly as before and picking marches the same rays from
+            // further back.
+            SysVector3 offset = CameraMath.OrthoCameraOffset(pitch);
+            _camera.Position = new Vector3(offset.X, offset.Y, offset.Z);
+            if (_camera.Near != CameraMath.OrthoNear)
+            {
+                _camera.Near = CameraMath.OrthoNear;
+            }
+
+            if (_camera.Far != CameraMath.OrthoFar)
+            {
+                _camera.Far = CameraMath.OrthoFar;
+            }
+        }
+        else
+        {
+            float zoomEff = PerspectiveClearanceZoom(zoom, pitch);
+            _camera.Position = new Vector3(0f, MathF.Sin(pitch) * zoomEff, MathF.Cos(pitch) * zoomEff);
+        }
+
         _camera.Rotation = new Vector3(-pitch, 0f, 0f);
+    }
+
+    // In perspective the span comes from the distance, so a low camera can sit inside the terrain or a building
+    // at street zoom; push it back along its arm just far enough to clear the highest ground under the arm plus
+    // the tallest building. Orthographic framing never depends on the distance, so it needs no guard.
+    private float PerspectiveClearanceZoom(float zoom, float pitch)
+    {
+        float horizontal = MathF.Cos(pitch) * zoom;
+        int cameraTileX = MapBounds.TileOf(_focus.X + (MathF.Sin(_yaw) * horizontal));
+        int cameraTileY = MapBounds.TileOf(_focus.Y + (MathF.Cos(_yaw) * horizontal));
+        // Off-map reads as sea level (the height lookup returns 0 past the edge), so no clamp is needed.
+        float ground = Math.Max(_focusHeight, HeightAt(cameraTileX, cameraTileY));
+        return CameraMath.PerspectiveZoomForClearance(zoom, pitch, _focusHeight, ground, CameraMath.PerspectiveClearance);
     }
 
     private void ZoomByNotches(float notches)
@@ -702,6 +749,54 @@ public sealed partial class CameraRig : Node3D
             _lastFovSize = size;
             _lastFovScreen = screen;
             ApplyProjection();
+        }
+    }
+
+    // Reads the debug-only screenshot framing flags (M2-37): --street-zoom holds full street zoom and
+    // --camera-focus=x,y pins one tile, so scripted shots frame any map identically run after run.
+    private void ParseCameraDebugFlags()
+    {
+        foreach (string arg in OS.GetCmdlineUserArgs())
+        {
+            if (arg == StreetZoomFlag)
+            {
+                _streetZoom = true;
+                GD.Print("[Evenmere] street-zoom: holding MinZoom for screenshots.");
+            }
+            else if (arg.StartsWith(CameraFocusPrefix, StringComparison.Ordinal))
+            {
+                string[] parts = arg[CameraFocusPrefix.Length..].Split(',');
+                if (parts.Length == 2
+                    && int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int fx)
+                    && int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int fy))
+                {
+                    _focusOverrideTile = new Vector2I(fx, fy);
+                    GD.Print($"[Evenmere] camera-focus: pinning tile ({fx}, {fy}) for screenshots.");
+                }
+                else
+                {
+                    GD.PushWarning($"[Evenmere] ignoring malformed '{arg}'; want '--camera-focus=x,y'.");
+                }
+            }
+        }
+    }
+
+    // Honours the parsed screenshot framing flags every frame, so they win over one-shot view presets whatever
+    // order the debug drivers applied them in. With --static-camera nothing else moves the focus or the zoom.
+    private void ApplyCameraDebugFlags(float minZoom)
+    {
+        if (_streetZoom)
+        {
+            _targetLogZoom = MathF.Log(minZoom);
+            _logZoom = _targetLogZoom;
+        }
+
+        if (_focusOverrideTile is { } tile)
+        {
+            _velocityX = 0f;
+            _velocityZ = 0f;
+            MoveFocusTo(MapBounds.TileCenter(tile.X), MapBounds.TileCenter(tile.Y));
+            _focusHeight = FocusGroundHeight();
         }
     }
 

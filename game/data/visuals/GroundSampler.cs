@@ -6,15 +6,16 @@ using Evenmere.Sim.Queries.Types;
 namespace Evenmere.Game.Data.Visuals;
 
 /// <summary>
-/// The rendered ground heights the building and road renderers stand on. The corner rule mirrors
-/// <c>TerrainRenderer</c> exactly (carved river beds, otherwise the average of the sharing base heights), so a pad or a
-/// road strip computed here lands on the visible mesh. It duplicates that logic instead of sharing it because the
-/// renderers own their folders (M1-20), while the terrain files stay untouched.
+/// The rendered ground heights the building and road renderers stand on. The corner rule reads the shared
+/// riverbed bake in <c>TerrainSurface</c> exactly like <c>TerrainRenderer</c> does (smoothed carved river beds,
+/// otherwise the average of the sharing base heights), so a pad or a road strip computed here lands on the
+/// visible mesh. It owns no heights itself; every number comes from the shared rule.
 /// </summary>
 public static class GroundSampler
 {
     /// <summary>
-    /// Gets the height of the tile corner shared by the tiles around vertex (vx, vy), in world units.
+    /// Gets the height of the tile corner shared by the tiles around vertex (vx, vy), in world units: the smoothed
+    /// carved river bed when a sharing tile is a river tile, else the average of the sharing base heights.
     /// </summary>
     /// <param name="map">The map queries.</param>
     /// <param name="content">The content, for terrain names.</param>
@@ -30,6 +31,7 @@ public static class GroundSampler
         int riverMask = 0;
         int count = 0;
         int bit = 1;
+        QueryBedTiles tiles = new(map, content);
         for (int dy = -1; dy <= 0; dy++)
         {
             for (int dx = -1; dx <= 0; dx++)
@@ -41,7 +43,9 @@ public static class GroundSampler
                     TileInfo tile = map.GetTile(tileX, tileY);
                     string name = content.Terrains.Names[tile.Terrain.Value];
                     WaterKind kind = TerrainSurface.Classify(name, (tile.Features & TileFeatures.River) != 0);
-                    float baseHeight = TerrainSurface.MeshTopHeight(tile.Elevation, kind);
+                    float baseHeight = kind == WaterKind.River
+                        ? TerrainSurface.SmoothedBedForTile(tiles, tileX, tileY)
+                        : TerrainSurface.MeshTopHeight(tile.Elevation, kind);
                     if (bit == 1)
                     {
                         first = baseHeight;
@@ -72,6 +76,41 @@ public static class GroundSampler
         }
 
         return TerrainSurface.ResolveCorner(first, second, third, fourth, riverMask, count);
+    }
+
+    // The tile grid as the shared riverbed rule reads it: base heights with land/river buckets, so the sampler
+    // shares the single bake source instead of copying it.
+    private readonly struct QueryBedTiles : TerrainSurface.IRiverBedTiles
+    {
+        private readonly IMapQueries _map;
+        private readonly ContentDb _content;
+
+        public QueryBedTiles(IMapQueries map, ContentDb content)
+        {
+            _map = map;
+            _content = content;
+        }
+
+        public int Width => _map.Width;
+
+        public int Height => _map.Height;
+
+        public bool IsRiver(int x, int y) => KindOf(x, y) == WaterKind.River;
+
+        public bool IsLand(int x, int y) => KindOf(x, y) == WaterKind.Land;
+
+        public float BaseHeight(int x, int y)
+        {
+            TileInfo tile = _map.GetTile(x, y);
+            return TerrainSurface.MeshTopHeight(tile.Elevation, KindOf(x, y));
+        }
+
+        private WaterKind KindOf(int x, int y)
+        {
+            TileInfo tile = _map.GetTile(x, y);
+            string name = _content.Terrains.Names[tile.Terrain.Value];
+            return TerrainSurface.Classify(name, (tile.Features & TileFeatures.River) != 0);
+        }
     }
 
     /// <summary>
