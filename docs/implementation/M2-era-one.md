@@ -104,6 +104,7 @@ file per card as listed; never edit another card's file.
 | M2-34 | Advisors at scale | sim | M2-16 | done |
 | M2-35 | Polish pass from review | game + sim + tools | — | done |
 | M2-36 | Tree and build-menu fixes found with full Era I content | game | M2-13b | done |
+| M2-37 | Playtest fixes: camera clipping and floating river strips | game | — | done |
 
 ---
 
@@ -1219,6 +1220,21 @@ Meanwhile `StartGuarantee` counts resources over a flood that leaks diagonally a
 
 ---
 
+### M2-37 · Playtest fixes: camera clipping and floating river strips
+
+| Lane | Depends on | Owns |
+| --- | --- | --- |
+| game | — | `game/rendering/camera/**`, `game/rendering/water/**`, `game/rendering/terrain/**` (river-strip and bank heights), `game/data/visuals/GroundSampler.cs` (shared bed heights), tests |
+
+**Found in the developer's M2-28 playtest (2026-11-05):**
+
+1. **The camera clips into buildings and terrain at street zoom.** The orthographic camera sat only `Zoom` units from the focus, so the near plane sliced anything closer.
+2. **River strips float above their banks.** The water rode a fixed lift over the carved bed, which put it above low or sloping banks.
+
+**Acceptance:** street-zoom shots of the starter landing river and the hall show nothing clipped and the river below its banks; picking still hits the right tiles; ground sampling matches the mesh corner for corner; `REQUIRE_GODOT=1 scripts/verify.sh` passes.
+
+---
+
 ## Follow-ups found in review
 
 Small issues found while reviewing M2 tasks, each with the card or lane it belongs to. A card picks its item up when it touches the code anyway. Items with no home card are listed for a polish pass before the M2-28 playtest.
@@ -1247,6 +1263,7 @@ Small issues found while reviewing M2 tasks, each with the card or lane it belon
 | M2-02a | A few generated rivers still read as long, nearly straight lines at overview scale, though each passes the 12-step rule. | M2-03 (seed gallery) |
 | M2-20 | `OverlayRenderer.AfterLookPriority` belongs in `LookPost`, so the camera and tools don't depend on the overlay namespace. | Polish pass |
 | M2-32 | Lit forest's red channel sits 3.8 points outside the ±8% calibration band; no single light fits every biome. | Look track |
+| M2-37 | On generated islands, a river descending a steep hillside still reads as a stepped cascade of flat tile panels. It sits in its banks now, but it isn't a smooth ribbon. A smoother river profile across elevation steps is art-direction work. | Look track |
 | M2-35 | At the default zoom the beach blend can still read as a bright yellow glow along the coast; judge it in the M2-28 playtest. | Look track |
 | M2-24 | Blossom pink is hardcoded; a `flower.blossom` palette token. Snow on roofs needs building visuals. | ART track |
 | M2-26 | ~~`evenmere run --cheats`.~~ Done in M2-35. | M2-35 (done) |

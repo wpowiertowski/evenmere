@@ -26,6 +26,86 @@ public static class CameraMath
     /// <summary>The vertical field of view in degrees at <see cref="ReferenceViewportHeight"/> points of window height.</summary>
     public const float ReferenceVerticalFovDegrees = 45f;
 
+    /// <summary>
+    /// How far back the orthographic camera hangs from the focus, in world units (M2-37): framing in an
+    /// orthographic view comes only from the span, never from the distance, so the camera sits at one constant
+    /// distance, far enough that nothing between it and the focus — the tallest terrain, the tallest building on
+    /// the largest 384 map — ever crosses the near plane and clips. The whole island stays between
+    /// <see cref="OrthoNear"/> and <see cref="OrthoFar"/> from any focus, so the depth range never changes and
+    /// the hand-drawn ink reads exactly as before (a shared shift leaves every depth difference untouched).
+    /// </summary>
+    public const float OrthoBackoffDistance = 700f;
+
+    /// <summary>The orthographic near plane in world units: the rig keeps the scene default, so depth values — and the ink — never move.</summary>
+    public const float OrthoNear = 0.5f;
+
+    /// <summary>The orthographic far plane in world units: the rig keeps the scene default, so depth values — and the ink — never move.</summary>
+    public const float OrthoFar = 1500f;
+
+    /// <summary>The highest terrain in world units: 15 elevation steps of half a unit (the map model's maximum).</summary>
+    public const float MaxTerrainHeight = 7.5f;
+
+    /// <summary>
+    /// How far above the local ground the perspective camera must stay (M2-37): the tallest building (a 4-unit
+    /// monument) plus a margin, so the arm never sits inside terrain or building tops at street zoom.
+    /// </summary>
+    public const float PerspectiveClearance = 5f;
+
+    /// <summary>
+    /// Gets where the orthographic camera sits relative to the focus point, in the rig's local space: straight back
+    /// along the pitch at <see cref="OrthoBackoffDistance"/> units. The rig node carries the yaw, so the offset
+    /// has no yaw of its own — exactly like the close camera it replaces, only further back. The framing is
+    /// identical; only the clipping is gone.
+    /// </summary>
+    /// <param name="pitchRadians">The pitch below the horizon, in radians.</param>
+    /// <returns>The rig-local offset from the focus point to the camera, in world units.</returns>
+    public static Vector3 OrthoCameraOffset(float pitchRadians) =>
+        new(0f, MathF.Sin(pitchRadians) * OrthoBackoffDistance, MathF.Cos(pitchRadians) * OrthoBackoffDistance);
+
+    /// <summary>
+    /// Gets the worst-case span a scene point can sit from the camera along the view direction: the map's half
+    /// diagonal foreshortened by the pitch, plus the scene height. The camera clears the near plane and holds the
+    /// far map corner while <c>backoff − span</c> stays past the near plane and <c>backoff + span</c> stays inside it.
+    /// </summary>
+    /// <param name="mapSizeTiles">The map size across in tiles (square maps).</param>
+    /// <param name="maxSceneHeight">The tallest scene point above the focus in world units.</param>
+    /// <param name="pitchRadians">The pitch below the horizon, in radians.</param>
+    /// <returns>The worst-case distance along the view direction, in world units.</returns>
+    public static float DepthSpan(float mapSizeTiles, float maxSceneHeight, float pitchRadians)
+    {
+        float halfDiagonal = (mapSizeTiles * MathF.Sqrt(2f)) / 2f;
+        return (halfDiagonal * MathF.Cos(pitchRadians)) + (maxSceneHeight * MathF.Sin(pitchRadians));
+    }
+
+    /// <summary>
+    /// Gets the zoom that keeps the perspective camera above the ground under its arm: the requested zoom, pushed
+    /// back along the view direction just far enough that the camera clears <paramref name="groundUnderCamera"/>
+    /// plus <paramref name="clearance"/>. A clear camera keeps its zoom, so the framing only ever moves to stop
+    /// a clip.
+    /// </summary>
+    /// <param name="zoom">The requested distance from the focus point, in world units.</param>
+    /// <param name="pitchRadians">The pitch below the horizon, in radians.</param>
+    /// <param name="focusHeight">The focus height in world units.</param>
+    /// <param name="groundUnderCamera">The highest ground under the camera's arm in world units.</param>
+    /// <param name="clearance">How far above that ground the camera must stay.</param>
+    /// <returns>The zoom to place the camera at, in world units.</returns>
+    public static float PerspectiveZoomForClearance(float zoom, float pitchRadians, float focusHeight, float groundUnderCamera, float clearance)
+    {
+        float sine = MathF.Sin(pitchRadians);
+        if (!(sine > 1e-3f))
+        {
+            return zoom;
+        }
+
+        float cameraHeight = focusHeight + (sine * zoom);
+        if (cameraHeight >= groundUnderCamera + clearance)
+        {
+            return zoom;
+        }
+
+        return (groundUnderCamera + clearance - focusHeight) / sine;
+    }
+
     /// <summary>The smallest vertical field of view in degrees, for short windows.</summary>
     public const float MinVerticalFovDegrees = 30f;
 
